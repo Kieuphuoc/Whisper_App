@@ -14,11 +14,16 @@ export function HelloWave() {
   const rotationAnimation = useSharedValue(0);
 
   useEffect(() => {
-    rotationAnimation.value = withRepeat(
-      withSequence(withTiming(25, { duration: 150 }), withTiming(0, { duration: 150 })),
-      4 // Run the animation 4 times
-    );
-  }, [rotationAnimation]);
+  rotationAnimation.value = withRepeat(
+    withSequence(
+      withTiming(25, { duration: 150 }),
+      withTiming(0, { duration: 150 })
+    ),
+    -1, // ❗ Lặp vô hạn
+    true // ❗ Đảo chiều mỗi lần lặp (wave đều hơn)
+  );
+}, [rotationAnimation]);
+
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotationAnimation.value}deg` }],
