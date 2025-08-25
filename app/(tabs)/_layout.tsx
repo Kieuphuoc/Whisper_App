@@ -47,13 +47,20 @@ export default function TabLayout() {
           title: 'Explore',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
         }}
-      />       <Tabs.Screen
-        name="map"
+      /><Tabs.Screen
+        name="login"
         options={{
-          title: 'Map',
+          title: 'Login',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="0.square.fill" color={color} />,
+        }}
+      />  
+      <Tabs.Screen
+        name="memory"
+        options={{
+          title: 'Memory',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
         }}
-      />    
+      /> 
     </Tabs>
   );
 }

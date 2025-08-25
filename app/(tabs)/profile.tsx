@@ -98,7 +98,7 @@ export default function UserProfileScreen({ onBack }: UserProfileScreenProps) {
 
       {/* Content */}
       <ScrollView contentContainerStyle={styles.contentContainer}>
-         
+    
       </ScrollView>
     </View>
   );

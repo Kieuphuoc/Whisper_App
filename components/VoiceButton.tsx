@@ -9,8 +9,6 @@ type VoiceButtonProps = {
 };
 
 export default function VoiceButton({ isRecording, onPress }: VoiceButtonProps) {
-    
-    
     return (
         <TouchableOpacity style={styles.button} onPress={onPress}>
             <Ionicons name={isRecording ? 'stop' : 'mic'} size={24} color="white" />
