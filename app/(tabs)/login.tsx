@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { useContext, useState } from 'react';
 
+
 import {
   KeyboardAvoidingView,
   Platform,
@@ -18,6 +19,8 @@ import {
 import { MyDispatchContext } from '../../configs/Context';
 import { Colors } from '../../constants/Colors';
 import { userStyles } from '../../constants/UserStyles';
+import Apis, { authApis, endpoints } from "../../configs/Apis";
+
 
 // ✅ Định nghĩa kiểu cho User login
 type UserLogin = {
@@ -70,46 +73,32 @@ const Login = () => {
   };
 
   const login = async () => {
-  const usernameValue = user.username;
-  const passValue = user.password;
+    if (validate()) {
+      try {
+        setLoading(true);
 
-  if (validate()) {
-    try {
-      setLoading(true);
+        const res = await Apis.post(endpoints['login'], {
+          username: user.username,
+          password: user.password
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
 
-      const response = await fetch('http://192.168.3.16:5000/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: usernameValue,
-          password: passValue,
-        }),
-      });
+        const data = res.data;
+        console.log(data);
 
-      const data = await response.json();
-      console.log('Dữ liệu trả về từ server:', data);
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Đăng nhập thất bại!');
+        await AsyncStorage.setItem('token', data.token);
+        navigation.navigate('index' as never);
+      } catch (err) {
+        console.error('Lỗi đăng nhập:', (err as Error).message);
+        setMsg((err as Error).message);
+      } finally {
+        setLoading(false);
       }
-
-      if (!data.token) {
-        throw new Error('Không nhận được access_token từ server!');
-      }
-
-      await AsyncStorage.setItem('token', data.token);
-      navigation.navigate('index' as never);
-    } catch (err) {
-      console.error('Lỗi đăng nhập:', (err as Error).message);
-      setMsg((err as Error).message);
-    } finally {
-      setLoading(false);
     }
-  }
-};
-
+  };
 
   return (
     <SafeAreaView style={userStyles.container}>

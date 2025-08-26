@@ -8,17 +8,19 @@ import { ThemedView } from '@/components/ThemedView';
 import { MemoryCard } from '@/components/MemoryCard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAudioPlayer } from 'expo-audio';
+import Apis, { authApis, endpoints } from "../../configs/Apis";
+
 
 type Memory = {
-  id: number | string;
-  emoji: string;
-  duration: string;
-  dateTime: string;
-  text: string;
-  location: string;
-  progressColor: string;
+    id: string;
+    emoji: string;
+    duration: string;
+    createdAt: string;
+    description: string;
+    longitude: number;
+    latitude: number;
+    audioUrl: string; // URL âm thanh từ backend
 };
-
 
 export default function MemoriesScreen() {
 
@@ -35,25 +37,12 @@ export default function MemoriesScreen() {
         throw new Error('No token found');
       }
 
-      const response = await fetch('http://192.168.3.16:5000/voice', {
-        headers: { Authorization: token },
-      });
+      const res = await authApis(token).get(endpoints['voice'])
 
-      const data = await response.json();
-      console.log('API data:', data);
-
-        // const player = useAudioPlayer(data.audioUrl);
-
-
-      if (data) {
-        setMemory(data); // nếu là danh sách
-      } else {
-        console.log('Invalid memory data format:', data);
-      }
-
+      const data = res.data;
+      setMemory(data);
     } catch (ex: any) {
       console.log('Error loading Memory:', ex);
-      console.log('Error details:', ex.response?.data || ex.message);
     } finally {
       setLoading(false);
     }

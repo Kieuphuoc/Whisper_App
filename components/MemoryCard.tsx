@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useAudioPlayer } from 'expo-audio';
+import * as Location from 'expo-location';
+
 
 type Memory = {
     id: string;
@@ -12,116 +14,115 @@ type Memory = {
     description: string;
     longitude: number;
     latitude: number;
-    progressColor: string;
     audioUrl: string; // URL âm thanh từ backend
-
-
 };
+
 
 export function MemoryCard({ memory }: { memory: Memory }) {
-    const player = useAudioPlayer(memory.audioUrl); // <-- tạo player từ URL
-    const [isPlaying, setIsPlaying] = useState(false); // <- biến riêng lưu status
-    const handleToggle = async () => {
-  if (isPlaying) {
-    await player.pause();
-    setIsPlaying(false);
-  } else {
-    await player.play();
-    setIsPlaying(true);
-  }
-};
+    const player = useAudioPlayer(memory.audioUrl);
+    const [isPlaying, setIsPlaying] = useState<boolean>(false);
+    const [duration, setDuration] = useState<string | null>(null);
+    const [loading, setLoading] = useState<boolean>(false)
+
+    const play = () => {
+        if (isPlaying) {
+            player.pause();
+            setIsPlaying(false);
+        } else {
+            player.play();
+            setIsPlaying(true);
+        }
+    }
+
+    const formatDuration = (seconds: number): string => {
+        const rounded = Math.round(seconds); // Cắt phần thập phân
+        const mins = Math.round(rounded / 60);
+        const secs = rounded % 60;
+        const paddedSecs = secs < 10 ? `0${secs}` : secs.toString();
+        return `${mins}:${paddedSecs}`;
+    };
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setDuration(formatDuration(player.duration));
+            clearInterval(interval);
+        }, 200);
+
+        return () => clearInterval(interval);
+    }, [player]);
 
 
     return (
         <ThemedView style={styles.card}>
             <ThemedView style={styles.row}>
-                <Pressable style={styles.button} onPress={handleToggle}
-                >
-                    <Text>
-                        {isPlaying ? 'Pause' : 'Play'}
-                    </Text>
+                <Pressable style={styles.button} onPress={play}>
+                    <Text>{isPlaying ? 'Pause' : 'Play'}</Text>
                 </Pressable>
-                <ThemedView style={styles.imageBox}>``
-                    <ThemedText style={styles.emoji}>{memory.emoji}</ThemedText>
-                </ThemedView>
-                <ThemedView style={styles.content}>
-                    <ThemedView style={styles.row}>
-                        <ThemedText style={styles.duration}>{player.duration}</ThemedText>
-                        <ThemedText type="default" style={styles.dateTime}>
-                            {new Date(memory.createdAt).toLocaleString()}
-                        </ThemedText>
-                    </ThemedView>
-                    <ThemedText type="default">{memory.description}</ThemedText>
-                    <ThemedText type="default" style={styles.location}>
-                        📍 {memory.latitude.toFixed(5)}, {memory.longitude.toFixed(5)}
-                    </ThemedText>
+                <ThemedText style={styles.emoji}>{memory.emoji}</ThemedText>
+                <ThemedView style={styles.info}>
+                    <ThemedText>{duration ? duration : '---'}</ThemedText>
+                    <ThemedText style={styles.dateTime}>{new Date(memory.createdAt).toLocaleString()}</ThemedText>
                 </ThemedView>
             </ThemedView>
-            <ThemedView
-                style={[styles.progressBar, { backgroundColor: memory.progressColor }]}
-            />
+
+            <ThemedText style={styles.description}>{memory.description}</ThemedText>
+            <ThemedText style={styles.location}>đây là địa điểm voice</ThemedText>
         </ThemedView>
     );
 }
 
 
 const styles = StyleSheet.create({
-    button: {
-        backgroundColor: '#4CAF50',
-        paddingVertical: 12,
-        paddingHorizontal: 24,
-        borderRadius: 8,
-    },
-    buttonText: {
-        fontSize: 18,
-        color: 'white',
-        textAlign: 'center',
-    },
     card: {
-        marginVertical: 10,
-        padding: 12,
+        backgroundColor: "#fff",
         borderRadius: 12,
-        backgroundColor: '#fff',
-        shadowColor: '#000',
-        shadowOpacity: 0.05,
-        shadowOffset: { width: 0, height: 2 },
+        padding: 12,
+        marginVertical: 8,
+        shadowColor: "#000",
+        shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 2,
     },
     row: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 8,
     },
-    imageBox: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: '#f0f0f0',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 12,
+    button: {
+        backgroundColor: "#eee",
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+        marginRight: 10,
     },
     emoji: {
-        fontSize: 24,
+        fontSize: 28,
+        marginRight: 10,
     },
-    content: {
+    info: {
         flex: 1,
     },
     duration: {
-        fontWeight: 'bold',
-        marginRight: 8,
+        fontSize: 12,
+        color: "#666",
     },
     dateTime: {
-        color: '#888',
+        fontSize: 12,
+        color: "#999",
+    },
+    description: {
+        fontSize: 14,
+        color: "#333",
+        marginBottom: 4,
     },
     location: {
-        marginTop: 4,
-        fontStyle: 'italic',
-        color: '#666',
+        fontSize: 13,
+        color: "#555",
+        fontStyle: "italic",
+        marginBottom: 8,
     },
     progressBar: {
-        height: 6,
-        borderRadius: 3,
-        marginTop: 8,
+        height: 4,
+        borderRadius: 2,
     },
 });
