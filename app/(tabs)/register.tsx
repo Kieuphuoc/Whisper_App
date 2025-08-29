@@ -3,135 +3,149 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Image, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Apis, { endpoints } from '../../configs/Apis';
-import { BlurView } from 'expo-blur';
-import { NavigationProp, useNavigation } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type UserLogin = {
-  username?: string;
-  password?: string;
-};
+export default function RegisterScreen() {
+  const router = useRouter();
+  const [user, setUser] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-// ✅ Định nghĩa kiểu cho từng field hiển thị
-type InfoField = {
-  label: string;
-  icon: any;
-  secureTextEntry: boolean;
-  field: keyof UserLogin;
-};
-export default function LoginScreen() {
-  const [user, setUser] = useState<UserLogin>({});
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
-  // const dispatch = useContext(MyDispatchContext);
-  const navigation = useNavigation<NavigationProp<any>>();
-  const [msg, setMsg] = useState<string | null>(null);
-
-  const info: InfoField[] = [
-    {
-      label: 'Username',
-      icon: 'person-outline',
-      secureTextEntry: false,
-      field: 'username',
-    },
-    {
-      label: 'Mật khẩu',
-      icon: 'lock-closed-outline',
-      secureTextEntry: true,
-      field: 'password',
-    },
-  ];
-
-  const setState = (value: string, field: keyof UserLogin) => {
-    setUser({ ...user, [field]: value });
-  };
-
-  const validate = (): boolean => {
-    if (!user?.username || !user?.password) {
-      setMsg('Please enter username and password!');
+  const validateForm = () => {
+    if (!user.username || !user.email || !user.password || !user.confirmPassword) {
+      setError('Please fill in all fields');
       return false;
     }
-    setMsg(null);
+
+    if (user.password !== user.confirmPassword) {
+      setError('Passwords do not match');
+      return false;
+    }
+
+    if (user.password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(user.email)) {
+      setError('Please enter a valid email address');
+      return false;
+    }
+
     return true;
   };
 
-  const login = async () => {
-    if (validate()) {
-      try {
-        setLoading(true);
+  const handleRegister = async () => {
+    if (!validateForm()) {
+      return;
+    }
 
-        const res = await Apis.post(endpoints['login'], {
-          username: user.username,
-          password: user.password
-        }, {
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
+    try {
+      setLoading(true);
+      setError('');
 
-        const data = res.data;
-        console.log(data);
+      const res = await Apis.post(endpoints['login'], {
+        username: user.username,
+        email: user.email,
+        password: user.password,
+      });
 
-        await AsyncStorage.setItem('token', data.token);
-        navigation.navigate('index' as never);
-      } catch (err) {
-        console.error('Lỗi đăng nhập:', (err as Error).message);
-        setMsg((err as Error).message);
-      } finally {
-        setLoading(false);
+      if (res.data.success) {
+        router.push('/(tabs)');
+      } else {
+        setError(res.data.message || 'Registration failed');
       }
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      setError(error.response?.data?.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1a1a1a" />
-
+      
       {/* Background Image */}
       <Image
         source={{ uri: 'https://i.pinimg.com/736x/8f/4f/83/8f4f836b45cae5270f1d717af7158070.jpg' }}
-        style={styles.backgroundImage}>
-      </Image>
-      <BlurView intensity={20} style={styles.blurOverlay} />
-
+        style={styles.backgroundImage}
+      />
+      
+      {/* Overlay */}
+      <View style={styles.overlay} />
+      
       {/* Content */}
       <View style={styles.content}>
         {/* Header Section */}
         <View style={styles.headerSection}>
           <View style={styles.logoCircle}>
-            {/* <Ionicons name="mic" size={32} color="#8b5cf6" /> */}
-            <Image
-              source={require('../../assets/images/logo.png')}
-              style={styles.backgroundImage}>
-            </Image>
+            <Ionicons name="mic" size={32} color="#8b5cf6" />
           </View>
-          <Text style={styles.title}>Whisper of Memory</Text>
-          <Text style={styles.subtitle}>Capture moments through voice</Text>
+          <Text style={styles.title}>Join Whisper</Text>
+          <Text style={styles.subtitle}>Start your voice journey today</Text>
         </View>
 
-        {/* Login Form */}
+        {/* Register Form */}
         <View style={styles.bentoContainer}>
           <View style={styles.welcomeBento}>
-            <Text style={styles.welcomeText}>Welcome back</Text>
-            <Text style={styles.signInText}>Sign in to continue your journey</Text>
+            <Text style={styles.welcomeText}>Create Account</Text>
+            <Text style={styles.signInText}>Sign up to begin capturing memories</Text>
           </View>
 
-          {info.map((i, index) => (
-            <View key={index} style={styles.inputBento}>
-              <View style={styles.inputWrapper}>
-                <Ionicons name={i.icon} size={20} color="#6b7280" style={styles.inputIcon} />
-                <TextInput
-                                style={styles.input}
+          {/* Username Input */}
+          <View style={styles.inputBento}>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="person-outline" size={20} color="#6b7280" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Username"
+                placeholderTextColor="#9ca3af"
+                value={user.username}
+                onChangeText={(text) => setUser({ ...user, username: text })}
+                autoCapitalize="none"
+              />
+            </View>
+          </View>
 
-                  value={user[i.field] || ''}
-                  onChangeText={(t) => setState(t, i.field)}
-                  placeholder={i.label}
-                  secureTextEntry={i.secureTextEntry && !showPassword}
-                  autoCapitalize="none"
-                  placeholderTextColor="#9ca3af"
-                />
-                {i.field === 'password' && (
-                  <TouchableOpacity
+          {/* Email Input */}
+          <View style={styles.inputBento}>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="mail-outline" size={20} color="#6b7280" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                placeholderTextColor="#9ca3af"
+                value={user.email}
+                onChangeText={(text) => setUser({ ...user, email: text })}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+            </View>
+          </View>
+
+          {/* Password Input */}
+          <View style={styles.inputBento}>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="lock-closed-outline" size={20} color="#6b7280" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                placeholderTextColor="#9ca3af"
+                value={user.password}
+                onChangeText={(text) => setUser({ ...user, password: text })}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
                 style={styles.eyeButton}
               >
@@ -141,31 +155,55 @@ export default function LoginScreen() {
                   color="#6b7280"
                 />
               </TouchableOpacity>
-                )}
-              </View>
             </View>
-          ))}
+          </View>
+
+          {/* Confirm Password Input */}
+          <View style={styles.inputBento}>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="lock-closed-outline" size={20} color="#6b7280" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Confirm Password"
+                placeholderTextColor="#9ca3af"
+                value={user.confirmPassword}
+                onChangeText={(text) => setUser({ ...user, confirmPassword: text })}
+                secureTextEntry={!showConfirmPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                style={styles.eyeButton}
+              >
+                <Ionicons
+                  name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                  size={20}
+                  color="#6b7280"
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {/* Error Message */}
-          {/* {error ? (
+          {error ? (
             <View style={styles.errorBento}>
               <Ionicons name="alert-circle-outline" size={16} color="#ef4444" />
               <Text style={styles.errorText}>{error}</Text>
             </View>
-          ) : null} */}
+          ) : null}
 
-          {/* Login Button */}
+          {/* Register Button */}
           <TouchableOpacity
-            style={[styles.loginButton, loading && styles.loginButtonDisabled]}
-            onPress={login}
+            style={[styles.registerButton, loading && styles.registerButtonDisabled]}
+            onPress={handleRegister}
             disabled={loading}
           >
             {loading ? (
-              <Text style={styles.loginButtonText}>Signing in...</Text>
+              <Text style={styles.registerButtonText}>Creating account...</Text>
             ) : (
               <>
-                <Ionicons name="log-in-outline" size={20} color="white" />
-                <Text style={styles.loginButtonText}>Sign In</Text>
+                <Ionicons name="person-add-outline" size={20} color="white" />
+                <Text style={styles.registerButtonText}>Create Account</Text>
               </>
             )}
           </TouchableOpacity>
@@ -183,20 +221,20 @@ export default function LoginScreen() {
               <Ionicons name="logo-google" size={20} color="#ea4335" />
               <Text style={styles.socialButtonText}>Google</Text>
             </TouchableOpacity>
-
+            
             <TouchableOpacity style={styles.socialButton}>
               <Ionicons name="logo-apple" size={20} color="#000000" />
               <Text style={styles.socialButtonText}>Apple</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Sign Up Link */}
-          {/* <View style={styles.signupBento}>
-            <Text style={styles.signupText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/register')}>
-              <Text style={styles.loginText}>Sign up</Text>
+          {/* Sign In Link */}
+          <View style={styles.signupBento}>
+            <Text style={styles.signupText}>Already have an account? </Text>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/login')}>
+              <Text style={styles.loginText}>Sign in</Text>
             </TouchableOpacity>
-          </View> */}
+          </View>
         </View>
       </View>
     </View>
@@ -204,14 +242,6 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  blurOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(64, 64, 64, 0.6)',
-  },
   container: {
     flex: 1,
     backgroundColor: '#1a1a1a',
@@ -220,6 +250,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: '100%',
     height: '100%',
+  },
+  overlay: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(64, 64, 64, 0.7)',
   },
   content: {
     flex: 1,
@@ -265,7 +301,7 @@ const styles = StyleSheet.create({
   },
   bentoContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 40,
+    borderRadius: 24,
     padding: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 16 },
@@ -336,25 +372,25 @@ const styles = StyleSheet.create({
     color: '#ef4444',
     fontWeight: '500',
   },
-  loginButton: {
+  registerButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1A1A1A',
-    borderRadius: 30,
+    backgroundColor: '#8b5cf6',
+    borderRadius: 16,
     paddingVertical: 16,
     marginBottom: 24,
-    shadowColor: 'black',
-    shadowOffset: { width: 12, height: 30 },
-    shadowOpacity: 0.30,
-    shadowRadius: 20,
+    shadowColor: '#8b5cf6',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
     elevation: 8,
   },
-  loginButtonDisabled: {
+  registerButtonDisabled: {
     backgroundColor: '#a78bfa',
     opacity: 0.7,
   },
-  loginButtonText: {
+  registerButtonText: {
     marginLeft: 8,
     fontSize: 16,
     fontWeight: '600',

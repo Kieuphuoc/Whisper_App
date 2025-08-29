@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 
-const BASE_URL = "http://192.168.30.175:5000/";
+const BASE_URL = "http://10.17.50.235:5000/";
 
 export const endpoints = {
   voice: "/voice/",
