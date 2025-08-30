@@ -1,9 +1,10 @@
 import axios, { AxiosInstance } from "axios";
 
-const BASE_URL = "http://10.17.50.235:5000/";
+const BASE_URL = "http://192.168.10.240:5000/";
 
 export const endpoints = {
   voice: "/voice/",
+  createVoicePin: "/voice/",
   login: "/auth/login/",
   review: (event_id: string | number): string => `/event/${event_id}/reviews/`,
 };

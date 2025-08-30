@@ -1,10 +1,16 @@
 import VoiceButton from '@/components/VoiceButton';
+
+import { authApis, endpoints } from '@/configs/Apis';
 import { Ionicons } from '@expo/vector-icons';
-import { AudioModule, RecordingPresets, useAudioRecorder } from 'expo-audio';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AudioModule, RecordingPresets, setAudioModeAsync, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
 import * as Location from 'expo-location';
 import React, { useEffect, useState } from 'react';
 import { Alert, Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import VoicePinPreview from '@/components/VoicePinPreview';
+import { Modal } from 'react-native';
+
 
 const { width, height } = Dimensions.get('window');
 
@@ -12,58 +18,24 @@ type VoicePin = {
   id: string;
   latitude: number;
   longitude: number;
-  emotion: string;
-  title: string;
-  duration: string;
-  isPublic: boolean;
-  isFriend: boolean;
-  isPersonal: boolean;
-  address?: string;
+  emotion: string;        // ví dụ: "happy", "sad", "angry"
+  description: string;    // mô tả ngắn (trước là "title")
+  duration: number;       // thời lượng (giây), kiểu number chuẩn hơn
+  visibility: 'PUBLIC' | 'PRIVATE' | 'FRIENDS'; // dùng enum thay vì 3 boolean
+  audioUrl: string;       // URL đến file âm thanh
+  imageUrl?: string;      // ảnh thumbnail nếu có
+  address?: string;       // địa chỉ có thể reverse từ lat/lng
+  createdAt: string;      // timestamp ISO
 };
+
 
 type FilterType = 'public' | 'friends' | 'personal';
 
 export default function HomeScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>('personal');
-  const [voicePins, setVoicePins] = useState<VoicePin[]>([
-    {
-      id: '1',
-      latitude: 37.78825,
-      longitude: -122.4324,
-      emotion: '😊',
-      title: 'Morning coffee vibes',
-      duration: '0:45',
-      isPublic: true,
-      isFriend: false,
-      isPersonal: false,
-      address: 'Central Park, New York',
-    },
-    {
-      id: '2',
-      latitude: 37.78925,
-      longitude: -122.4344,
-      emotion: '🎵',
-      title: 'Street music inspiration',
-      duration: '1:20',
-      isPublic: false,
-      isFriend: true,
-      isPersonal: false,
-      address: 'Coffee Shop, San Francisco',
-    },
-    {
-      id: '3',
-      latitude: 37.78725,
-      longitude: -122.4304,
-      emotion: '🌅',
-      title: 'Sunrise meditation',
-      duration: '2:15',
-      isPublic: false,
-      isFriend: false,
-      isPersonal: true,
-      address: 'Golden Gate Bridge',
-    },
-  ]);
+  const [voicePin, setVoicePin] = useState<VoicePin[]>();
+  const [showPreview, setShowPreview] = useState(false);
 
   const [pulseAnim] = useState(new Animated.Value(1));
   const [scaleAnim] = useState(new Animated.Value(1));
@@ -79,6 +51,7 @@ export default function HomeScreen() {
       }
 
       let location = await Location.getCurrentPositionAsync({});
+
       setLocation(location);
     }
 
@@ -86,52 +59,90 @@ export default function HomeScreen() {
   }, []);
 
   // RECORD
-
-  useEffect(() => {
-    async function getMicPermission() { // Create async function to request permission, then await to receive the reply
-      const { granted } = await AudioModule.requestRecordingPermissionsAsync();
-      if (!granted) {
-        Alert.alert("Permission to use micro was denied");
-      }
-    }
-    getMicPermission() // Then use this function in here
-  }, []);
-
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [isRecording, setIsRecording] = useState(false);
+  const recorderState = useAudioRecorderState(recorder);
+
+
+  useEffect(() => {
+    (async () => {
+      const status = await AudioModule.requestRecordingPermissionsAsync();
+      if (!status.granted) {
+        Alert.alert('Permission to access microphone was denied');
+      }
+
+      setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: true,
+      });
+    })();
+  }, []);
 
   const record = async () => {
     await recorder.prepareToRecordAsync();
     recorder.record();
-    console.log('Is Recording', recorder.uri);
     setIsRecording(true)
   };
 
   const stop = async () => {
     await recorder.stop();
     console.log('Record Done!', recorder.uri);
-    setIsRecording(true)
 
+    setIsRecording(false)
+    setShowPreview(true)
+    // createVoicePin()
   };
 
-
-  
-
- 
-  const getFilteredPins = () => {
-    return voicePins.filter(pin => {
-      switch (activeFilter) {
-        case 'public':
-          return pin.isPublic;
-        case 'friends':
-          return pin.isFriend;
-        case 'personal':
-          return pin.isPersonal;
-        default:
-          return true;
+  const createVoicePin = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        throw new Error('No token found');
       }
-    });
+
+      const formData = new FormData();
+
+      // formData.append('description', voicePin.description);
+      formData.append('latitude', location?.coords?.latitude);
+      formData.append('longitude', location?.coords?.longitude);
+      formData.append('visibility', "PUBLIC");
+      formData.append('file', {
+        uri: recorder.uri,             // local uri
+        name: 'audio.m4a',             // tên file
+        type: 'audio/x-m4a',           // MIME type
+      });
+
+      const res = await authApis(token).post(endpoints['createVoicePin'], formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      console.log('Upload thành công:', res.data);
+    } catch (err) {
+      console.error('Lỗi upload:', err);
+    }
   };
+
+
+
+
+
+
+  // const getFilteredPins = () => {
+  //   return voicePin.filter(pin => {
+  //     switch (activeFilter) {
+  //       case 'public':
+  //         return pin.isPublic;
+  //       case 'friends':
+  //         return pin.isFriend;
+  //       case 'personal':
+  //         return pin.isPersonal;
+  //       default:
+  //         return true;
+  //     }
+  //   });
+  // };
 
   const FilterToggle = () => (
     <View style={styles.filterContainer}>
@@ -163,7 +174,7 @@ export default function HomeScreen() {
         latitude: pin.latitude,
         longitude: pin.longitude,
       }}
-      title={pin.title}
+    // title={pin.title}
     >
       <View style={styles.markerContainer}>
         <View style={styles.markerBackground}>
@@ -200,19 +211,19 @@ export default function HomeScreen() {
     </View>
   );
 
-  const StatsBento = () => (
-    <View style={styles.statsBento}>
-      <View style={styles.statItem}>
-        <Text style={styles.statNumber}>{voicePins.length}</Text>
-        <Text style={styles.statLabel}>Voices</Text>
-      </View>
-      <View style={styles.statDivider} />
-      <View style={styles.statItem}>
-        <Text style={styles.statNumber}>1.2km</Text>
-        <Text style={styles.statLabel}>Radius</Text>
-      </View>
-    </View>
-  );
+  // const StatsBento = () => (
+  //   <View style={styles.statsBento}>
+  //     <View style={styles.statItem}>
+  //       <Text style={styles.statNumber}>{voicePins.length}</Text>
+  //       <Text style={styles.statLabel}>Voices</Text>
+  //     </View>
+  //     <View style={styles.statDivider} />
+  //     <View style={styles.statItem}>
+  //       <Text style={styles.statNumber}>1.2km</Text>
+  //       <Text style={styles.statLabel}>Radius</Text>
+  //     </View>
+  //   </View>
+  // );
 
   return (
     <View style={styles.container}>
@@ -243,9 +254,9 @@ export default function HomeScreen() {
           </Marker>
 
           {/* Voice pins */}
-          {getFilteredPins().map((pin) => (
+          {/* {getFilteredPins().map((pin) => (
             <VoicePinMarker key={pin.id} pin={pin} />
-          ))}
+          ))} */}
         </MapView>
       ) : (
         <View style={styles.loadingContainer}>
@@ -257,10 +268,30 @@ export default function HomeScreen() {
       <FilterToggle />
 
       {/* Quick Actions */}
-      <QuickActions />
+      {/* <QuickActions /> */}
+      <Modal
+        visible={showPreview}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPreview(false)
+        }
+      >
+        <VoicePinPreview message="Chào các mày, tao la nguyen kieu phuoc hehehehehehecoasdjoasjdoasjdoasjd" isOwn={false} recorder={recorder} />
+
+      </Modal>
+
+
+      {/* <View style={{
+        position: 'absolute',
+        bottom: '20%',
+        left: '20%'
+      }}>
+        <VoicePinPreview message="Chào các mày, tao la nguyen kieu phuoc hehehehehehecoasdjoasjdoasjdoasjd" isOwn={false} />
+      </View> */}
+
 
       {/* Stats Bento */}
-      <StatsBento />
+      {/* <StatsBento /> */}
 
       {/* Voice recording button */}
       <Animated.View style={[

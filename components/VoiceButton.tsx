@@ -1,4 +1,3 @@
-// components/VoiceButton/index.tsx
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, TouchableOpacity } from 'react-native';
@@ -9,108 +8,10 @@ type VoiceButtonProps = {
 };
 
 export default function VoiceButton({ isRecording, onPress }: VoiceButtonProps) {
-    const pulseAnim = useRef(new Animated.Value(1)).current;
-    const scaleAnim = useRef(new Animated.Value(1)).current;
-    const rotateAnim = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-        if (isRecording) {
-            // Pulse animation
-            Animated.loop(
-                Animated.sequence([
-                    Animated.timing(pulseAnim, {
-                        toValue: 1.2,
-                        duration: 1000,
-                        useNativeDriver: true,
-                    }),
-                    Animated.timing(pulseAnim, {
-                        toValue: 1,
-                        duration: 1000,
-                        useNativeDriver: true,
-                    }),
-                ])
-            ).start();
-
-            // Rotate animation
-            Animated.loop(
-                Animated.timing(rotateAnim, {
-                    toValue: 1,
-                    duration: 2000,
-                    useNativeDriver: true,
-                })
-            ).start();
-        } else {
-            pulseAnim.setValue(1);
-            rotateAnim.setValue(0);
-        }
-    }, [isRecording]);
-
-    const handlePress = () => {
-        // Scale animation on press
-        Animated.sequence([
-            Animated.timing(scaleAnim, {
-                toValue: 0.9,
-                duration: 100,
-                useNativeDriver: true,
-            }),
-            Animated.timing(scaleAnim, {
-                toValue: 1,
-                duration: 100,
-                useNativeDriver: true,
-            }),
-        ]).start();
-
-        onPress();
-    };
-
     return (
-        <Animated.View style={[
-            styles.container,
-            {
-                transform: [
-                    { scale: pulseAnim },
-                    { scale: scaleAnim },
-                ],
-            },
-        ]}>
-            <TouchableOpacity 
-                style={[styles.button, isRecording && styles.recordingButton]} 
-                onPress={handlePress}
-                activeOpacity={0.8}
-            >
-                <Animated.View style={{
-                    transform: [{
-                        rotate: rotateAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: ['0deg', '360deg'],
-                        }),
-                    }],
-                }}>
-                    <Ionicons 
-                        name={isRecording ? 'stop' : 'mic'} 
-                        size={28} 
-                        color="white" 
-                    />
-                </Animated.View>
-            </TouchableOpacity>
-            
-            {isRecording && (
-                <Animated.View style={[
-                    styles.pulseRing,
-                    {
-                        transform: [{ scale: pulseAnim }],
-                    },
-                ]} />
-            )}
-            
-            <Animated.View style={[
-                styles.glowRing,
-                {
-                    transform: [{ scale: pulseAnim }],
-                    opacity: isRecording ? 0.6 : 0.3,
-                },
-            ]} />
-        </Animated.View>
+        <TouchableOpacity style={styles.button} onPress={onPress}>
+            <Ionicons name={isRecording ? 'stop' : 'mic'} size={24} color="white" />
+        </TouchableOpacity>
     );
 }
 
