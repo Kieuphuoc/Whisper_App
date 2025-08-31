@@ -29,6 +29,8 @@ export function MemoryCard({ memory }: { memory: Memory }) {
             player.pause();
             setIsPlaying(false);
         } else {
+            player.seekTo(0);
+
             player.play();
             setIsPlaying(true);
         }
@@ -57,7 +59,7 @@ export function MemoryCard({ memory }: { memory: Memory }) {
                 <View style={styles.emotionContainer}>
                     <Text style={styles.emotionText}>{memory.emotion}</Text>
                 </View>
-                
+
                 <View style={styles.infoContainer}>
                     <View style={styles.titleRow}>
                         <ThemedText style={styles.duration}>
@@ -72,11 +74,11 @@ export function MemoryCard({ memory }: { memory: Memory }) {
                             })}
                         </Text>
                     </View>
-                    
+
                     <ThemedText style={styles.description}>
                         {memory.description}
                     </ThemedText>
-                    
+
                     <View style={styles.locationContainer}>
                         <Ionicons name="location-outline" size={14} color="#6b7280" />
                         <Text style={styles.location}>
@@ -87,14 +89,14 @@ export function MemoryCard({ memory }: { memory: Memory }) {
             </View>
 
             <View style={styles.actions}>
-                <TouchableOpacity 
-                    style={[styles.playButton, isPlaying && styles.playingButton]} 
+                <TouchableOpacity
+                    style={[styles.playButton, isPlaying && styles.playingButton]}
                     onPress={play}
                 >
-                    <Ionicons 
-                        name={isPlaying ? 'pause' : 'play'} 
-                        size={16} 
-                        color={isPlaying ? '#ffffff' : '#22c55e'} 
+                    <Ionicons
+                        name={isPlaying ? 'pause' : 'play'}
+                        size={16}
+                        color={isPlaying ? '#ffffff' : '#22c55e'}
                     />
                     <Text style={[styles.playButtonText, isPlaying && styles.playingButtonText]}>
                         {isPlaying ? 'Pause' : 'Play'}

@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAudioRecorder } from 'expo-audio';
+import { useAudioPlayer, useAudioRecorder } from 'expo-audio';
+import React, { useRef, useState } from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 type VoicePinPreviewProps = {
   message: string;
@@ -16,15 +16,19 @@ export default function VoicePinPreview({ message, isOwn = false, recorder }: Vo
   const [description, setDescription] = useState('');
 
   const intervalRef = useRef<any>(null);
-
-  useEffect(() => {
-    const play = async () => {
-      await recorder.release();
+    const player = useAudioPlayer(recorder.uri);
+    // console.log(
+    //   player
+    // )
+    const play = () => {
+        if (isPlaying) {
+            player.pause();
+            setIsPlaying(false);
+        } else {
+            player.play();
+            setIsPlaying(true);
+        }
     };
-
-    play();
-  }, []);
-
 
   const formatMillis = (millis: number) => {
     const seconds = Math.floor(millis / 1000);
@@ -42,13 +46,13 @@ export default function VoicePinPreview({ message, isOwn = false, recorder }: Vo
 
         {/* Audio controls */}
         <View style={styles.audioControls}>
-          <TouchableOpacity onPress={togglePlay}>
+          <TouchableOpacity onPress={play}>
             <Ionicons name={isPlaying ? 'pause' : 'play'} size={24} color="#8b5cf6" />
           </TouchableOpacity>
           <View style={styles.progressBar}>
             <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
           </View>
-          <Text style={styles.duration}>{formatMillis(duration)}</Text>
+          <Text style={styles.duration}>{formatMillis(player.duration)}</Text>
         </View>
 
         {/* Description input */}

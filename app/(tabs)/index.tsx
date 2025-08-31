@@ -1,15 +1,15 @@
 import VoiceButton from '@/components/VoiceButton';
+import VoiceMarker from '@/components/VoiceMarker';
 
+import VoicePinPreview from '@/components/VoicePinPreview';
 import { authApis, endpoints } from '@/configs/Apis';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AudioModule, RecordingPresets, setAudioModeAsync, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
 import * as Location from 'expo-location';
 import React, { useEffect, useState } from 'react';
-import { Alert, Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import VoicePinPreview from '@/components/VoicePinPreview';
-import { Modal } from 'react-native';
 
 
 const { width, height } = Dimensions.get('window');
@@ -36,6 +36,7 @@ export default function HomeScreen() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('personal');
   const [voicePin, setVoicePin] = useState<VoicePin[]>();
   const [showPreview, setShowPreview] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [pulseAnim] = useState(new Animated.Value(1));
   const [scaleAnim] = useState(new Animated.Value(1));
@@ -62,6 +63,31 @@ export default function HomeScreen() {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [isRecording, setIsRecording] = useState(false);
   const recorderState = useAudioRecorderState(recorder);
+
+  // GET VoicePin
+  const loadVoicePin = async () => {
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        throw new Error('No token found');
+      }
+
+      const res = await authApis(token).get(endpoints['voice'])
+
+      const data = res.data;
+      console.log(data.voicePin)
+      setVoicePin(data.voicePin);
+    } catch (ex: any) {
+      console.log('Error loading Memory:', ex);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadVoicePin();
+  }, []);
 
 
   useEffect(() => {
@@ -168,23 +194,23 @@ export default function HomeScreen() {
     </View>
   );
 
-  const VoicePinMarker = ({ pin }: { pin: VoicePin }) => (
-    <Marker
-      coordinate={{
-        latitude: pin.latitude,
-        longitude: pin.longitude,
-      }}
-    // title={pin.title}
-    >
-      <View style={styles.markerContainer}>
-        <View style={styles.markerBackground}>
-          <Text style={styles.markerEmoji}>{pin.emotion}</Text>
-        </View>
-        <View style={styles.markerPulse} />
-        <View style={styles.markerGlow} />
-      </View>
-    </Marker>
-  );
+  // const VoicePinMarker = ({ pin }: { pin: VoicePin }) => (
+  //   <Marker
+  //     coordinate={{
+  //       latitude: pin.latitude,
+  //       longitude: pin.longitude,
+  //     }}
+  //   // title={pin.title}
+  //   >
+  //     <View style={styles.markerContainer}>
+  //       <View style={styles.markerBackground}>
+  //         <Text style={styles.markerEmoji}>{pin.emotion}</Text>
+  //       </View>
+  //       <View style={styles.markerPulse} />
+  //       <View style={styles.markerGlow} />
+  //     </View>
+  //   </Marker>
+  // );
 
   const QuickActions = () => (
     <View style={styles.quickActionsBento}>
@@ -257,6 +283,13 @@ export default function HomeScreen() {
           {/* {getFilteredPins().map((pin) => (
             <VoicePinMarker key={pin.id} pin={pin} />
           ))} */}
+          {voicePin?.map((item) => (
+            <VoiceMarker
+              latitude={item.latitude}
+              longitude={item.longitude}
+              title={item.description} // hoặc item.title nếu bạn sửa lại key
+            />
+          ))}
         </MapView>
       ) : (
         <View style={styles.loadingContainer}>
@@ -273,12 +306,18 @@ export default function HomeScreen() {
         visible={showPreview}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowPreview(false)
-        }
+        onRequestClose={() => setShowPreview(false)}
       >
-        <VoicePinPreview message="Chào các mày, tao la nguyen kieu phuoc hehehehehehecoasdjoasjdoasjdoasjd" isOwn={false} recorder={recorder} />
-
+        <View style={{
+          flex: 1,
+          justifyContent: 'flex-end', // Đẩy nội dung xuống cuối màn hình
+          backgroundColor: 'rgba(0, 0, 0, 0.3)', // Làm nền mờ
+          padding: 16
+        }}>
+          <VoicePinPreview message="Chào các mày, tao" isOwn={false} recorder={recorder} />
+        </View>
       </Modal>
+
 
 
       {/* <View style={{
@@ -373,43 +412,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '600',
   },
-  markerContainer: {
-    alignItems: 'center',
-  },
-  markerBackground: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#8b5cf6',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 2,
-    borderColor: '#8b5cf6',
-  },
-  markerEmoji: {
-    fontSize: 20,
-  },
-  markerPulse: {
-    position: 'absolute',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(139, 92, 246, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.4)',
-  },
-  markerGlow: {
-    position: 'absolute',
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
-  },
+
   currentLocationMarker: {
     alignItems: 'center',
   },
