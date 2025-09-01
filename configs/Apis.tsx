@@ -5,6 +5,8 @@ const BASE_URL = "http://192.168.1.68:5000/";
 export const endpoints = {
   voice: "/voice/",
   createVoicePin: "/voice/",
+  voicePublic: "/voice/public/",
+  voiceFriends: "/voice/friends/",
   login: "/auth/login/",
   review: (event_id: string | number): string => `/event/${event_id}/reviews/`,
 };

@@ -96,7 +96,7 @@ export function MemoryCard({ memory }: { memory: Memory }) {
                     <Ionicons
                         name={isPlaying ? 'pause' : 'play'}
                         size={16}
-                        color={isPlaying ? '#ffffff' : '#22c55e'}
+                        color={isPlaying ? '#ffffff' : '#8b5cf6'}
                     />
                     <Text style={[styles.playButtonText, isPlaying && styles.playingButtonText]}>
                         {isPlaying ? 'Pause' : 'Play'}
@@ -142,11 +142,11 @@ const styles = StyleSheet.create({
         width: 56,
         height: 56,
         borderRadius: 28,
-        backgroundColor: '#f0fdf4',
+        backgroundColor: '#faf5ff',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
-        borderColor: '#22c55e',
+        borderColor: '#8b5cf6',
     },
     emotionText: {
         fontSize: 24,
@@ -161,8 +161,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     duration: {
-        backgroundColor: '#d1fbe3',
-        color: '#1A936F',
+        backgroundColor: '#f3e8ff',
+        color: '#7c3aed',
         borderRadius: 12,
         paddingHorizontal: 8,
         paddingVertical: 2,
@@ -205,16 +205,16 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 20,
-        backgroundColor: '#f0fdf4',
+        backgroundColor: '#faf5ff',
         borderWidth: 1,
-        borderColor: '#22c55e',
+        borderColor: '#8b5cf6',
     },
     playingButton: {
-        backgroundColor: '#22c55e',
+        backgroundColor: '#8b5cf6',
     },
     playButtonText: {
         fontSize: 12,
-        color: '#22c55e',
+        color: '#8b5cf6',
         fontWeight: '600',
     },
     playingButtonText: {

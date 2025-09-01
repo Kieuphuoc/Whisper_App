@@ -1,34 +1,35 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useAudioPlayer, useAudioRecorder } from 'expo-audio';
 import React, { useRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 type VoicePinPreviewProps = {
   message: string;
   isOwn?: boolean;
   recorder: ReturnType<typeof useAudioRecorder>;
-};
+  onPress: () => void;
+  onClose?: () => void;
+}
 
-export default function VoicePinPreview({ message, isOwn = false, recorder }: VoicePinPreviewProps) {
+export default function VoicePinPreview({ message, isOwn = false, recorder, onPress, onClose }: VoicePinPreviewProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState<number>(0);
   const [position, setPosition] = useState<number>(0);
   const [description, setDescription] = useState('');
+  const [isPosting, setIsPosting] = useState(false);
 
   const intervalRef = useRef<any>(null);
-    const player = useAudioPlayer(recorder.uri);
-    // console.log(
-    //   player
-    // )
-    const play = () => {
-        if (isPlaying) {
-            player.pause();
-            setIsPlaying(false);
-        } else {
-            player.play();
-            setIsPlaying(true);
-        }
-    };
+  const player = useAudioPlayer(recorder.uri);
+
+  const play = () => {
+    if (isPlaying) {
+      player.pause();
+      setIsPlaying(false);
+    } else {
+      player.play();
+      setIsPlaying(true);
+    }
+  };
 
   const formatMillis = (millis: number) => {
     const seconds = Math.floor(millis / 1000);
@@ -39,32 +40,90 @@ export default function VoicePinPreview({ message, isOwn = false, recorder }: Vo
 
   const progressPercent = duration > 0 ? (position / duration) * 100 : 0;
 
-  return (
-    <View style={[styles.container, isOwn ? styles.ownContainer : styles.otherContainer]}>
-      <View style={[styles.bubble, isOwn ? styles.ownBubble : styles.otherBubble]}>
-        <Text style={[styles.text, isOwn ? styles.ownText : styles.otherText]}>{message}</Text>
+  const handlePost = async () => {
+    if (!description.trim()) {
+      Alert.alert('Lỗi', 'Vui lòng nhập mô tả cho voice pin');
+      return;
+    }
+    
+    setIsPosting(true);
+    try {
+      await onPress();
+      onClose?.();
+    } catch (error) {
+      Alert.alert('Lỗi', 'Không thể đăng voice pin');
+    } finally {
+      setIsPosting(false);
+    }
+  };
 
-        {/* Audio controls */}
-        <View style={styles.audioControls}>
-          <TouchableOpacity onPress={play}>
-            <Ionicons name={isPlaying ? 'pause' : 'play'} size={24} color="#8b5cf6" />
-          </TouchableOpacity>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Preview Voice Pin</Text>
+        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <Ionicons name="close" size={24} color="#6b7280" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.content}>
+        {/* Audio Preview */}
+        <View style={styles.audioSection}>
+          <View style={styles.audioControls}>
+            <TouchableOpacity onPress={play} style={styles.playButton}>
+              <Ionicons 
+                name={isPlaying ? 'pause' : 'play'} 
+                size={24} 
+                color="#8b5cf6" 
+              />
+            </TouchableOpacity>
+            <View style={styles.audioInfo}>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+              </View>
+              <Text style={styles.duration}>{formatMillis(player.duration)}</Text>
+            </View>
           </View>
-          <Text style={styles.duration}>{formatMillis(player.duration)}</Text>
         </View>
 
-        {/* Description input */}
-        <TextInput
-          style={styles.input}
-          placeholder="Nhập mô tả..."
-          value={description}
-          onChangeText={setDescription}
-        />
+        {/* Description Input */}
+        
+        <View style={styles.inputSection}>
+          <Text style={styles.inputLabel}>Mô tả</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Nhập mô tả cho voice pin của bạn..."
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            numberOfLines={3}
+            maxLength={200}
+          />
+          <Text style={styles.charCount}>{description.length}/200</Text>
+        </View>
 
-        {/* Tail */}
-        <View style={[styles.tail, isOwn ? styles.ownTail : styles.otherTail]} />
+        {/* Action Buttons */}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity 
+            style={styles.cancelButton} 
+            onPress={onClose}
+            disabled={isPosting}
+          >
+            <Text style={styles.cancelButtonText}>Hủy</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.postButton, isPosting && styles.postButtonDisabled]} 
+            onPress={handlePost}
+            disabled={isPosting}
+          >
+            {isPosting ? (
+              <Text style={styles.postButtonText}>Đang đăng...</Text>
+            ) : (
+              <Text style={styles.postButtonText}>Đăng Voice Pin</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -72,89 +131,146 @@ export default function VoicePinPreview({ message, isOwn = false, recorder }: Vo
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    margin: 16,
+    maxWidth: 400,
+    width: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  header: {
     flexDirection: 'row',
-    marginVertical: 4,
-    paddingHorizontal: 10,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
   },
-  ownContainer: {
-    justifyContent: 'flex-end',
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
   },
-  otherContainer: {
-    justifyContent: 'flex-start',
-  },
-  bubble: {
-    maxWidth: '85%',
-    padding: 12,
+  closeButton: {
+    width: 32,
+    height: 32,
     borderRadius: 16,
-    position: 'relative',
-    backgroundColor: 'white',
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  ownBubble: {
-    borderTopRightRadius: 0,
+  content: {
+    padding: 20,
   },
-  otherBubble: {
-    borderTopLeftRadius: 0,
-  },
-  text: {
-    fontSize: 16,
-    marginBottom: 8,
-  },
-  ownText: {
-    color: '#111827',
-  },
-  otherText: {
-    color: '#111827',
+  audioSection: {
+    marginBottom: 24,
   },
   audioControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    padding: 16,
+  },
+  playButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#8b5cf6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  audioInfo: {
+    flex: 1,
+    marginLeft: 16,
   },
   progressBar: {
-    flex: 1,
     height: 6,
     backgroundColor: '#e5e7eb',
-    borderRadius: 4,
+    borderRadius: 3,
     overflow: 'hidden',
+    marginBottom: 8,
   },
   progressFill: {
     height: '100%',
     backgroundColor: '#8b5cf6',
   },
   duration: {
-    width: 40,
-    textAlign: 'right',
     fontSize: 12,
     color: '#6b7280',
+    fontWeight: '500',
+  },
+  inputSection: {
+    marginBottom: 24,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
   },
   input: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    fontSize: 14,
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
     color: '#111827',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    textAlignVertical: 'top',
   },
-  tail: {
-    position: 'absolute',
-    bottom: 0,
-    width: 0,
-    height: 0,
-    borderStyle: 'solid',
+  charCount: {
+    fontSize: 12,
+    color: '#9ca3af',
+    textAlign: 'right',
+    marginTop: 4,
   },
-  ownTail: {
-    right: -6,
-    borderTopWidth: 10,
-    borderLeftWidth: 12,
-    borderTopColor: 'transparent',
-    borderLeftColor: 'white',
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
   },
-  otherTail: {
-    left: -6,
-    borderTopWidth: 10,
-    borderRightWidth: 12,
-    borderTopColor: 'transparent',
-    borderRightColor: 'white',
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  postButton: {
+    flex: 2,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: '#8b5cf6',
+    alignItems: 'center',
+    shadowColor: '#8b5cf6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  postButtonDisabled: {
+    backgroundColor: '#c4b5fd',
+  },
+  postButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });

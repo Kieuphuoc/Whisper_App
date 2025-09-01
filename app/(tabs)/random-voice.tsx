@@ -186,7 +186,7 @@ export default function RandomVoiceScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0fdf4',
+    backgroundColor: '#f8fafc',
   },
   mapContainer: {
     position: 'absolute',
@@ -252,10 +252,10 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#22c55e',
+    backgroundColor: '#8b5cf6',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#22c55e',
+    shadowColor: '#8b5cf6',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 16,

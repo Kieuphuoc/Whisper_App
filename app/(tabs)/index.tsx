@@ -1,16 +1,18 @@
+import VisibilityFilter from '@/components/VisibilityFilter';
 import VoiceButton from '@/components/VoiceButton';
-import VoiceMarker from '@/components/VoiceMarker';
-
+import VoicePinCard from '@/components/VoicePinCard';
+import VoicePinCluster from '@/components/VoicePinCluster';
 import VoicePinPreview from '@/components/VoicePinPreview';
-import { authApis, endpoints } from '@/configs/Apis';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AudioModule, RecordingPresets, setAudioModeAsync, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
 import * as Location from 'expo-location';
-import React, { useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-
+import Apis, { authApis, endpoints } from '../../configs/Apis';
+import { clusterVoicePins } from '../../utils/clustering';
 
 const { width, height } = Dimensions.get('window');
 
@@ -18,33 +20,41 @@ type VoicePin = {
   id: string;
   latitude: number;
   longitude: number;
-  emotion: string;        // ví dụ: "happy", "sad", "angry"
-  description: string;    // mô tả ngắn (trước là "title")
-  duration: number;       // thời lượng (giây), kiểu number chuẩn hơn
-  visibility: 'PUBLIC' | 'PRIVATE' | 'FRIENDS'; // dùng enum thay vì 3 boolean
-  audioUrl: string;       // URL đến file âm thanh
-  imageUrl?: string;      // ảnh thumbnail nếu có
-  address?: string;       // địa chỉ có thể reverse từ lat/lng
-  createdAt: string;      // timestamp ISO
+  emotion: string;
+  description: string;
+  duration: number;
+  visibility: 'PUBLIC' | 'PRIVATE' | 'FRIENDS';
+  audioUrl: string;
+  imageUrl?: string;
+  address?: string;
+  createdAt: string;
+  user?: {
+    name: string;
+    avatar?: string;
+  };
+  likes?: number;
+  replies?: number;
 };
 
 
-type FilterType = 'public' | 'friends' | 'personal';
-
 export default function HomeScreen() {
+  const router = useRouter();
+  const mapRef = useRef<MapView>(null);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
-  const [activeFilter, setActiveFilter] = useState<FilterType>('personal');
   const [voicePin, setVoicePin] = useState<VoicePin[]>();
+  const [voicePinClusters, setVoicePinClusters] = useState<any[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedVoicePin, setSelectedVoicePin] = useState<VoicePin | null>(null);
+  const [showVoicePinCard, setShowVoicePinCard] = useState(false);
+  const [focusedMarkerId, setFocusedMarkerId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<'personal' | 'friends' | 'public'>('public');
 
   const [pulseAnim] = useState(new Animated.Value(1));
   const [scaleAnim] = useState(new Animated.Value(1));
 
-
   useEffect(() => {
     async function getCurrentLocation() {
-
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission to access location was denied');
@@ -52,7 +62,6 @@ export default function HomeScreen() {
       }
 
       let location = await Location.getCurrentPositionAsync({});
-
       setLocation(location);
     }
 
@@ -74,10 +83,11 @@ export default function HomeScreen() {
       }
 
       const res = await authApis(token).get(endpoints['voice'])
-
       const data = res.data;
-      console.log(data.voicePin)
-      setVoicePin(data.voicePin);
+      console.log(data.data)
+      setVoicePin(data.data);
+      const clusters = clusterVoicePins(data.data || [], 50);
+      setVoicePinClusters(clusters);
     } catch (ex: any) {
       console.log('Error loading Memory:', ex);
     } finally {
@@ -85,10 +95,50 @@ export default function HomeScreen() {
     }
   };
 
-  useEffect(() => {
-    loadVoicePin();
-  }, []);
+    // GET VoicePin
+  const loadPublicVoicePin = async () => {
+    try {
+      setLoading(true);
+      const res = await Apis.get(endpoints['voicePublic'])
+      const data = res.data;
+      console.log(data.data)
+      setVoicePin(data.data);
+      const clusters = clusterVoicePins(data.data || [], 50);
+      setVoicePinClusters(clusters);
+    } catch (ex: any) {
+      console.log('Error loading Memory:', ex);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // GET Friends VoicePin
+  const loadFriendsVoicePin = async () => {
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        throw new Error('No token found');
+      }
+
+      const res = await authApis(token).get(endpoints['voiceFriends'])
+      const data = res.data;
+      console.log(data.data)
+      setVoicePin(data.data);
+      const clusters = clusterVoicePins(data.data || [], 50);
+      setVoicePinClusters(clusters);
+    } catch (ex: any) {
+      console.log('Error loading Friends Memory:', ex);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  // useEffect(() => {
+  //   loadVoicePin();
+  //   loadPublicVoicePin();
+  // }, []);
 
   useEffect(() => {
     (async () => {
@@ -113,10 +163,8 @@ export default function HomeScreen() {
   const stop = async () => {
     await recorder.stop();
     console.log('Record Done!', recorder.uri);
-
     setIsRecording(false)
     setShowPreview(true)
-    // createVoicePin()
   };
 
   const createVoicePin = async () => {
@@ -127,16 +175,14 @@ export default function HomeScreen() {
       }
 
       const formData = new FormData();
-
-      // formData.append('description', voicePin.description);
-      formData.append('latitude', location?.coords?.latitude);
-      formData.append('longitude', location?.coords?.longitude);
+      formData.append('latitude', location?.coords?.latitude?.toString() || '0');
+      formData.append('longitude', location?.coords?.longitude?.toString() || '0');
       formData.append('visibility', "PUBLIC");
       formData.append('file', {
-        uri: recorder.uri,             // local uri
-        name: 'audio.m4a',             // tên file
-        type: 'audio/x-m4a',           // MIME type
-      });
+        uri: recorder.uri || '',
+        name: 'audio.m4a',
+        type: 'audio/x-m4a',
+      } as any);
 
       const res = await authApis(token).post(endpoints['createVoicePin'], formData, {
         headers: {
@@ -145,116 +191,55 @@ export default function HomeScreen() {
       });
 
       console.log('Upload thành công:', res.data);
+      // Refresh data based on current filter
+      filterVisibility();
     } catch (err) {
       console.error('Lỗi upload:', err);
+      throw err;
     }
   };
 
+  const handleMarkerPress = (voicePin: VoicePin) => {
+    setSelectedVoicePin(voicePin);
+    setFocusedMarkerId(voicePin.id);
+    setShowVoicePinCard(true);
 
+    if (mapRef.current) {
+      mapRef.current.animateToRegion({
+        latitude: voicePin.latitude,
+        longitude: voicePin.longitude,
+        latitudeDelta: 0.005,
+        longitudeDelta: 0.005,
+      }, 500);
+    }
+  };
 
+  const handleVoicePinCardClose = () => {
+    setShowVoicePinCard(false);
+    setSelectedVoicePin(null);
+    setFocusedMarkerId(null);
+  };
 
+  const handleViewDetail = () => {
+    if (selectedVoicePin) {
+      router.push({
+        pathname: '/voice-detail',
+        params: { voicePinId: selectedVoicePin.id }
+      });
+    }
+  };
 
-
-  // const getFilteredPins = () => {
-  //   return voicePin.filter(pin => {
-  //     switch (activeFilter) {
-  //       case 'public':
-  //         return pin.isPublic;
-  //       case 'friends':
-  //         return pin.isFriend;
-  //       case 'personal':
-  //         return pin.isPersonal;
-  //       default:
-  //         return true;
-  //     }
-  //   });
-  // };
-
-  const FilterToggle = () => (
-    <View style={styles.filterContainer}>
-      <View style={styles.filterBento}>
-        {(['personal', 'friends', 'public'] as FilterType[]).map((filter) => (
-          <TouchableOpacity
-            key={filter}
-            style={[
-              styles.filterButton,
-              activeFilter === filter && styles.activeFilterButton
-            ]}
-            onPress={() => setActiveFilter(filter)}
-          >
-            <Text style={[
-              styles.filterText,
-              activeFilter === filter && styles.activeFilterText
-            ]}>
-              {filter.charAt(0).toUpperCase() + filter.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
-
-  // const VoicePinMarker = ({ pin }: { pin: VoicePin }) => (
-  //   <Marker
-  //     coordinate={{
-  //       latitude: pin.latitude,
-  //       longitude: pin.longitude,
-  //     }}
-  //   // title={pin.title}
-  //   >
-  //     <View style={styles.markerContainer}>
-  //       <View style={styles.markerBackground}>
-  //         <Text style={styles.markerEmoji}>{pin.emotion}</Text>
-  //       </View>
-  //       <View style={styles.markerPulse} />
-  //       <View style={styles.markerGlow} />
-  //     </View>
-  //   </Marker>
-  // );
-
-  const QuickActions = () => (
-    <View style={styles.quickActionsBento}>
-      <TouchableOpacity style={styles.quickActionButton}>
-        <View style={styles.quickActionIcon}>
-          <Ionicons name="compass" size={20} color="#8b5cf6" />
-        </View>
-        <Text style={styles.quickActionText}>Explore</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.quickActionButton}>
-        <View style={styles.quickActionIcon}>
-          <Ionicons name="people" size={20} color="#8b5cf6" />
-        </View>
-        <Text style={styles.quickActionText}>Friends</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.quickActionButton}>
-        <View style={styles.quickActionIcon}>
-          <Ionicons name="trending-up" size={20} color="#8b5cf6" />
-        </View>
-        <Text style={styles.quickActionText}>Trending</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  // const StatsBento = () => (
-  //   <View style={styles.statsBento}>
-  //     <View style={styles.statItem}>
-  //       <Text style={styles.statNumber}>{voicePins.length}</Text>
-  //       <Text style={styles.statLabel}>Voices</Text>
-  //     </View>
-  //     <View style={styles.statDivider} />
-  //     <View style={styles.statItem}>
-  //       <Text style={styles.statNumber}>1.2km</Text>
-  //       <Text style={styles.statLabel}>Radius</Text>
-  //     </View>
-  //   </View>
-  // );
+  // FilterVisibility
+  const filterVisibility = () => {
+    if (activeFilter == 'personal') loadVoicePin();
+    else if (activeFilter == 'public') loadPublicVoicePin();
+  }
 
   return (
     <View style={styles.container}>
       {location ? (
         <MapView
+          ref={mapRef}
           mapType='standard'
           style={styles.map}
           initialRegion={{
@@ -264,7 +249,6 @@ export default function HomeScreen() {
             longitudeDelta: 0.01,
           }}
         >
-          {/* Current location marker */}
           <Marker
             coordinate={{
               latitude: location.coords.latitude,
@@ -279,16 +263,21 @@ export default function HomeScreen() {
             </View>
           </Marker>
 
-          {/* Voice pins */}
-          {/* {getFilteredPins().map((pin) => (
-            <VoicePinMarker key={pin.id} pin={pin} />
-          ))} */}
-          {voicePin?.map((item) => (
-            <VoiceMarker
-              latitude={item.latitude}
-              longitude={item.longitude}
-              title={item.description} // hoặc item.title nếu bạn sửa lại key
-            />
+          {voicePinClusters.map((cluster, index) => (
+            <Marker
+              key={`cluster-${index}`}
+              coordinate={{
+                latitude: cluster.latitude,
+                longitude: cluster.longitude,
+              }}
+            >
+              <VoicePinCluster
+                voicePins={cluster.voicePins}
+                latitude={cluster.latitude}
+                longitude={cluster.longitude}
+                onPress={handleMarkerPress}
+              />
+            </Marker>
           ))}
         </MapView>
       ) : (
@@ -297,42 +286,46 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* Filter toggle */}
-      <FilterToggle />
+      {/* <FilterToggle /> */}
 
-      {/* Quick Actions */}
-      {/* <QuickActions /> */}
+      <VisibilityFilter activeFilter={activeFilter} setActiveFilter={setActiveFilter} onPress={filterVisibility}/>
+
+
       <Modal
-        visible={showPreview}
+        visible={showVoicePinCard}
         transparent
-        animationType="fade"
-        onRequestClose={() => setShowPreview(false)}
+        animationType="slide"
+        onRequestClose={handleVoicePinCardClose}
       >
-        <View style={{
-          flex: 1,
-          justifyContent: 'flex-end', // Đẩy nội dung xuống cuối màn hình
-          backgroundColor: 'rgba(0, 0, 0, 0.3)', // Làm nền mờ
-          padding: 16
-        }}>
-          <VoicePinPreview message="Chào các mày, tao" isOwn={false} recorder={recorder} />
+        <View style={styles.voicePinCardModal}>
+          <View style={styles.voicePinCardOverlay} />
+          {selectedVoicePin && (
+            <VoicePinCard
+              voicePin={selectedVoicePin}
+              onPress={handleViewDetail}
+              onClose={handleVoicePinCardClose}
+            />
+          )}
         </View>
       </Modal>
 
+      <Modal
+        visible={showPreview}
+        transparent
+ animationType="slide"
+      onRequestClose={() => setShowPreview(false)}
+      >
+        <View style={styles.previewModal}>
+          <VoicePinPreview
+            message="Chào các mày, tao"
+            isOwn={false}
+            recorder={recorder}
+            onPress={createVoicePin}
+            onClose={() => setShowPreview(false)}
+          />
+        </View>
+      </Modal>
 
-
-      {/* <View style={{
-        position: 'absolute',
-        bottom: '20%',
-        left: '20%'
-      }}>
-        <VoicePinPreview message="Chào các mày, tao la nguyen kieu phuoc hehehehehehecoasdjoasjdoasjdoasjd" isOwn={false} />
-      </View> */}
-
-
-      {/* Stats Bento */}
-      {/* <StatsBento /> */}
-
-      {/* Voice recording button */}
       <Animated.View style={[
         styles.voiceButtonContainer,
         { transform: [{ scale: pulseAnim }] }
@@ -340,7 +333,6 @@ export default function HomeScreen() {
         <VoiceButton isRecording={isRecording} onPress={isRecording ? stop : record} />
       </Animated.View>
 
-      {/* Random voice button */}
       <TouchableOpacity style={styles.randomVoiceButton}>
         <Ionicons name="shuffle" size={24} color="white" />
       </TouchableOpacity>
@@ -351,7 +343,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#e8f5e8', // Light green background like Mercedes app
   },
   map: {
     width: '100%',
@@ -361,11 +353,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#e8f5e8',
   },
   loadingText: {
     fontSize: 16,
-    color: '#6b7280',
+    color: '#374151',
     fontWeight: '500',
   },
   filterContainer: {
@@ -377,16 +369,16 @@ const styles = StyleSheet.create({
   },
   filterBento: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: 'white',
     borderRadius: 20,
     padding: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.25,
     shadowRadius: 16,
     elevation: 8,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.1)',
+    borderColor: 'rgba(139, 92, 246, 0.2)',
   },
   filterButton: {
     flex: 1,
@@ -406,13 +398,252 @@ const styles = StyleSheet.create({
   filterText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6b7280',
+    color: '#94a3b8',
   },
   activeFilterText: {
     color: '#ffffff',
     fontWeight: '600',
   },
-
+  userProfileCard: {
+    position: 'absolute',
+    top: 140,
+    left: 16,
+    right: 16,
+    backgroundColor: '#1f2937',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+    zIndex: 1,
+  },
+  userProfileHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  userPoints: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#374151',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginRight: 12,
+  },
+  pointsText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  userProfileInfo: {
+    flex: 1,
+  },
+  userName: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  userCardNumber: {
+    color: '#9ca3af',
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  userMemberSince: {
+    color: '#9ca3af',
+    fontSize: 12,
+  },
+  brandLogo: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#374151',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardType: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#374151',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  cardTypeText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  newsCard: {
+    position: 'absolute',
+    top: 320,
+    left: 16,
+    right: 16,
+    backgroundColor: '#f9fafb',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+    zIndex: 1,
+  },
+  newsHeader: {
+    marginBottom: 12,
+  },
+  newsTag: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  newsTagText: {
+    color: '#374151',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  newsContent: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  newsText: {
+    flex: 1,
+    color: '#374151',
+    fontSize: 14,
+    lineHeight: 20,
+    marginRight: 12,
+  },
+  newsImage: {
+    width: 80,
+    height: 60,
+  },
+  placeholderImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 12,
+  },
+  newsFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  newsIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  newsIconText: {
+    color: '#374151',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  electromobilityButton: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  electromobilityText: {
+    color: '#374151',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  serviceCardsContainer: {
+    position: 'absolute',
+    top: 480,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    gap: 12,
+    zIndex: 1,
+  },
+  serviceCard: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+    borderRadius: 20,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  serviceCardContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 80,
+  },
+  serviceCardText: {
+    color: '#374151',
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 8,
+  },
+  serviceCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  serviceIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#e5e7eb',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  serviceTitle: {
+    color: '#374151',
+    fontSize: 12,
+    fontWeight: '500',
+    flex: 1,
+  },
+  serviceDate: {
+    color: '#374151',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  serviceDescription: {
+    color: '#6b7280',
+    fontSize: 12,
+  },
+  bottomNavigation: {
+    position: 'absolute',
+    bottom: 90,
+    left: 16,
+    right: 16,
+    backgroundColor: '#1f2937',
+    borderRadius: 20,
+    flexDirection: 'row',
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+    zIndex: 1,
+  },
+  navItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 4,
+  },
   currentLocationMarker: {
     alignItems: 'center',
   },
@@ -463,74 +694,23 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
   },
-  quickActionsBento: {
+  voicePinCardModal: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  voicePinCardOverlay: {
     position: 'absolute',
-    top: 140,
-    left: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 20,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.1)',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  quickActionButton: {
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginVertical: 4,
-  },
-  quickActionIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+  previewModal: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4,
-  },
-  quickActionText: {
-    fontSize: 10,
-    color: '#6b7280',
-    fontWeight: '500',
-  },
-  statsBento: {
-    position: 'absolute',
-    top: 140,
-    right: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.1)',
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#8b5cf6',
-    marginBottom: 2,
-  },
-  statLabel: {
-    fontSize: 10,
-    color: '#6b7280',
-    fontWeight: '500',
-  },
-  statDivider: {
-    width: 1,
-    height: 20,
-    backgroundColor: 'rgba(139, 92, 246, 0.2)',
-    marginVertical: 8,
   },
 });

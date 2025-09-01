@@ -1,14 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useAudioPlayer } from 'expo-audio';
 import { Image } from 'expo-image';
-import React, { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
-    Dimensions,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -30,19 +33,42 @@ type VoiceDetail = {
     latitude: number;
     longitude: number;
   };
+  user?: {
+    name: string;
+    avatar?: string;
+  };
+};
+
+type Comment = {
+  id: string;
+  text: string;
+  createdAt: string;
+  user: {
+    name: string;
+    avatar?: string;
+  };
+  likes: number;
+  replies: number;
 };
 
 type Reaction = '❤️' | '👍' | '😊' | '🎵' | '💭';
 
 export default function VoiceDetailScreen() {
+  const router = useRouter();
+  const { voicePinId } = useLocalSearchParams<{ voicePinId: string }>();
+  
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [totalDuration, setTotalDuration] = useState(0);
   const [userReaction, setUserReaction] = useState<Reaction | null>(null);
   const [showReactions, setShowReactions] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [showCommentInput, setShowCommentInput] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
 
+  // Mock data - trong thực tế sẽ fetch từ API
   const mockVoiceDetail: VoiceDetail = {
-    id: '1',
+    id: voicePinId || '1',
     emotion: '😊',
     duration: '1:23',
     createdAt: '2024-01-15T10:30:00Z',
@@ -58,7 +84,39 @@ export default function VoiceDetailScreen() {
       latitude: 40.7829,
       longitude: -73.9654,
     },
+    user: {
+      name: 'John Doe',
+      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
+    },
   };
+
+  const mockComments: Comment[] = [
+    {
+      id: '1',
+      text: 'Love the energy in this voice! 🎵',
+      createdAt: '2024-01-15T11:00:00Z',
+      user: {
+        name: 'Sarah Wilson',
+        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
+      },
+      likes: 5,
+      replies: 1,
+    },
+    {
+      id: '2',
+      text: 'Central Park is beautiful this time of year!',
+      createdAt: '2024-01-15T11:30:00Z',
+      user: {
+        name: 'Mike Johnson',
+      },
+      likes: 3,
+      replies: 0,
+    },
+  ];
+
+  useEffect(() => {
+    setComments(mockComments);
+  }, []);
 
   const player = useAudioPlayer(mockVoiceDetail.audioUrl);
 
@@ -85,6 +143,29 @@ export default function VoiceDetailScreen() {
     setShowReactions(false);
   };
 
+  const handleComment = () => {
+    if (!commentText.trim()) {
+      Alert.alert('Lỗi', 'Vui lòng nhập nội dung comment');
+      return;
+    }
+
+    const newComment: Comment = {
+      id: Date.now().toString(),
+      text: commentText,
+      createdAt: new Date().toISOString(),
+      user: {
+        name: 'You',
+        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
+      },
+      likes: 0,
+      replies: 0,
+    };
+
+    setComments([newComment, ...comments]);
+    setCommentText('');
+    setShowCommentInput(false);
+  };
+
   const WaveformVisualizer = () => (
     <View style={styles.waveformContainer}>
       <View style={styles.waveform}>
@@ -95,7 +176,7 @@ export default function VoiceDetailScreen() {
               styles.waveformBar,
               {
                 height: Math.random() * 40 + 10,
-                backgroundColor: isPlaying ? '#22c55e' : '#e5e7eb',
+                backgroundColor: isPlaying ? '#8b5cf6' : '#e5e7eb',
               },
             ]}
           />
@@ -136,17 +217,78 @@ export default function VoiceDetailScreen() {
     </View>
   );
 
+  const CommentItem = ({ comment }: { comment: Comment }) => (
+    <View style={styles.commentItem}>
+      <View style={styles.commentHeader}>
+        <View style={styles.commentUser}>
+          {comment.user.avatar ? (
+            <Image source={{ uri: comment.user.avatar }} style={styles.commentAvatar} />
+          ) : (
+            <View style={styles.defaultCommentAvatar}>
+              <Ionicons name="person" size={16} color="#8b5cf6" />
+            </View>
+          )}
+          <Text style={styles.commentUserName}>{comment.user.name}</Text>
+        </View>
+        <Text style={styles.commentTime}>
+          {new Date(comment.createdAt).toLocaleDateString('vi-VN', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </Text>
+      </View>
+      <Text style={styles.commentText}>{comment.text}</Text>
+      <View style={styles.commentActions}>
+        <TouchableOpacity style={styles.commentAction}>
+          <Ionicons name="heart-outline" size={14} color="#6b7280" />
+          <Text style={styles.commentActionText}>{comment.likes}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.commentAction}>
+          <Ionicons name="chatbubble-outline" size={14} color="#6b7280" />
+          <Text style={styles.commentActionText}>Reply</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#374151" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Voice Detail</Text>
         <TouchableOpacity style={styles.moreButton}>
           <Ionicons name="ellipsis-horizontal" size={24} color="#374151" />
         </TouchableOpacity>
+      </View>
+
+      {/* User Info */}
+      <View style={styles.userSection}>
+        <View style={styles.userInfo}>
+          {mockVoiceDetail.user?.avatar ? (
+            <Image source={{ uri: mockVoiceDetail.user.avatar }} style={styles.userAvatar} />
+          ) : (
+            <View style={styles.defaultUserAvatar}>
+              <Ionicons name="person" size={24} color="#8b5cf6" />
+            </View>
+          )}
+          <View style={styles.userDetails}>
+            <Text style={styles.userName}>{mockVoiceDetail.user?.name || 'Anonymous'}</Text>
+            <Text style={styles.userTimestamp}>
+              {new Date(mockVoiceDetail.createdAt).toLocaleDateString('vi-VN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </Text>
+          </View>
+        </View>
       </View>
 
       {/* Emotion and Play Controls */}
@@ -211,7 +353,10 @@ export default function VoiceDetailScreen() {
       <View style={styles.actionsSection}>
         <ReactionButton />
 
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => setShowCommentInput(true)}
+        >
           <Ionicons name="chatbubble-outline" size={20} color="#6b7280" />
           <Text style={styles.actionText}>{mockVoiceDetail.replies}</Text>
         </TouchableOpacity>
@@ -226,21 +371,55 @@ export default function VoiceDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Reply Section */}
-      <View style={styles.replySection}>
-        <View style={styles.replyHeader}>
-          <Text style={styles.replyTitle}>Replies</Text>
-          <TouchableOpacity>
-            <Text style={styles.replyAllText}>View all</Text>
-          </TouchableOpacity>
+      {/* Comment Input */}
+      {showCommentInput && (
+        <View style={styles.commentInputSection}>
+          <TextInput
+            style={styles.commentInput}
+            placeholder="Viết comment..."
+            value={commentText}
+            onChangeText={setCommentText}
+            multiline
+            maxLength={500}
+          />
+          <View style={styles.commentInputActions}>
+            <TouchableOpacity 
+              style={styles.cancelCommentButton}
+              onPress={() => {
+                setShowCommentInput(false);
+                setCommentText('');
+              }}
+            >
+              <Text style={styles.cancelCommentText}>Hủy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.postCommentButton, !commentText.trim() && styles.postCommentButtonDisabled]}
+              onPress={handleComment}
+              disabled={!commentText.trim()}
+            >
+              <Text style={styles.postCommentText}>Đăng</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Comments Section */}
+      <View style={styles.commentsSection}>
+        <View style={styles.commentsHeader}>
+          <Text style={styles.commentsTitle}>Comments ({comments.length})</Text>
         </View>
 
-        <View style={styles.replyInput}>
-          <TouchableOpacity style={styles.replyButton}>
-            <Ionicons name="mic" size={20} color="#22c55e" />
-            <Text style={styles.replyButtonText}>Reply with voice</Text>
-          </TouchableOpacity>
-        </View>
+        {comments.map((comment) => (
+          <CommentItem key={comment.id} comment={comment} />
+        ))}
+
+        {comments.length === 0 && (
+          <View style={styles.emptyComments}>
+            <Ionicons name="chatbubble-outline" size={48} color="#d1d5db" />
+            <Text style={styles.emptyCommentsText}>Chưa có comment nào</Text>
+            <Text style={styles.emptyCommentsSubtext}>Hãy là người đầu tiên comment!</Text>
+          </View>
+        )}
       </View>
     </ScrollView>
   );
@@ -249,7 +428,7 @@ export default function VoiceDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0fdf4',
+    backgroundColor: '#f8fafc',
   },
   header: {
     flexDirection: 'row',
@@ -283,6 +462,46 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  userSection: {
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  userAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 12,
+  },
+  defaultUserAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+  },
+  userDetails: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  userTimestamp: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
   playSection: {
     backgroundColor: '#ffffff',
     padding: 24,
@@ -292,12 +511,12 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#f0fdf4',
+    backgroundColor: '#faf5ff',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
     borderWidth: 2,
-    borderColor: '#22c55e',
+    borderColor: '#8b5cf6',
   },
   emotionText: {
     fontSize: 32,
@@ -306,11 +525,11 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#22c55e',
+    backgroundColor: '#8b5cf6',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
-    shadowColor: '#22c55e',
+    shadowColor: '#8b5cf6',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -396,7 +615,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#f0fdf4',
+    backgroundColor: '#faf5ff',
   },
   reactionIcon: {
     fontSize: 16,
@@ -438,42 +657,142 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontWeight: '500',
   },
-  replySection: {
+  commentInputSection: {
+    backgroundColor: '#ffffff',
+    padding: 16,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  commentInput: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#111827',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    textAlignVertical: 'top',
+    minHeight: 80,
+  },
+  commentInputActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 12,
+  },
+  cancelCommentButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  cancelCommentText: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  postCommentButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#8b5cf6',
+    borderRadius: 8,
+  },
+  postCommentButtonDisabled: {
+    backgroundColor: '#d1d5db',
+  },
+  postCommentText: {
+    fontSize: 14,
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  commentsSection: {
     backgroundColor: '#ffffff',
     padding: 24,
     marginTop: 8,
   },
-  replyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  commentsHeader: {
     marginBottom: 16,
   },
-  replyTitle: {
+  commentsTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#111827',
   },
-  replyAllText: {
-    fontSize: 14,
-    color: '#22c55e',
-    fontWeight: '500',
+  commentItem: {
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
   },
-  replyInput: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 16,
-    padding: 16,
+  commentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  replyButton: {
+  commentUser: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
   },
-  replyButtonText: {
-    fontSize: 16,
-    color: '#22c55e',
+  commentAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
+  },
+  defaultCommentAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  commentUserName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  commentTime: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  commentText: {
+    fontSize: 14,
+    color: '#374151',
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  commentActions: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  commentAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  commentActionText: {
+    fontSize: 12,
+    color: '#6b7280',
     fontWeight: '500',
+  },
+  emptyComments: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyCommentsText: {
+    fontSize: 16,
+    color: '#6b7280',
+    fontWeight: '500',
+    marginTop: 12,
+  },
+  emptyCommentsSubtext: {
+    fontSize: 14,
+    color: '#9ca3af',
+    marginTop: 4,
   },
 });
