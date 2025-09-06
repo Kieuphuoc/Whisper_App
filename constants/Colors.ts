@@ -24,7 +24,7 @@ export const Colors = {
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
   },
-    primary: '#1E1E2F',
+  primary: '#8b5cf6',
   secondary: '#3D2C8D',
   background: 'rgba(255,255,255,0.1)', // opacity nhẹ
   cardBackground: 'rgba(30, 30, 47, 0.6)',

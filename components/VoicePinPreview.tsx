@@ -1,27 +1,28 @@
+import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useAudioPlayer, useAudioRecorder } from 'expo-audio';
-import React, { useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { Alert, Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 
 type VoicePinPreviewProps = {
-  message: string;
-  isOwn?: boolean;
   recorder: ReturnType<typeof useAudioRecorder>;
-  onPress: () => void;
+  createVoicePin: () => Promise<void>;
+  description: string;
+  setDescription: (description: string) => void;
   onClose?: () => void;
 }
 
-export default function VoicePinPreview({ message, isOwn = false, recorder, onPress, onClose }: VoicePinPreviewProps) {
+const VoicePinPreview = React.memo(({ recorder, createVoicePin, description, setDescription, onClose }: VoicePinPreviewProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState<number>(0);
   const [position, setPosition] = useState<number>(0);
-  const [description, setDescription] = useState('');
   const [isPosting, setIsPosting] = useState(false);
 
   const intervalRef = useRef<any>(null);
   const player = useAudioPlayer(recorder.uri);
 
-  const play = () => {
+  // Memoize functions to prevent unnecessary re-renders
+  const play = useCallback(() => {
     if (isPlaying) {
       player.pause();
       setIsPlaying(false);
@@ -29,105 +30,119 @@ export default function VoicePinPreview({ message, isOwn = false, recorder, onPr
       player.play();
       setIsPlaying(true);
     }
-  };
+  }, [isPlaying, player]);
 
-  const formatMillis = (millis: number) => {
+  const formatMillis = useCallback((millis: number) => {
     const seconds = Math.floor(millis / 1000);
     const min = Math.floor(seconds / 60);
     const sec = seconds % 60;
     return `${min}:${sec < 10 ? '0' : ''}${sec}`;
-  };
+  }, []);
 
-  const progressPercent = duration > 0 ? (position / duration) * 100 : 0;
+  // Memoize calculated values
+  const progressPercent = useMemo(() => {
+    return duration > 0 ? (position / duration) * 100 : 0;
+  }, [duration, position]);
 
-  const handlePost = async () => {
+  const handlePost = useCallback(async () => {
     if (!description.trim()) {
       Alert.alert('Lỗi', 'Vui lòng nhập mô tả cho voice pin');
       return;
     }
-    
+
     setIsPosting(true);
     try {
-      await onPress();
+      await createVoicePin();
+      console.log("Chạy được description")
       onClose?.();
     } catch (error) {
+      console.log(error);
       Alert.alert('Lỗi', 'Không thể đăng voice pin');
     } finally {
       setIsPosting(false);
     }
-  };
+  }, [description, createVoicePin, onClose]);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Preview Voice Pin</Text>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Ionicons name="close" size={24} color="#6b7280" />
-        </TouchableOpacity>
-      </View>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
 
-      <View style={styles.content}>
-        {/* Audio Preview */}
-        <View style={styles.audioSection}>
-          <View style={styles.audioControls}>
-            <TouchableOpacity onPress={play} style={styles.playButton}>
-              <Ionicons 
-                name={isPlaying ? 'pause' : 'play'} 
-                size={24} 
-                color="#8b5cf6" 
-              />
-            </TouchableOpacity>
-            <View style={styles.audioInfo}>
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Preview Voice Pin</Text>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color="#6b7280" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.content}>
+          {/* Audio Preview */}
+          <View style={styles.audioSection}>
+            <View style={styles.audioControls}>
+              <TouchableOpacity onPress={play} style={styles.playButton}>
+                <Ionicons
+                  name={isPlaying ? 'pause' : 'play'}
+                  size={24}
+                  color={Colors.primary}
+                />
+              </TouchableOpacity>
+              <View style={styles.audioInfo}>
+                <View style={styles.progressBar}>
+                  <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+                </View>
+                <Text style={styles.duration}>{formatMillis(player.duration)}</Text>
               </View>
-              <Text style={styles.duration}>{formatMillis(player.duration)}</Text>
             </View>
           </View>
-        </View>
 
-        {/* Description Input */}
-        
-        <View style={styles.inputSection}>
-          <Text style={styles.inputLabel}>Mô tả</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Nhập mô tả cho voice pin của bạn..."
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={3}
-            maxLength={200}
-          />
-          <Text style={styles.charCount}>{description.length}/200</Text>
-        </View>
+          {/* Description Input */}
 
-        {/* Action Buttons */}
-        <View style={styles.actionButtons}>
-          <TouchableOpacity 
-            style={styles.cancelButton} 
-            onPress={onClose}
-            disabled={isPosting}
-          >
-            <Text style={styles.cancelButtonText}>Hủy</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.postButton, isPosting && styles.postButtonDisabled]} 
-            onPress={handlePost}
-            disabled={isPosting}
-          >
-            {isPosting ? (
-              <Text style={styles.postButtonText}>Đang đăng...</Text>
-            ) : (
-              <Text style={styles.postButtonText}>Đăng Voice Pin</Text>
-            )}
-          </TouchableOpacity>
+          <View style={styles.inputSection}>
+            <Text style={styles.inputLabel}>Description</Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Nhập mô tả cho voice pin của bạn..."
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              numberOfLines={3}
+              maxLength={200}
+            />
+
+            <Text style={styles.charCount}>{description.length}/200</Text>
+          </View>
+
+
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={onClose}
+              disabled={isPosting}
+            >
+              <Text style={styles.cancelButtonText}>Hủy</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.postButton, isPosting && styles.postButtonDisabled]}
+              onPress={handlePost}
+              disabled={isPosting}
+            >
+              {isPosting ? (
+                <Text style={styles.postButtonText}>Posting...</Text>
+              ) : (
+                <Text style={styles.postButtonText}>Post Voice Pin</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
-    </View>
+    </TouchableWithoutFeedback>
+
   );
-}
+});
+
+export default VoicePinPreview;
 
 const styles = StyleSheet.create({
   container: {

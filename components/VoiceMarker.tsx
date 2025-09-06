@@ -1,3 +1,4 @@
+import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -99,7 +100,7 @@ export default function VoiceMarker({
             <Ionicons 
               name="mic" 
               size={20} 
-              color={isFocused ? "#ffffff" : "#8b5cf6"} 
+              color={isFocused ? Colors.white : Colors.primary} 
             />
           </View>
           

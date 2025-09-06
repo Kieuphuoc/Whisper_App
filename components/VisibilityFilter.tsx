@@ -1,3 +1,4 @@
+import { Colors } from '@/constants/Colors';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -47,8 +48,8 @@ const styles = StyleSheet.create({
     },
     filterBento: {
         flexDirection: 'row',
-        backgroundColor: 'white',
-        borderRadius: 20,
+        backgroundColor: Colors.black,
+        borderRadius: 25,
         padding: 4,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 8 },
@@ -62,11 +63,11 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingVertical: 12,
         paddingHorizontal: 16,
-        borderRadius: 16,
+        borderRadius: 25,
         alignItems: 'center',
     },
     activeFilterButton: {
-        backgroundColor: '#8b5cf6',
+        backgroundColor: Colors.primary,
         shadowColor: '#8b5cf6',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
@@ -76,10 +77,10 @@ const styles = StyleSheet.create({
     filterText: {
         fontSize: 14,
         fontWeight: '500',
-        color: '#94a3b8',
+        color: Colors.white,
     },
     activeFilterText: {
-        color: '#ffffff',
+        color: Colors.white,
         fontWeight: '600',
     },
 });

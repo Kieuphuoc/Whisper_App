@@ -67,8 +67,8 @@ export default function MemoriesScreen() {
       const res = await authApis(token).get(endpoints['voice'])
 
       const data = res.data;
-      console.log(data.voicePin)
-      setMemory(data.voicePin);
+      console.log(data.data)
+      setMemory(data.data);
     } catch (ex: any) {
       console.log('Error loading Memory:', ex);
     } finally {
@@ -114,38 +114,38 @@ export default function MemoriesScreen() {
     </TouchableOpacity>
   );
 
-  const SortOptions = () => (
-    <View style={styles.sortOptionsContainer}>
-      {(['time', 'location', 'emotion'] as SortType[]).map((sortType) => (
-        <TouchableOpacity
-          key={sortType}
-          style={[
-            styles.sortOption,
-            activeSort === sortType && styles.activeSortOption
-          ]}
-          onPress={() => {
-            setActiveSort(sortType);
-            setShowSortOptions(false);
-          }}
-        >
-          <ThemedText style={[
-            styles.sortOptionText,
-            activeSort === sortType && styles.activeSortOptionText
-          ]}>
-            {sortType.charAt(0).toUpperCase() + sortType.slice(1)}
-          </ThemedText>
-          {activeSort === sortType && (
-            <Ionicons name="checkmark" size={16} color="#22c55e" />
-          )}
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
+  // const SortOptions = () => (
+  //   <View style={styles.sortOptionsContainer}>
+  //     {(['time', 'location', 'emotion'] as SortType[]).map((sortType) => (
+  //       <TouchableOpacity
+  //         key={sortType}
+  //         style={[
+  //           styles.sortOption,
+  //           activeSort === sortType && styles.activeSortOption
+  //         ]}
+  //         onPress={() => {
+  //           setActiveSort(sortType);
+  //           setShowSortOptions(false);
+  //         }}
+  //       >
+  //         <ThemedText style={[
+  //           styles.sortOptionText,
+  //           activeSort === sortType && styles.activeSortOptionText
+  //         ]}>
+  //           {sortType.charAt(0).toUpperCase() + sortType.slice(1)}
+  //         </ThemedText>
+  //         {activeSort === sortType && (
+  //           <Ionicons name="checkmark" size={16} color="#22c55e" />
+  //         )}
+  //       </TouchableOpacity>
+  //     ))}
+  //   </View>
+  // );
 
   const StatsCard = () => (
     <View style={styles.statsCard}>
       <View style={styles.statItem}>
-        <ThemedText style={styles.statNumber}>{memory.length}</ThemedText>
+        {/* <ThemedText style={styles.statNumber}>{memory.length}</ThemedText> */}
         <ThemedText style={styles.statLabel}>Total Memories</ThemedText>
       </View>
       <View style={styles.statDivider} />
@@ -177,7 +177,7 @@ export default function MemoriesScreen() {
 
       <View style={styles.controlsContainer}>
         <SortButton />
-        {showSortOptions && <SortOptions />}
+        {/* {showSortOptions && <SortOptions />} */}
       </View>
 
       {loading ? (
@@ -193,7 +193,7 @@ export default function MemoriesScreen() {
         </View>
       )}
 
-      {memory.length === 0 && !loading && (
+      {/* {memory.length === 0 && !loading && (
         <View style={styles.emptyContainer}>
           <Ionicons name="mic-outline" size={64} color="#d1d5db" />
           <ThemedText style={styles.emptyTitle}>No memories yet</ThemedText>
@@ -201,7 +201,7 @@ export default function MemoriesScreen() {
             Start recording your first voice memory on the map!
           </ThemedText>
         </View>
-      )}
+      )} */}
     </ScrollView>
   );
 }

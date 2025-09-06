@@ -1,11 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { BlurView } from 'expo-blur';
 import React, { useState } from 'react';
 import { Image, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Apis, { endpoints } from '../../configs/Apis';
-import { BlurView } from 'expo-blur';
-import { NavigationProp, useNavigation } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type UserLogin = {
   username?: string;
@@ -121,8 +120,7 @@ export default function LoginScreen() {
               <View style={styles.inputWrapper}>
                 <Ionicons name={i.icon} size={20} color="#6b7280" style={styles.inputIcon} />
                 <TextInput
-                                style={styles.input}
-
+                  style={styles.input}
                   value={user[i.field] || ''}
                   onChangeText={(t) => setState(t, i.field)}
                   placeholder={i.label}
@@ -132,15 +130,15 @@ export default function LoginScreen() {
                 />
                 {i.field === 'password' && (
                   <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeButton}
-              >
-                <Ionicons
-                  name={showPassword ? "eye-off-outline" : "eye-outline"}
-                  size={20}
-                  color="#6b7280"
-                />
-              </TouchableOpacity>
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.eyeButton}
+                  >
+                    <Ionicons
+                      name={showPassword ? "eye-off-outline" : "eye-outline"}
+                      size={20}
+                      color="#6b7280"
+                    />
+                  </TouchableOpacity>
                 )}
               </View>
             </View>

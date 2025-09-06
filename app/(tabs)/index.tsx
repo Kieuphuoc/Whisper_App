@@ -8,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AudioModule, RecordingPresets, setAudioModeAsync, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import Apis, { authApis, endpoints } from '../../configs/Apis';
@@ -45,10 +45,13 @@ export default function HomeScreen() {
   const [voicePinClusters, setVoicePinClusters] = useState<any[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(false);
+    const [description, setDescription] = useState<string>('');
+  
   const [selectedVoicePin, setSelectedVoicePin] = useState<VoicePin | null>(null);
   const [showVoicePinCard, setShowVoicePinCard] = useState(false);
   const [focusedMarkerId, setFocusedMarkerId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'personal' | 'friends' | 'public'>('public');
+  const [mapError, setMapError] = useState<string | null>(null);
 
   const [pulseAnim] = useState(new Animated.Value(1));
   const [scaleAnim] = useState(new Animated.Value(1));
@@ -95,7 +98,7 @@ export default function HomeScreen() {
     }
   };
 
-    // GET VoicePin
+  // GET VoicePin
   const loadPublicVoicePin = async () => {
     try {
       setLoading(true);
@@ -167,7 +170,13 @@ export default function HomeScreen() {
     setShowPreview(true)
   };
 
-  const createVoicePin = async () => {
+  // FilterVisibility
+  const filterVisibility = useCallback(() => {
+    if (activeFilter == 'personal') loadVoicePin();
+    else if (activeFilter == 'public') loadPublicVoicePin();
+  }, [activeFilter]);
+
+  const createVoicePin = useCallback(async () => {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
@@ -177,6 +186,7 @@ export default function HomeScreen() {
       const formData = new FormData();
       formData.append('latitude', location?.coords?.latitude?.toString() || '0');
       formData.append('longitude', location?.coords?.longitude?.toString() || '0');
+      formData.append('description', description)
       formData.append('visibility', "PUBLIC");
       formData.append('file', {
         uri: recorder.uri || '',
@@ -191,13 +201,15 @@ export default function HomeScreen() {
       });
 
       console.log('Upload thành công:', res.data);
+      // Reset description after successful upload
+      setDescription('');
       // Refresh data based on current filter
       filterVisibility();
     } catch (err) {
       console.error('Lỗi upload:', err);
       throw err;
     }
-  };
+  }, [description, location?.coords?.latitude, location?.coords?.longitude, recorder.uri, setDescription, filterVisibility]);
 
   const handleMarkerPress = (voicePin: VoicePin) => {
     setSelectedVoicePin(voicePin);
@@ -229,114 +241,133 @@ export default function HomeScreen() {
     }
   };
 
-  // FilterVisibility
-  const filterVisibility = () => {
-    if (activeFilter == 'personal') loadVoicePin();
-    else if (activeFilter == 'public') loadPublicVoicePin();
-  }
-
   return (
-    <View style={styles.container}>
-      {location ? (
-        <MapView
-          ref={mapRef}
-          mapType='standard'
-          style={styles.map}
-          initialRegion={{
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          }}
-        >
-          <Marker
-            coordinate={{
+
+
+      <View style={styles.container}>
+        {location ? (
+          <MapView
+            ref={mapRef}
+            provider="google"
+            mapType='standard'
+            style={styles.map}
+            initialRegion={{
               latitude: location.coords.latitude,
               longitude: location.coords.longitude,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
             }}
-            title="Your Location"
+            onMapReady={() => {
+              console.log('Map is ready');
+              setMapError(null);
+            }}
+            onError={(error) => {
+              console.error('Map error:', error);
+              setMapError('Map failed to load. Please check your internet connection.');
+            }}
           >
-            <View style={styles.currentLocationMarker}>
-              <View style={styles.currentLocationDot} />
-              <View style={styles.currentLocationRing} />
-              <View style={styles.currentLocationGlow} />
-            </View>
-          </Marker>
-
-          {voicePinClusters.map((cluster, index) => (
             <Marker
-              key={`cluster-${index}`}
               coordinate={{
-                latitude: cluster.latitude,
-                longitude: cluster.longitude,
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
               }}
+              title="Your Location"
             >
-              <VoicePinCluster
-                voicePins={cluster.voicePins}
-                latitude={cluster.latitude}
-                longitude={cluster.longitude}
-                onPress={handleMarkerPress}
-              />
+              <View style={styles.currentLocationMarker}>
+                <View style={styles.currentLocationDot} />
+                <View style={styles.currentLocationRing} />
+                <View style={styles.currentLocationGlow} />
+              </View>
             </Marker>
-          ))}
-        </MapView>
-      ) : (
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Getting your location...</Text>
-        </View>
-      )}
 
-      {/* <FilterToggle /> */}
+            {voicePinClusters.map((cluster, index) => (
+              <Marker
+                provider="google" // thêm dòng này
+                key={`cluster-${index}`}
+                coordinate={{
+                  latitude: cluster.latitude,
+                  longitude: cluster.longitude,
+                }}
+              >
+                <VoicePinCluster
+                  voicePins={cluster.voicePins}
+                  latitude={cluster.latitude}
+                  longitude={cluster.longitude}
+                  onPress={handleMarkerPress}
+                />
+              </Marker>
+            ))}
+          </MapView>
+        ) : (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Getting your location...</Text>
+          </View>
+        )}
 
-      <VisibilityFilter activeFilter={activeFilter} setActiveFilter={setActiveFilter} onPress={filterVisibility}/>
+        {mapError && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{mapError}</Text>
+          </View>
+        )}
+
+        {/* <FilterToggle /> */}
+
+        <VisibilityFilter activeFilter={activeFilter} setActiveFilter={setActiveFilter} onPress={filterVisibility} />
 
 
-      <Modal
-        visible={showVoicePinCard}
-        transparent
-        animationType="slide"
-        onRequestClose={handleVoicePinCardClose}
-      >
-        <View style={styles.voicePinCardModal}>
-          <View style={styles.voicePinCardOverlay} />
-          {selectedVoicePin && (
-            <VoicePinCard
-              voicePin={selectedVoicePin}
-              onPress={handleViewDetail}
-              onClose={handleVoicePinCardClose}
+        <Modal
+          visible={showVoicePinCard}
+          transparent
+          animationType="slide"
+          onRequestClose={handleVoicePinCardClose}
+        >
+          <View style={styles.voicePinCardModal}>
+            <View style={styles.voicePinCardOverlay} />
+            {selectedVoicePin && (
+              <VoicePinCard
+                voicePin={selectedVoicePin}
+                onPress={handleViewDetail}
+                onClose={handleVoicePinCardClose}
+              />
+            )}
+          </View>
+        </Modal>
+
+        <Modal
+          visible={showPreview}
+          transparent
+          animationType="slide"
+          onRequestClose={() => {
+            setShowPreview(false);
+            setDescription(''); // Reset description when closing modal
+          }}
+        >
+          <View style={styles.previewModal}>
+            <VoicePinPreview
+              recorder={recorder}
+              createVoicePin={createVoicePin}
+              description={description}
+              setDescription={setDescription}
+              onClose={() => {
+                setShowPreview(false);
+                setDescription(''); // Reset description when closing modal
+              }}
             />
-          )}
-        </View>
-      </Modal>
+          </View>
+        </Modal>
 
-      <Modal
-        visible={showPreview}
-        transparent
- animationType="slide"
-      onRequestClose={() => setShowPreview(false)}
-      >
-        <View style={styles.previewModal}>
-          <VoicePinPreview
-            message="Chào các mày, tao"
-            isOwn={false}
-            recorder={recorder}
-            onPress={createVoicePin}
-            onClose={() => setShowPreview(false)}
-          />
-        </View>
-      </Modal>
+        <Animated.View style={[
+          styles.voiceButtonContainer,
+          { transform: [{ scale: pulseAnim }] }
+        ]}>
+          <VoiceButton isRecording={isRecording} onPress={isRecording ? stop : record} />
+        </Animated.View>
 
-      <Animated.View style={[
-        styles.voiceButtonContainer,
-        { transform: [{ scale: pulseAnim }] }
-      ]}>
-        <VoiceButton isRecording={isRecording} onPress={isRecording ? stop : record} />
-      </Animated.View>
+        <TouchableOpacity style={styles.randomVoiceButton}>
+          <Ionicons name="shuffle" size={24} color="white" />
+        </TouchableOpacity>
+      </View>
 
-      <TouchableOpacity style={styles.randomVoiceButton}>
-        <Ionicons name="shuffle" size={24} color="white" />
-      </TouchableOpacity>
-    </View>
   );
 }
 
@@ -712,5 +743,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     padding: 16,
+  },
+  errorContainer: {
+    position: 'absolute',
+    top: 100,
+    left: 16,
+    right: 16,
+    backgroundColor: '#fee2e2',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+    zIndex: 1000,
+  },
+  errorText: {
+    color: '#dc2626',
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });
