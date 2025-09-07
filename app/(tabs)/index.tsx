@@ -235,7 +235,7 @@ export default function HomeScreen() {
     if (selectedVoicePin) {
       router.push({
         pathname: '/voice-detail',
-        params: { voicePinId: selectedVoicePin.id }
+        params: { voicePinId: selectedVoicePin.id, voicePinJson: encodeURIComponent(JSON.stringify(selectedVoicePin)) }
       });
     }
   };

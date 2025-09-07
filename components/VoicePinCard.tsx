@@ -1,6 +1,8 @@
+import { HomeScreenNavigationProp } from '@/type';
 import { Ionicons } from '@expo/vector-icons';
 import { useAudioPlayer } from 'expo-audio';
 import { Image } from 'expo-image';
+import { useNavigation } from 'expo-router';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -18,17 +20,16 @@ type VoicePinCardProps = {
     likes?: number;
     replies?: number;
   };
-  onPress: () => void;
   onClose: () => void;
 };
 
-export default function VoicePinCard({ voicePin, onPress, onClose }: VoicePinCardProps) {
+export default function VoicePinCard({ voicePin, onClose }: VoicePinCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [totalDuration, setTotalDuration] = useState(0);
-
+  
   const player = useAudioPlayer(voicePin.audioUrl);
-
+  const navigation = useNavigation<HomeScreenNavigationProp>()
   const playPause = () => {
     if (isPlaying) {
       player.pause();
@@ -119,8 +120,8 @@ export default function VoicePinCard({ voicePin, onPress, onClose }: VoicePinCar
       </View>
 
       {/* View Detail Button */}
-      <TouchableOpacity style={styles.detailButton} onPress={onPress}>
-        <Text style={styles.detailButtonText}>Xem chi tiết</Text>
+      <TouchableOpacity style={styles.detailButton} onPress={()=>navigation.navigate('voice-detail')}>
+        <Text style={styles.detailButtonText}>Detail Voice Pin</Text>
         <Ionicons name="arrow-forward" size={16} color="#8b5cf6" />
       </TouchableOpacity>
     </View>

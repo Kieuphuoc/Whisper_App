@@ -5,8 +5,12 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Platform } from 'react-native';
+import { HomeStackNagivatiorParamList } from '@/type';
 
+
+const Stack = createNativeStackNavigator<HomeStackNagivatiorParamList>();
 
 export default function TabLayout() {
 
