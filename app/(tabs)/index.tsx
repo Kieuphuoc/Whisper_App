@@ -51,7 +51,6 @@ export default function HomeScreen() {
   const [showVoicePinCard, setShowVoicePinCard] = useState(false);
   const [focusedMarkerId, setFocusedMarkerId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'personal' | 'friends' | 'public'>('public');
-  const [mapError, setMapError] = useState<string | null>(null);
 
   const [pulseAnim] = useState(new Animated.Value(1));
   const [scaleAnim] = useState(new Animated.Value(1));
@@ -248,7 +247,6 @@ export default function HomeScreen() {
         {location ? (
           <MapView
             ref={mapRef}
-            provider="google"
             mapType='standard'
             style={styles.map}
             initialRegion={{
@@ -256,14 +254,6 @@ export default function HomeScreen() {
               longitude: location.coords.longitude,
               latitudeDelta: 0.01,
               longitudeDelta: 0.01,
-            }}
-            onMapReady={() => {
-              console.log('Map is ready');
-              setMapError(null);
-            }}
-            onError={(error) => {
-              console.error('Map error:', error);
-              setMapError('Map failed to load. Please check your internet connection.');
             }}
           >
             <Marker
@@ -301,12 +291,6 @@ export default function HomeScreen() {
         ) : (
           <View style={styles.loadingContainer}>
             <Text style={styles.loadingText}>Getting your location...</Text>
-          </View>
-        )}
-
-        {mapError && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{mapError}</Text>
           </View>
         )}
 
@@ -743,23 +727,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     padding: 16,
-  },
-  errorContainer: {
-    position: 'absolute',
-    top: 100,
-    left: 16,
-    right: 16,
-    backgroundColor: '#fee2e2',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#fca5a5',
-    zIndex: 1000,
-  },
-  errorText: {
-    color: '#dc2626',
-    fontSize: 14,
-    fontWeight: '500',
-    textAlign: 'center',
   },
 });

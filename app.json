@@ -16,11 +16,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
-      "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
-      ]
+      "edgeToEdgeEnabled": true
     },
     "web": {
       "bundler": "metro",
@@ -42,12 +38,6 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
-        }
-      ],
-      [
-        "react-native-maps",
-        {
-          "androidApiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE"
         }
       ]
     ],

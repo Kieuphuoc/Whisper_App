@@ -1,5 +1,6 @@
+import { MyUserContext } from '@/configs/Context';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type VoicePin = {
@@ -49,6 +50,9 @@ export default function VoicePinCluster({ voicePins, latitude, longitude, onPres
     });
   };
 
+  const user = useContext(MyUserContext);
+
+
   return (
     <>
       <TouchableOpacity onPress={handleClusterPress} style={styles.clusterContainer}>
@@ -71,8 +75,8 @@ export default function VoicePinCluster({ voicePins, latitude, longitude, onPres
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Voice Pins tại đây ({voicePins.length})</Text>
-              <TouchableOpacity 
+              <Text style={styles.modalTitle}>Voice Pin here! ({voicePins.length})</Text>
+              <TouchableOpacity
                 onPress={() => setShowClusterModal(false)}
                 style={styles.closeButton}
               >
@@ -100,7 +104,7 @@ export default function VoicePinCluster({ voicePins, latitude, longitude, onPres
                         </View>
                       )}
                       <View style={styles.userDetails}>
-                        <Text style={styles.userName}>{voicePin.user?.name || 'Anonymous'}</Text>
+                        <Text style={styles.userName}>{voicePin.user?.username || 'Anonymous'}</Text>
                         <Text style={styles.timestamp}>{formatTime(voicePin.createdAt)}</Text>
                       </View>
                     </View>
