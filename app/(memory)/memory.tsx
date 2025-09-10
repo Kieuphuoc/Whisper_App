@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
-import { Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
-import { MemoryCard } from '@/components/MemoryCard';
+import MiniVoiceCard from '@/components/MiniVoiceCard';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -28,33 +28,6 @@ export default function MemoriesScreen() {
   const [memory, setMemory] = useState<Memory[]>([]);
   const [activeSort, setActiveSort] = useState<SortType>('time');
   const [showSortOptions, setShowSortOptions] = useState(false);
-
-  // const loadMemory = async () => {
-  //   try {
-  //     setLoading(true);
-  //     const token = await AsyncStorage.getItem('token');
-  //     if (!token) {
-  //       throw new Error('No token found');
-  //     }
-
-  //     const res = await authApis(token).get(endpoints['voice'])
-  //     const data = res.data;
-      
-  //     // Add mock location and emotion data for demo
-  //     const enhancedData = data.map((item: any, index: number) => ({
-  //       ...item,
-  //       location: ['Central Park, NY', 'Coffee Shop, SF', 'Golden Gate Bridge', 'Library, Boston'][index % 4],
-  //       emotion: ['😊', '🎵', '🌅', '📚', '🎉', '😢'][index % 6],
-  //     }));
-      
-  //     setMemory(enhancedData);
-  //   } catch (ex: any) {
-  //     console.log('Error loading Memory:', ex);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   
   const loadMemory = async () => {
     try {
@@ -142,29 +115,6 @@ export default function MemoriesScreen() {
   //   </View>
   // );
 
-  const StatsCard = () => (
-    <View style={styles.statsCard}>
-      <View style={styles.statItem}>
-        {/* <ThemedText style={styles.statNumber}>{memory.length}</ThemedText> */}
-        <ThemedText style={styles.statLabel}>Total Memories</ThemedText>
-      </View>
-      <View style={styles.statDivider} />
-      <View style={styles.statItem}>
-        <ThemedText style={styles.statNumber}>
-          {/* {memory.reduce((acc, mem) => acc + parseInt(mem.duration.split(':')[0]) * 60 + parseInt(mem.duration.split(':')[1]), 0)} */}
-        </ThemedText>
-        <ThemedText style={styles.statLabel}>Total Minutes</ThemedText>
-      </View>
-      <View style={styles.statDivider} />
-      <View style={styles.statItem}>
-        <ThemedText style={styles.statNumber}>
-          {/* {new Set(memory.map(m => m.location)).size} */}
-        </ThemedText>
-        <ThemedText style={styles.statLabel}>Locations</ThemedText>
-      </View>
-    </View>
-  );
-
   return (
     <ScrollView
       >
@@ -172,8 +122,6 @@ export default function MemoriesScreen() {
         <ThemedText type="title" style={styles.title}>My Memories</ThemedText>
         <ThemedText style={styles.subtitle}>Your voice journey through time</ThemedText>
       </ThemedView>
-
-      <StatsCard />
 
       <View style={styles.controlsContainer}>
         <SortButton />
@@ -187,13 +135,13 @@ export default function MemoriesScreen() {
       ) : (
         <View style={styles.memoriesContainer}>
           {memory.map((item) => (
-        <MemoryCard key={item.id} memory={item} />
+        <MiniVoiceCard key={item.id} voicePin={item} />
       ))}
 
         </View>
       )}
 
-      {/* {memory.length === 0 && !loading && (
+      {memory.length === 0 && !loading && (
         <View style={styles.emptyContainer}>
           <Ionicons name="mic-outline" size={64} color="#d1d5db" />
           <ThemedText style={styles.emptyTitle}>No memories yet</ThemedText>
@@ -201,17 +149,21 @@ export default function MemoriesScreen() {
             Start recording your first voice memory on the map!
           </ThemedText>
         </View>
-      )} */}
+      )}
     </ScrollView>
   );
 }
-
-const { width } = Dimensions.get('window');
-
 const styles = StyleSheet.create({
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#f9fafb', // nền nhẹ nhàng
+    paddingVertical: 16,
+  },
   titleContainer: {
+    paddingTop: 50,
     marginBottom: 24,
     alignItems: 'center',
+    paddingHorizontal: 16,
   },
   title: {
     fontSize: 28,
@@ -224,24 +176,18 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontWeight: '400',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
   statsCard: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
+    marginHorizontal: 16,
     marginBottom: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
   },
   statItem: {
     flex: 1,
@@ -257,6 +203,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     fontWeight: '500',
+    textAlign: 'center',
   },
   statDivider: {
     width: 1,
@@ -264,20 +211,21 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   controlsContainer: {
+    marginHorizontal: 16,
     marginBottom: 16,
   },
   sortButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#fff',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowRadius: 6,
+    elevation: 2,
   },
   sortButtonText: {
     marginLeft: 8,
@@ -287,7 +235,7 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   sortOptionsContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#fff',
     borderRadius: 12,
     marginTop: 8,
     shadowColor: '#000',
@@ -318,7 +266,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   memoriesContainer: {
+    paddingHorizontal: 16,
     gap: 12,
+    marginBottom: 32,
   },
   loadingContainer: {
     alignItems: 'center',

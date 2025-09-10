@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Image, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Apis, { endpoints } from '../../configs/Apis';
@@ -72,7 +73,7 @@ export default function LoginScreen() {
         console.log(data);
 
         await AsyncStorage.setItem('token', data.token);
-        navigation.navigate('index' as never);
+        router.push('/');
       } catch (err) {
         console.error('Lỗi đăng nhập:', (err as Error).message);
         setMsg((err as Error).message);

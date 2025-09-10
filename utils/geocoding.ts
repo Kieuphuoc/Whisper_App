@@ -4,7 +4,12 @@ export interface GeocodedLocation {
   address: string;
   city: string;
   country: string;
+  district?: string;
+  ward?: string;
+  subregion?: string;
+  region?: string;
   formattedAddress: string;
+  detailedAddress: string;
 }
 
 export const reverseGeocode = async (
@@ -21,20 +26,36 @@ export const reverseGeocode = async (
       const result = results[0];
       
       const address = result.street || result.name || 'Unknown Street';
-      const city = result.city || result.subregion || 'Unknown City';
+      const city = result.city || 'Unknown City';
       const country = result.country || 'Unknown Country';
+      const district = result.district || result.subregion;
+      const ward = result.subLocality || result.subAdministrativeArea;
+      const subregion = result.subregion;
+      const region = result.region;
       
-      const formattedAddress = [
-        address,
-        city,
-        country
-      ].filter(Boolean).join(', ');
+      // Tạo địa chỉ chi tiết với quận, phường
+      const detailedParts = [];
+      if (address && address !== 'Unknown Street') detailedParts.push(address);
+      if (ward) detailedParts.push(ward);
+      if (district) detailedParts.push(district);
+      if (city && city !== 'Unknown City') detailedParts.push(city);
+      // if (country && country !== 'Unknown Country') detailedParts.push(country);
+      
+      const detailedAddress = detailedParts.join(', ');
+      
+      // Địa chỉ ngắn gọn (chỉ thành phố)
+      const formattedAddress = city !== 'Unknown City' ? city : detailedAddress;
 
       return {
         address,
         city,
         country,
+        district,
+        ward,
+        subregion,
+        region,
         formattedAddress,
+        detailedAddress,
       };
     }
 
@@ -52,10 +73,21 @@ export const getLocationName = async (
   const geocoded = await reverseGeocode(latitude, longitude);
   
   if (geocoded) {
-    // Return a shorter, more user-friendly format
-    if (geocoded.city && geocoded.city !== 'Unknown City') {
-      return geocoded.city;
-    }
+    // Trả về địa chỉ chi tiết với quận, phường
+    return geocoded.detailedAddress;
+  }
+  
+  return 'Unknown Location';
+};
+
+export const getLocationNameShort = async (
+  latitude: number,
+  longitude: number
+): Promise<string> => {
+  const geocoded = await reverseGeocode(latitude, longitude);
+  
+  if (geocoded) {
+    // Trả về địa chỉ ngắn gọn (chỉ thành phố)
     return geocoded.formattedAddress;
   }
   

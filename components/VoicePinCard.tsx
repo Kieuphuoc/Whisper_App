@@ -1,3 +1,4 @@
+import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useAudioPlayer } from 'expo-audio';
 import { Image } from 'expo-image';
@@ -12,7 +13,7 @@ type VoicePinCardProps = {
     audioUrl: string;
     createdAt: string;
     user?: {
-      name: string;
+      displayName: string;
       avatar?: string;
     };
     likes?: number;
@@ -63,12 +64,12 @@ export default function VoicePinCard({ voicePin, onPress, onClose }: VoicePinCar
             <Image source={{ uri: voicePin?.user?.avatar }} style={styles.avatar} />
           ) : (
             <View style={styles.defaultAvatar}>
-              <Ionicons name="person" size={20} color="#8b5cf6" />
+              <Ionicons name="person" size={20} color={Colors.primary} />
             </View>
           )}
         </View>
         <View style={styles.userInfo}>
-          <Text style={styles.userName}>{voicePin?.user?.name || 'Anonymous'}</Text>
+          <Text style={styles.userName}>{voicePin?.user?.displayName || 'Anonymous'}</Text>
           <Text style={styles.timestamp}>
             {new Date(voicePin.createdAt).toLocaleDateString('vi-VN', {
               month: 'short',

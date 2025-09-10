@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
     },
     filterBento: {
         flexDirection: 'row',
-        backgroundColor: Colors.black,
+        backgroundColor: Colors.button,
         borderRadius: 25,
         padding: 4,
         shadowColor: '#000',
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     filterText: {
         fontSize: 14,
         fontWeight: '500',
-        color: Colors.white,
+        color: Colors.lightText,
     },
     activeFilterText: {
         color: Colors.white,

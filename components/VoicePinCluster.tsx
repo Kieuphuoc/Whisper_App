@@ -1,4 +1,5 @@
 import { MyUserContext } from '@/configs/Context';
+import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useContext, useState } from 'react';
 import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -16,7 +17,8 @@ type VoicePin = {
   address?: string;
   createdAt: string;
   user?: {
-    name: string;
+    displayName: string;
+    username: string;
     avatar?: string;
   };
   likes?: number;
@@ -42,7 +44,7 @@ export default function VoicePinCluster({ voicePins, latitude, longitude, onPres
   };
 
   const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN', {
+    return new Date(dateString).toLocaleDateString('en-GB', {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
@@ -100,11 +102,11 @@ export default function VoicePinCluster({ voicePins, latitude, longitude, onPres
                         <Image source={{ uri: voicePin.user.avatar }} style={styles.userAvatar} />
                       ) : (
                         <View style={styles.defaultAvatar}>
-                          <Ionicons name="person" size={16} color="#8b5cf6" />
+                          <Ionicons name="person" size={16} color={Colors.primary} />
                         </View>
                       )}
                       <View style={styles.userDetails}>
-                        <Text style={styles.userName}>{voicePin.user?.username || 'Anonymous'}</Text>
+                        <Text style={styles.userName}>{voicePin.user?.displayName || 'Anonymous'}</Text>
                         <Text style={styles.timestamp}>{formatTime(voicePin.createdAt)}</Text>
                       </View>
                     </View>

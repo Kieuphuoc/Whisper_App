@@ -1,3 +1,4 @@
+import QuickAction from '@/components/QuickAction';
 import VisibilityFilter from '@/components/VisibilityFilter';
 import VoiceButton from '@/components/VoiceButton';
 import VoicePinCard from '@/components/VoicePinCard';
@@ -232,12 +233,12 @@ export default function HomeScreen() {
   };
 
   const handleViewDetail = () => {
-    if (selectedVoicePin) {
+    // if (selectedVoicePin) {
       router.push({
-        pathname: '/voice-detail',
+        pathname: '/(home)/voiceDetail',
         params: { voicePinId: selectedVoicePin.id }
       });
-    }
+      // }
   };
 
   return (
@@ -272,7 +273,6 @@ export default function HomeScreen() {
 
             {voicePinClusters.map((cluster, index) => (
               <Marker
-                provider="google" // thêm dòng này
                 key={`cluster-${index}`}
                 coordinate={{
                   latitude: cluster.latitude,
@@ -294,7 +294,9 @@ export default function HomeScreen() {
           </View>
         )}
 
+        <QuickAction />
         {/* <FilterToggle /> */}
+        {/* <StatsBento voicesCount={3} radius='100'  /> */}
 
         <VisibilityFilter activeFilter={activeFilter} setActiveFilter={setActiveFilter} onPress={filterVisibility} />
 
@@ -347,7 +349,7 @@ export default function HomeScreen() {
           <VoiceButton isRecording={isRecording} onPress={isRecording ? stop : record} />
         </Animated.View>
 
-        <TouchableOpacity style={styles.randomVoiceButton}>
+        <TouchableOpacity style={styles.randomVoiceButton} onPress={handleViewDetail}>
           <Ionicons name="shuffle" size={24} color="white" />
         </TouchableOpacity>
       </View>
