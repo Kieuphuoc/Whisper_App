@@ -21,12 +21,12 @@
 
 | Component     | Technology            |
 |---------------|------------------------|
-| **Frontend**  | Next.js / React Native |
+| **Frontend**  | React Native           |
 | **Backend**   | NestJS (REST API)      |
 | **Database**  | PostgreSQL + Prisma    |
-| **Maps**      | Mapbox API             |
-| **Auth**      | JWT / OAuth            |
-| **Audio Storage** | AWS S3 / Firebase Storage |
+| **Maps**      | React Native Map       |
+| **Auth**      | JWT                    |
+| **Audio Storage** | Cloudinary              |
 | **Emotion Detection** | (Optional) AI model or user-selected emotion stickers |
 
 ---
