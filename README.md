@@ -1,51 +1,49 @@
-# Welcome to your Expo app 👋
+# 📍 Whisper of Memory
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**Whisper** is an anonymous voice-based social platform that lets users record and share memories using their voice, tied to real-world locations on a map. Each voice is a “whisper” — a short, emotional message, story, or confession, left anonymously for others to discover.
 
-## Get started
+---
 
-1. Install dependencies
+## 🚀 Features
 
-   ```bash
-   npm install
-   ```
+- 🎙️ **Voice Pinning**: Record and pin a voice message to your current location on the map.
+- 🗺️ **Emotional Map**: Explore voice pins shared by others around you.
+- 🎭 **Anonymity**: Users remain anonymous when sharing or listening to voices.
+- 🎧 **Random Discovery**: Listen to a random voice pinned nearby (within 100 meters) or from anywhere in the system.
+- 💬 **Comment & Reply**: Interact with voice messages through voice/text comments and replies.
+- 🧡 **Emotional Reactions**: React with stickers or emojis based on how the voice makes you feel.
+- 👥 **Anonymous Friendship**: Send and accept friend requests without revealing identity.
+- 📊 **User Stats**: Track your activity, emotional impact, and user interactions.
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## 🛠️ Tech Stack
 
-In the output, you'll find options to open the app in a
+| Component     | Technology            |
+|---------------|------------------------|
+| **Frontend**  | Next.js / React Native |
+| **Backend**   | NestJS (REST API)      |
+| **Database**  | PostgreSQL + Prisma    |
+| **Maps**      | Mapbox API             |
+| **Auth**      | JWT / OAuth            |
+| **Audio Storage** | AWS S3 / Firebase Storage |
+| **Emotion Detection** | (Optional) AI model or user-selected emotion stickers |
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## 🏁 Quick Setup (Local)
 
 ```bash
-npm run reset-project
-```
+# 1. Clone the repository
+git clone https://github.com/your-org/whisper-app.git
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+# 2. Install dependencies
+cd whisper-app
+npm install
 
-## Learn more
+# 3. Configure environment variables
+cp .env.example .env
+# Update your DB
 
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
-"# Whisper_App" 
+# 4. Start development server
+npm run dev
