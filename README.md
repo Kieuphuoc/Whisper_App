@@ -38,7 +38,7 @@
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/whisper-app.git
+git clone https://github.com/Kieuphuoc/whisper-app.git
 
 # 2. Install dependencies
 cd whisper-app
