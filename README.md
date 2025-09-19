@@ -49,4 +49,4 @@ cp .env.example .env
 # Update your DB
 
 # 4. Start development server
-npm run dev
+npm start
