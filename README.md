@@ -14,8 +14,8 @@
 - 🧡 **Emotional Reactions**: React with stickers or emojis based on how the voice makes you feel.
 - 👥 **Anonymous Friendship**: Send and accept friend requests without revealing identity.
 - 📊 **User Stats**: Track your activity, emotional impact, and user interactions.
-- <img width="828" height="1792" alt="image" src="https://github.com/user-attachments/assets/36eb3498-13cc-46c8-ae0a-cd16bdfe25a8" />
-<img width="828" height="1792" alt="image" src="https://github.com/user-attachments/assets/de49b0ac-4445-4983-b2f2-2065b6926f92" />
+- <img width="207" height="448" alt="image" src="https://github.com/user-attachments/assets/36eb3498-13cc-46c8-ae0a-cd16bdfe25a8" />
+<img width="207" height="448" alt="image" src="https://github.com/user-attachments/assets/de49b0ac-4445-4983-b2f2-2065b6926f92" />
 
 
 ---
