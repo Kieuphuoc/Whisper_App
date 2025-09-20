@@ -28,12 +28,12 @@ export const endpoints = {
   updateComment: (commentId: string | number) => `/voice/${commentId}`,
   deleteComment: (commentId: string | number) => `/voice/${commentId}`,
 
-  // Fri ends
+  // Friends
   friendRequest: "/friend/request",
   friendRespond: (id: string | number) => `/friend/request/${id}/respond`,
   friendCancel: (id: string | number) => `/friend/request/${id}`,
   friendRemove: "/friend/remove",
-  friendList: (id: string | number) => `/friend/list/${id}`,
+  friendList: "/friend/list/",
   friendPending: "/friend/pending"
 };
 

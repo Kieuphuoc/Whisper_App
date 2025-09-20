@@ -43,11 +43,18 @@ export default function HomeScreen() {
   const mapRef = useRef<MapView>(null);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [voicePin, setVoicePin] = useState<VoicePin[]>();
+  const [voicePinFriend, setVoicePinFriend] = useState<VoicePin[]>();
+
+  const [voicePinPublic, setVoicePinPublic] = useState<VoicePin[]>();
+
   const [voicePinClusters, setVoicePinClusters] = useState<any[]>([]);
+    const [voicePinClustersFriend, setVoicePinClustersFriend] = useState<any[]>([]);
+  const [voicePinClustersPublic, setVoicePinClustersPublic] = useState<any[]>([]);
+
   const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(false);
-    const [description, setDescription] = useState<string>('');
-  
+  const [description, setDescription] = useState<string>('');
+
   const [selectedVoicePin, setSelectedVoicePin] = useState<VoicePin | null>(null);
   const [showVoicePinCard, setShowVoicePinCard] = useState(false);
   const [focusedMarkerId, setFocusedMarkerId] = useState<string | null>(null);
@@ -105,9 +112,9 @@ export default function HomeScreen() {
       const res = await Apis.get(endpoints['voicePublic'])
       const data = res.data;
       console.log(data.data)
-      setVoicePin(data.data);
+      setVoicePinPublic(data.data);
       const clusters = clusterVoicePins(data.data || [], 50);
-      setVoicePinClusters(clusters);
+      setVoicePinClustersPublic(clusters);
     } catch (ex: any) {
       console.log('Error loading Memory:', ex);
     } finally {
@@ -127,9 +134,9 @@ export default function HomeScreen() {
       const res = await authApis(token).get(endpoints['voiceFriends'])
       const data = res.data;
       console.log(data.data)
-      setVoicePin(data.data);
+      setVoicePinFriend(data.data);
       const clusters = clusterVoicePins(data.data || [], 50);
-      setVoicePinClusters(clusters);
+      setVoicePinClustersFriend(clusters);
     } catch (ex: any) {
       console.log('Error loading Friends Memory:', ex);
     } finally {
@@ -174,6 +181,7 @@ export default function HomeScreen() {
   const filterVisibility = useCallback(() => {
     if (activeFilter == 'personal') loadVoicePin();
     else if (activeFilter == 'public') loadPublicVoicePin();
+    else if (activeFilter == 'friends') loadFriendsVoicePin();
   }, [activeFilter]);
 
   const createVoicePin = useCallback(async () => {
@@ -234,125 +242,125 @@ export default function HomeScreen() {
 
   const handleViewDetail = () => {
     // if (selectedVoicePin) {
-      router.push({
-        pathname: '/(home)/voiceDetail',
-        params: { voicePinId: selectedVoicePin.id }
-      });
-      // }
+    router.push({
+      pathname: '/(home)/voiceDetail',
+      params: { voicePinId: selectedVoicePin.id }
+    });
+    // }
   };
 
   return (
 
 
-      <View style={styles.container}>
-        {location ? (
-          <MapView
-            ref={mapRef}
-            mapType='standard'
-            style={styles.map}
-            initialRegion={{
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            }}
-          >
-            <Marker
-              coordinate={{
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
-              }}
-              title="Your Location"
-            >
-              <View style={styles.currentLocationMarker}>
-                <View style={styles.currentLocationDot} />
-                <View style={styles.currentLocationRing} />
-                <View style={styles.currentLocationGlow} />
-              </View>
-            </Marker>
-
-            {voicePinClusters.map((cluster, index) => (
-              <Marker
-                key={`cluster-${index}`}
-                coordinate={{
-                  latitude: cluster.latitude,
-                  longitude: cluster.longitude,
-                }}
-              >
-                <VoicePinCluster
-                  voicePins={cluster.voicePins}
-                  latitude={cluster.latitude}
-                  longitude={cluster.longitude}
-                  onPress={handleMarkerPress}
-                />
-              </Marker>
-            ))}
-          </MapView>
-        ) : (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Getting your location...</Text>
-          </View>
-        )}
-
-        <QuickAction />
-        {/* <FilterToggle /> */}
-        {/* <StatsBento voicesCount={3} radius='100'  /> */}
-
-        <VisibilityFilter activeFilter={activeFilter} setActiveFilter={setActiveFilter} onPress={filterVisibility} />
-
-
-        <Modal
-          visible={showVoicePinCard}
-          transparent
-          animationType="slide"
-          onRequestClose={handleVoicePinCardClose}
-        >
-          <View style={styles.voicePinCardModal}>
-            <View style={styles.voicePinCardOverlay} />
-            {selectedVoicePin && (
-              <VoicePinCard
-                voicePin={selectedVoicePin}
-                onPress={handleViewDetail}
-                onClose={handleVoicePinCardClose}
-              />
-            )}
-          </View>
-        </Modal>
-
-        <Modal
-          visible={showPreview}
-          transparent
-          animationType="slide"
-          onRequestClose={() => {
-            setShowPreview(false);
-            setDescription(''); // Reset description when closing modal
+    <View style={styles.container}>
+      {location ? (
+        <MapView
+          ref={mapRef}
+          mapType='standard'
+          style={styles.map}
+          initialRegion={{
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
           }}
         >
-          <View style={styles.previewModal}>
-            <VoicePinPreview
-              recorder={recorder}
-              createVoicePin={createVoicePin}
-              description={description}
-              setDescription={setDescription}
-              onClose={() => {
-                setShowPreview(false);
-                setDescription(''); // Reset description when closing modal
+          <Marker
+            coordinate={{
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+            }}
+            title="Your Location"
+          >
+            <View style={styles.currentLocationMarker}>
+              <View style={styles.currentLocationDot} />
+              <View style={styles.currentLocationRing} />
+              <View style={styles.currentLocationGlow} />
+            </View>
+          </Marker>
+
+          {voicePinClusters.map((cluster, index) => (
+            <Marker
+              key={`cluster-${index}`}
+              coordinate={{
+                latitude: cluster.latitude,
+                longitude: cluster.longitude,
               }}
+            >
+              <VoicePinCluster
+                voicePins={cluster.voicePins}
+                latitude={cluster.latitude}
+                longitude={cluster.longitude}
+                onPress={handleMarkerPress}
+              />
+            </Marker>
+          ))}
+        </MapView>
+      ) : (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Getting your location...</Text>
+        </View>
+      )}
+
+      <QuickAction />
+      {/* <FilterToggle /> */}
+      {/* <StatsBento voicesCount={3} radius='100'  /> */}
+
+      <VisibilityFilter activeFilter={activeFilter} setActiveFilter={setActiveFilter} onPress={filterVisibility} />
+
+
+      <Modal
+        visible={showVoicePinCard}
+        transparent
+        animationType="slide"
+        onRequestClose={handleVoicePinCardClose}
+      >
+        <View style={styles.voicePinCardModal}>
+          <View style={styles.voicePinCardOverlay} />
+          {selectedVoicePin && (
+            <VoicePinCard
+              voicePin={selectedVoicePin}
+              onPress={handleViewDetail}
+              onClose={handleVoicePinCardClose}
             />
-          </View>
-        </Modal>
+          )}
+        </View>
+      </Modal>
 
-        <Animated.View style={[
-          styles.voiceButtonContainer,
-          { transform: [{ scale: pulseAnim }] }
-        ]}>
-          <VoiceButton isRecording={isRecording} onPress={isRecording ? stop : record} />
-        </Animated.View>
+      <Modal
+        visible={showPreview}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setShowPreview(false);
+          setDescription(''); // Reset description when closing modal
+        }}
+      >
+        <View style={styles.previewModal}>
+          <VoicePinPreview
+            recorder={recorder}
+            createVoicePin={createVoicePin}
+            description={description}
+            setDescription={setDescription}
+            onClose={() => {
+              setShowPreview(false);
+              setDescription(''); // Reset description when closing modal
+            }}
+          />
+        </View>
+      </Modal>
 
-        <TouchableOpacity style={styles.randomVoiceButton} onPress={handleViewDetail}>
-          <Ionicons name="shuffle" size={24} color="white" />
-        </TouchableOpacity>
-      </View>
+      <Animated.View style={[
+        styles.voiceButtonContainer,
+        { transform: [{ scale: pulseAnim }] }
+      ]}>
+        <VoiceButton isRecording={isRecording} onPress={isRecording ? stop : record} />
+      </Animated.View>
+
+      <TouchableOpacity style={styles.randomVoiceButton} onPress={handleViewDetail}>
+        <Ionicons name="shuffle" size={24} color="white" />
+      </TouchableOpacity>
+    </View>
 
   );
 }
