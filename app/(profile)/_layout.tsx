@@ -1,11 +1,16 @@
+import { Header } from '@react-navigation/elements';
 import { Stack } from 'expo-router';
 import React from 'react';
 
-export default function HomeStack() {
+export default function ProfileStack() {
   return (
-    <Stack>
-      <Stack.Screen name="login" options={{headerShown: false}}/>
-      <Stack.Screen name="profile" />
-    </Stack>
-  )
+   <Stack>
+       <Stack.Screen
+         name="profile"
+           options={{
+                   header: () => <Header title="My Profile" />,
+                 }}/>
+     </Stack>
+   );
+
 }

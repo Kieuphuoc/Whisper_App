@@ -134,9 +134,10 @@ export default function MemoriesScreen() {
         </View>
       ) : (
         <View style={styles.memoriesContainer}>
-          {memory.map((item) => (
-        <MiniVoiceCard key={item.id} voicePin={item} />
-      ))}
+         {memory.map((item, index) => (
+  <MiniVoiceCard key={index} voicePin={item} />
+))}
+
 
         </View>
       )}

@@ -1,5 +1,4 @@
 import MiniVoiceCard from '@/components/MiniVoiceCard';
-import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -56,17 +55,21 @@ export default function ProfileScreen() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<'pins' | 'memories'>('pins');
 
-    const loadUserProfile = async () => {
+    const loadMe = async () => {
         try {
             setLoading(true);
+            const token = await AsyncStorage.getItem('token');
+            if (!token) {
+                throw new Error('No token found');
+            }
 
-            const res = await Apis.get(endpoints['userProfile'](id))
+            const res = await authApis(token).get(endpoints['me'])
 
             const data = res.data;
             console.log(data)
             setUser(data);
         } catch (ex: any) {
-            console.log('Error loading User Profile:', ex);
+            console.log('Error loading Me:', ex);
         } finally {
             setLoading(false);
         }
@@ -74,8 +77,12 @@ export default function ProfileScreen() {
 
     const loadStats = async () => {
         try {
-            setLoading(true);
-            const res = await Apis.get(endpoints['userStats'](id))
+            setLoading(true)
+             const token = await AsyncStorage.getItem('token');
+            if (!token) {
+                throw new Error('No token found');
+            }
+            const res = await authApis(token).get(endpoints['meStats'])
 
             const data = res.data;
             console.log(data)
@@ -107,23 +114,23 @@ export default function ProfileScreen() {
             setFriendRequestStatus('loading');
             const token = await AsyncStorage.getItem('token');
             if (!token) {
-              throw new Error('No token found');
+                throw new Error('No token found');
             }
-      
+
             const res = await authApis(token).post(endpoints['friendRequest'], {
                 receiverId: id
             });
 
             console.log('Friend request sent:', res.data);
             setFriendRequestStatus('pending');
-            
+
             // Có thể thêm toast notification ở đây
             alert('Đã gửi lời mời kết bạn!');
-            
+
         } catch (ex: any) {
             console.log('Error sending friend request:', ex);
             setFriendRequestStatus('none');
-            
+
             // Xử lý lỗi cụ thể
             if (ex.response?.status === 400) {
                 alert('Không thể gửi lời mời kết bạn. Có thể bạn đã là bạn bè hoặc đã gửi lời mời trước đó.');
@@ -134,7 +141,7 @@ export default function ProfileScreen() {
     };
 
     useEffect(() => {
-        loadUserProfile();
+        loadMe();
         loadStats();
         loadVoicePin();
     }, []);
@@ -181,7 +188,7 @@ export default function ProfileScreen() {
         },
     ];
 
-   
+
 
     const MemoryCard = ({ memory }: { memory: any }) => (
         <View style={styles.memoryBento}>
@@ -254,48 +261,6 @@ export default function ProfileScreen() {
                     </View>
                 </View>
 
-                {/* Action Buttons */}
-                <View style={styles.actionsBento}>
-                    <TouchableOpacity 
-                        style={[
-                            styles.following,
-                            friendRequestStatus === 'pending' && styles.followingPending,
-                            friendRequestStatus === 'friends' && styles.followingFriends,
-                            friendRequestStatus === 'loading' && styles.followingLoading
-                        ]}
-                        onPress={handleAddFriend}
-                        disabled={friendRequestStatus === 'loading' || friendRequestStatus === 'friends'}
-                    >
-                        <Ionicons 
-                            name={
-                                friendRequestStatus === 'pending' ? 'checkmark' :
-                                friendRequestStatus === 'friends' ? 'people' :
-                                friendRequestStatus === 'loading' ? 'hourglass-outline' : 'people'
-                            } 
-                            size={16} 
-                            color={
-                                friendRequestStatus === 'pending' ? '#10b981' :
-                                friendRequestStatus === 'friends' ? '#8b5cf6' :
-                                friendRequestStatus === 'loading' ? '#9ca3af' : '#8b5cf6'
-                            } 
-                        />
-                        <Text style={[
-                            styles.followingText,
-                            friendRequestStatus === 'pending' && styles.followingTextPending,
-                            friendRequestStatus === 'friends' && styles.followingTextFriends,
-                            friendRequestStatus === 'loading' && styles.followingTextLoading
-                        ]}>
-                            {friendRequestStatus === 'pending' ? 'Đã gửi lời mời' :
-                             friendRequestStatus === 'friends' ? 'Bạn bè' :
-                             friendRequestStatus === 'loading' ? 'Đang gửi...' : 'Add Friend'}
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={styles.messageButton}>
-                        <Ionicons name="chatbubble-outline" size={16} color="#8b5cf6" />
-                        <Text style={styles.messageText}>Message</Text>
-                    </TouchableOpacity>
-                </View>
 
                 {/* Tabs */}
                 <View style={styles.tabsBento}>

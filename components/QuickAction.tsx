@@ -1,6 +1,7 @@
 // QuickActions.tsx
 import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -10,12 +11,23 @@ type QuickActionItem = {
   onPress?: () => void;
 };
 
-const actions: QuickActionItem[] = [
-  { iconName: 'compass', label: 'Explore' },
-  { iconName: 'people', label: 'Friends' },
-];
-
 export default function QuickAction() {
+  const router = useRouter();
+
+  const handleFriendsPress = () => {
+    router.push('/(home)/listfriend');
+  };
+
+  const handleExplorePress = () => {
+    // TODO: Navigate to explore page
+    console.log('Explore pressed');
+  };
+
+  const actions: QuickActionItem[] = [
+    { iconName: 'compass', label: 'Explore', onPress: handleExplorePress },
+    { iconName: 'people', label: 'Friends', onPress: handleFriendsPress },
+  ];
+
   return (
     <View style={styles.quickActionsBento}>
       {actions.map((item) => (
