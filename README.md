@@ -28,7 +28,7 @@
 | Component     | Technology            |
 |---------------|------------------------|
 | **Frontend**  | React Native           |
-| **Backend**   | NestJS (REST API)      |
+| **Backend**   | ExpressJS (REST API)      |
 | **Database**  | PostgreSQL + Prisma    |
 | **Maps**      | React Native Map       |
 | **Auth**      | JWT                    |
