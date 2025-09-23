@@ -16,10 +16,10 @@
 - 📊 **User Stats**: Track your activity, emotional impact, and user interactions.
 - 
 <img width="207" height="448" alt="image" src="https://github.com/user-attachments/assets/de49b0ac-4445-4983-b2f2-2065b6926f92" />
-<img width="207" height="448" alt="image" src="https://github.com/user-attachments/assets/36eb3498-13cc-46c8-ae0a-cd16bdfe25a8" />
 <img width="207" height="448" alt="image" src="https://github.com/user-attachments/assets/002564b1-dd45-4da6-991c-2dc3c596b748" />
 <img width="207" height="448" alt="image" src="https://github.com/user-attachments/assets/d0c3ca32-058f-4e9e-bef3-be8604f7e5b9" />
 <img width="207" height="448" alt="image" src="https://github.com/user-attachments/assets/9b993982-113e-46c9-98ee-c32a56a09a6a" />
+<img width="207" height="448" alt="image" src="https://github.com/user-attachments/assets/36eb3498-13cc-46c8-ae0a-cd16bdfe25a8" />
 
 ---
 
