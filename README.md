@@ -1,4 +1,4 @@
-![fe-profile](https://github.com/user-attachments/assets/d3c8fcf1-b8a6-4b84-ab90-6dd46e38ba17)![fe-cluster](https://github.com/user-attachments/assets/3b765756-ec7c-406b-a944-1d345267526b)# 📍 Whisper of Memory
+📍 Whisper of Memory
 
 **Whisper** is an anonymous voice-based social platform that lets users record and share memories using their voice, tied to real-world locations on a map. Each voice is a “whisper” — a short, emotional message, story, or confession, left anonymously for others to discover.
 
