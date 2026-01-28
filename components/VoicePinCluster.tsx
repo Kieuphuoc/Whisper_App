@@ -16,7 +16,7 @@ type VoicePin = {
   address?: string;
   createdAt: string;
   user?: {
-    name: string;
+    username: string;
     avatar?: string;
   };
   likes?: number;
@@ -25,12 +25,10 @@ type VoicePin = {
 
 type VoicePinClusterProps = {
   voicePins: VoicePin[];
-  latitude: number;
-  longitude: number;
   onPress: (voicePin: VoicePin) => void;
 };
 
-export default function VoicePinCluster({ voicePins, latitude, longitude, onPress }: VoicePinClusterProps) {
+export default function VoicePinCluster({ voicePins, onPress }: VoicePinClusterProps) {
   const [showClusterModal, setShowClusterModal] = useState(false);
 
   const handleClusterPress = () => {

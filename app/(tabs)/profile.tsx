@@ -1,6 +1,8 @@
+import { MyDispatchContext, MyUserContext } from '@/configs/Context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type VoicePin = {
@@ -13,7 +15,9 @@ type VoicePin = {
 };
 
 export default function ProfileScreen() {
-  const router = useRouter();
+  const user = useContext(MyUserContext);
+  const dispatch = useContext(MyDispatchContext);
+  const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState<'pins' | 'memories'>('pins');
 
   const voicePins: VoicePin[] = [
@@ -116,13 +120,13 @@ export default function ProfileScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={() => navigation.goBack()}
         >
           <Ionicons name="arrow-back" size={20} color="#8b5cf6" />
         </TouchableOpacity>
-        
+
         <TouchableOpacity style={styles.settingsButton}>
           <Ionicons name="settings-outline" size={20} color="#8b5cf6" />
         </TouchableOpacity>
@@ -138,7 +142,7 @@ export default function ProfileScreen() {
             />
             <View style={styles.onlineIndicator} />
           </View>
-          
+
           <View style={styles.profileInfo}>
             <Text style={styles.username}>Alex Johnson</Text>
             <Text style={styles.userBio}>Voice storyteller & memory collector</Text>
@@ -170,7 +174,7 @@ export default function ProfileScreen() {
             <Ionicons name="people" size={16} color="#8b5cf6" />
             <Text style={styles.followingText}>Following</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.messageButton}>
             <Ionicons name="chatbubble-outline" size={16} color="#8b5cf6" />
             <Text style={styles.messageText}>Message</Text>
@@ -187,7 +191,7 @@ export default function ProfileScreen() {
               Voice Pins
             </Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={[styles.tab, activeTab === 'memories' && styles.activeTab]}
             onPress={() => setActiveTab('memories')}

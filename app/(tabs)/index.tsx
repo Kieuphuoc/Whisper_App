@@ -231,15 +231,6 @@ export default function HomeScreen() {
     setFocusedMarkerId(null);
   };
 
-  const handleViewDetail = () => {
-    if (selectedVoicePin) {
-      router.push({
-        pathname: '/voice-detail',
-        params: { voicePinId: selectedVoicePin.id, voicePinJson: encodeURIComponent(JSON.stringify(selectedVoicePin)) }
-      });
-    }
-  };
-
   return (
 
 
@@ -272,7 +263,6 @@ export default function HomeScreen() {
 
             {voicePinClusters.map((cluster, index) => (
               <Marker
-                provider="google" // thêm dòng này
                 key={`cluster-${index}`}
                 coordinate={{
                   latitude: cluster.latitude,
@@ -310,7 +300,6 @@ export default function HomeScreen() {
             {selectedVoicePin && (
               <VoicePinCard
                 voicePin={selectedVoicePin}
-                onPress={handleViewDetail}
                 onClose={handleVoicePinCardClose}
               />
             )}

@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAudioPlayer } from 'expo-audio';
 import { Image } from 'expo-image';
 import { useNavigation } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type VoicePinCardProps = {
@@ -40,6 +40,13 @@ export default function VoicePinCard({ voicePin, onClose }: VoicePinCardProps) {
     }
   };
 
+  const handlePress = useCallback(() => {
+  if (voicePin) {
+    navigation.navigate('voiceDetail', { voicePinId: voicePin.id });
+  }
+}, [voicePin, navigation]);
+
+
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -47,7 +54,7 @@ export default function VoicePinCard({ voicePin, onClose }: VoicePinCardProps) {
   };
 
   const progressPercent = totalDuration > 0 ? (currentTime / totalDuration) * 100 : 0;
-
+  console.log("Ma chi tiet voice", voicePin.id);
   return (
     <View style={styles.container}>
       {/* Header with close button */}
@@ -120,10 +127,10 @@ export default function VoicePinCard({ voicePin, onClose }: VoicePinCardProps) {
       </View>
 
       {/* View Detail Button */}
-      <TouchableOpacity style={styles.detailButton} onPress={()=>navigation.navigate('voice-detail')}>
-        <Text style={styles.detailButtonText}>Detail Voice Pin</Text>
-        <Ionicons name="arrow-forward" size={16} color="#8b5cf6" />
-      </TouchableOpacity>
+       <TouchableOpacity style={styles.detailButton} onPress={handlePress}>
+      <Text style={styles.detailButtonText}>Detail Voice Pin</Text>
+      <Ionicons name="arrow-forward" size={16} color="#8b5cf6" />
+    </TouchableOpacity>
     </View>
   );
 }
