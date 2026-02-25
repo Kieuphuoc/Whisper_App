@@ -1,77 +1,55 @@
+import { authApis, endpoints } from '@/configs/Apis';
 import { MyDispatchContext, MyUserContext } from '@/configs/Context';
+import { ProfileVoicePin, User } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
-import React, { useContext, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
-type VoicePin = {
-  id: string;
-  title: string;
-  emotion: string;
-  duration: string;
-  playCount: number;
-  location: string;
-};
+import React, { useContext, useEffect, useState } from 'react';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
-  const user = useContext(MyUserContext);
+  const user = useContext(MyUserContext) as User | null;
   const dispatch = useContext(MyDispatchContext);
   const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState<'pins' | 'memories'>('pins');
+  const [profile, setProfile] = useState<User | null>(null);
+  const [stats, setStats] = useState<{ voicePinCount: number, totalListens: number, locationCount: number } | null>(null);
+  const [voicePins, setVoicePins] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const voicePins: VoicePin[] = [
-    {
-      id: '1',
-      title: 'Morning Coffee Vibes',
-      emotion: '😊',
-      duration: '0:45',
-      playCount: 12,
-      location: 'Central Park',
-    },
-    {
-      id: '2',
-      title: 'Street Music Inspiration',
-      emotion: '🎵',
-      duration: '1:20',
-      playCount: 8,
-      location: 'Coffee Shop',
-    },
-    {
-      id: '3',
-      title: 'Sunset Meditation',
-      emotion: '🌅',
-      duration: '2:15',
-      playCount: 25,
-      location: 'Golden Gate Bridge',
-    },
-  ];
+  useEffect(() => {
+    if (user?.token) {
+      fetchProfileData();
+    }
+  }, [user]);
 
-  const mostPlayedMemories = [
-    {
-      id: '1',
-      title: 'Peaceful Morning',
-      emotion: '😌',
-      duration: '1:30',
-      playCount: 45,
-    },
-    {
-      id: '2',
-      title: 'City Sounds',
-      emotion: '🏙️',
-      duration: '0:55',
-      playCount: 32,
-    },
-    {
-      id: '3',
-      title: 'Nature Walk',
-      emotion: '🌿',
-      duration: '2:45',
-      playCount: 28,
-    },
-  ];
+  const fetchProfileData = async () => {
+    try {
+      if (!user?.token) return;
+      setLoading(true);
+      const api = authApis(user.token);
 
-  const VoicePinCard = ({ pin }: { pin: VoicePin }) => (
+      const [profileRes, statsRes, pinsRes] = await Promise.all([
+        api.get(endpoints.userMe),
+        api.get(endpoints.userStats),
+        api.get(endpoints.voice)
+      ]);
+
+      setProfile(profileRes.data);
+      setStats(statsRes.data);
+      setVoicePins(pinsRes.data);
+    } catch (error) {
+      console.error("Error fetching profile data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const mostPlayedMemories = [...voicePins]
+    .sort((a, b) => (b.listensCount || 0) - (a.listensCount || 0))
+    .slice(0, 5);
+
+  const VoicePinCard = ({ pin }: { pin: ProfileVoicePin }) => (
     <View style={styles.pinBento}>
       <View style={styles.pinHeader}>
         <View style={styles.pinIconContainer}>
@@ -116,6 +94,18 @@ export default function ProfileScreen() {
     </View>
   );
 
+  const logout = async () => {
+    try {
+      await AsyncStorage.removeItem("token");
+      await AsyncStorage.removeItem("user");
+      if (dispatch) {
+        dispatch({ type: 'LOGOUT' });
+      }
+    } catch (e) {
+      console.error("Logout failed", e);
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -127,9 +117,15 @@ export default function ProfileScreen() {
           <Ionicons name="arrow-back" size={20} color="#8b5cf6" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.settingsButton}>
-          <Ionicons name="settings-outline" size={20} color="#8b5cf6" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <TouchableOpacity style={styles.settingsButton} onPress={logout}>
+            <Ionicons name="log-out-outline" size={20} color="#ef4444" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingsButton}>
+            <Ionicons name="settings-outline" size={20} color="#8b5cf6" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -137,14 +133,14 @@ export default function ProfileScreen() {
         <View style={styles.profileBento}>
           <View style={styles.profileImageContainer}>
             <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face' }}
+              source={{ uri: profile?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face' }}
               style={styles.profileImage}
             />
             <View style={styles.onlineIndicator} />
           </View>
 
           <View style={styles.profileInfo}>
-            <Text style={styles.username}>Alex Johnson</Text>
+            <Text style={styles.username}>{profile?.displayName || profile?.username || 'User'}</Text>
             <Text style={styles.userBio}>Voice storyteller & memory collector</Text>
             <Text style={styles.userLocation}>San Francisco, CA</Text>
           </View>
@@ -153,17 +149,17 @@ export default function ProfileScreen() {
         {/* Stats */}
         <View style={styles.statsBento}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{voicePins.length}</Text>
+            <Text style={styles.statValue}>{stats?.voicePinCount || 0}</Text>
             <Text style={styles.statLabel}>Voice Pins</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>1.2k</Text>
+            <Text style={styles.statValue}>{stats?.totalListens || 0}</Text>
             <Text style={styles.statLabel}>Total Plays</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>24</Text>
+            <Text style={styles.statValue}>{stats?.locationCount || 0}</Text>
             <Text style={styles.statLabel}>Locations</Text>
           </View>
         </View>
@@ -204,17 +200,46 @@ export default function ProfileScreen() {
 
         {/* Content */}
         <View style={styles.contentContainer}>
-          {activeTab === 'pins' ? (
+          {loading ? (
+            <ActivityIndicator size="large" color="#8b5cf6" style={{ marginTop: 40 }} />
+          ) : activeTab === 'pins' ? (
             <View style={styles.pinsContainer}>
-              {voicePins.map((pin) => (
-                <VoicePinCard key={pin.id} pin={pin} />
-              ))}
+              {voicePins.length > 0 ? (
+                voicePins.map((pin) => (
+                  <VoicePinCard
+                    key={pin.id}
+                    pin={{
+                      id: pin.id,
+                      title: pin.content,
+                      emotion: pin.emotionLabel || '🎵',
+                      duration: pin.duration ? `${Math.floor(pin.duration / 60)}:${(pin.duration % 60).toString().padStart(2, '0')}` : '0:00',
+                      playCount: pin.listensCount || 0,
+                      location: pin.address || 'Unknown'
+                    }}
+                  />
+                ))
+              ) : (
+                <Text style={styles.noDataText}>No voice pins yet</Text>
+              )}
             </View>
           ) : (
             <View style={styles.memoriesContainer}>
-              {mostPlayedMemories.map((memory) => (
-                <MemoryCard key={memory.id} memory={memory} />
-              ))}
+              {mostPlayedMemories.length > 0 ? (
+                mostPlayedMemories.map((memory) => (
+                  <MemoryCard
+                    key={memory.id}
+                    memory={{
+                      id: memory.id,
+                      title: memory.content,
+                      emotion: memory.emotionLabel || '🎙️',
+                      duration: memory.duration ? `${Math.floor(memory.duration / 60)}:${(memory.duration % 60).toString().padStart(2, '0')}` : '0:00',
+                      playCount: memory.listensCount || 0,
+                    }}
+                  />
+                ))
+              ) : (
+                <Text style={styles.noDataText}>No memories yet</Text>
+              )}
             </View>
           )}
         </View>
@@ -565,5 +590,11 @@ const styles = StyleSheet.create({
   playCountLabel: {
     fontSize: 10,
     color: '#9ca3af',
+  },
+  noDataText: {
+    textAlign: 'center',
+    color: '#9ca3af',
+    marginTop: 40,
+    fontSize: 16,
   },
 });

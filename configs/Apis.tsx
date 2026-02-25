@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 
-const BASE_URL = "http://192.168.88.104:5000/";
+const BASE_URL = "https://62c2-1-52-252-42.ngrok-free.app/";
 
 export const endpoints = {
   voice: "/voice/",
@@ -14,6 +14,8 @@ export const endpoints = {
   translate: (sourceText: string, targetLang = 'vi'): string => `/translate/?q=${encodeURIComponent(sourceText)}&target=${encodeURIComponent(targetLang)}`,
   login: "/auth/login/",
   review: (event_id: string | number): string => `/event/${event_id}/reviews/`,
+  userMe: "/user/me",
+  userStats: "/user/me/stats",
 };
 
 export const authApis = (token: string): AxiosInstance => {

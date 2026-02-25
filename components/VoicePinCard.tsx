@@ -1,4 +1,4 @@
-import { HomeScreenNavigationProp } from '@/type';
+import { VoicePinCardProps } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useAudioPlayer } from 'expo-audio';
 import { Image } from 'expo-image';
@@ -6,30 +6,13 @@ import { useNavigation } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-type VoicePinCardProps = {
-  voicePin: {
-    id: string;
-    description: string;
-    duration: number;
-    audioUrl: string;
-    createdAt: string;
-    user?: {
-      name: string;
-      avatar?: string;
-    };
-    likes?: number;
-    replies?: number;
-  };
-  onClose: () => void;
-};
-
 export default function VoicePinCard({ voicePin, onClose }: VoicePinCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [totalDuration, setTotalDuration] = useState(0);
-  
+
   const player = useAudioPlayer(voicePin.audioUrl);
-  const navigation = useNavigation<HomeScreenNavigationProp>()
+  const navigation = useNavigation<any>()
   const playPause = () => {
     if (isPlaying) {
       player.pause();
@@ -41,10 +24,10 @@ export default function VoicePinCard({ voicePin, onClose }: VoicePinCardProps) {
   };
 
   const handlePress = useCallback(() => {
-  if (voicePin) {
-    navigation.navigate('voiceDetail', { voicePinId: voicePin.id });
-  }
-}, [voicePin, navigation]);
+    if (voicePin) {
+      navigation.navigate('voiceDetail', { voicePinId: voicePin.id });
+    }
+  }, [voicePin, navigation]);
 
 
   const formatTime = (seconds: number): string => {
@@ -90,19 +73,19 @@ export default function VoicePinCard({ voicePin, onClose }: VoicePinCardProps) {
 
       {/* Description */}
       <Text style={styles.description} numberOfLines={2}>
-        {voicePin.description}
+        {voicePin.content}
       </Text>
 
       {/* Audio Player */}
       <View style={styles.audioSection}>
         <TouchableOpacity onPress={playPause} style={styles.playButton}>
-          <Ionicons 
-            name={isPlaying ? 'pause' : 'play'} 
-            size={20} 
-            color="#ffffff" 
+          <Ionicons
+            name={isPlaying ? 'pause' : 'play'}
+            size={20}
+            color="#ffffff"
           />
         </TouchableOpacity>
-        
+
         <View style={styles.audioInfo}>
           <View style={styles.progressBar}>
             <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
@@ -118,19 +101,19 @@ export default function VoicePinCard({ voicePin, onClose }: VoicePinCardProps) {
       <View style={styles.statsSection}>
         <View style={styles.statItem}>
           <Ionicons name="heart-outline" size={16} color="#6b7280" />
-          <Text style={styles.statText}>{voicePin.likes || 0}</Text>
+          <Text style={styles.statText}>{voicePin.reactionsCount || 0}</Text>
         </View>
         <View style={styles.statItem}>
           <Ionicons name="chatbubble-outline" size={16} color="#6b7280" />
-          <Text style={styles.statText}>{voicePin.replies || 0}</Text>
+          <Text style={styles.statText}>{voicePin.commentsCount || 0}</Text>
         </View>
       </View>
 
       {/* View Detail Button */}
-       <TouchableOpacity style={styles.detailButton} onPress={handlePress}>
-      <Text style={styles.detailButtonText}>Detail Voice Pin</Text>
-      <Ionicons name="arrow-forward" size={16} color="#8b5cf6" />
-    </TouchableOpacity>
+      <TouchableOpacity style={styles.detailButton} onPress={handlePress}>
+        <Text style={styles.detailButtonText}>Detail Voice Pin</Text>
+        <Ionicons name="arrow-forward" size={16} color="#8b5cf6" />
+      </TouchableOpacity>
     </View>
   );
 }

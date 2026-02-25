@@ -1,25 +1,18 @@
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { VoicePin } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useAudioPlayer } from 'expo-audio';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-type Memory = {
-    id: string;
-    emoji: string;
-    duration: string;
-    createdAt: string;
-    description: string;
-    longitude: number;
-    latitude: number;
-    audioUrl: string;
-    location: string;
-    emotion: string;
+type Props = {
+    item: VoicePin;
+    onPress?: () => void;
 };
 
-export function MemoryCard({ memory }: { memory: Memory }) {
-    const player = useAudioPlayer(memory.audioUrl);
+export function MemoryCard({ item, onPress }: Props) {
+    const player = useAudioPlayer(item.audioUrl);
     const [isPlaying, setIsPlaying] = useState<boolean>(false);
     const [duration, setDuration] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
@@ -57,7 +50,7 @@ export function MemoryCard({ memory }: { memory: Memory }) {
         <ThemedView style={styles.card}>
             <View style={styles.header}>
                 <View style={styles.emotionContainer}>
-                    <Text style={styles.emotionText}>{memory.emotion}</Text>
+                    <Text style={styles.emotionText}>{item.emotionLabel || '🎵'}</Text>
                 </View>
 
                 <View style={styles.infoContainer}>
@@ -66,7 +59,7 @@ export function MemoryCard({ memory }: { memory: Memory }) {
                             {duration ? duration : '---'}
                         </ThemedText>
                         <Text style={styles.dateTime}>
-                            {new Date(memory.createdAt).toLocaleDateString('en-US', {
+                            {new Date(item.createdAt).toLocaleDateString('en-US', {
                                 month: 'short',
                                 day: 'numeric',
                                 hour: '2-digit',
@@ -76,13 +69,13 @@ export function MemoryCard({ memory }: { memory: Memory }) {
                     </View>
 
                     <ThemedText style={styles.description}>
-                        {memory.description}
+                        {item.content}
                     </ThemedText>
 
                     <View style={styles.locationContainer}>
                         <Ionicons name="location-outline" size={14} color="#6b7280" />
                         <Text style={styles.location}>
-                            {memory.location || 'Unknown location'}
+                            {item.address || 'Unknown location'}
                         </Text>
                     </View>
                 </View>

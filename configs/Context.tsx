@@ -1,16 +1,5 @@
+import { User, UserAction } from '@/types';
 import { createContext, Dispatch } from 'react';
-
-export type User = {
-    id: string;
-    name: string;
-    email: string;
-    avatar?: string;
-    token?: string;
-};
-
-export type UserAction =
-    | { type: 'SET_USER'; payload: User }
-    | { type: 'LOGOUT' };
 
 export const MyUserContext = createContext<User | null>(null);
 export const MyDispatchContext = createContext<Dispatch<UserAction> | null>(null);
