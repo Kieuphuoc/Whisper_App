@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 
-const BASE_URL = "https://62c2-1-52-252-42.ngrok-free.app/";
+const BASE_URL = "http://192.168.88.104:5000";
 
 export const endpoints = {
   voice: "/voice/",
@@ -16,13 +16,27 @@ export const endpoints = {
   review: (event_id: string | number): string => `/event/${event_id}/reviews/`,
   userMe: "/user/me",
   userStats: "/user/me/stats",
+  // Notifications
+  notifications: "/notification/",
+  notificationsUnread: "/notification/unread",
+  notificationRead: (id: string | number) => `/notification/${id}/read`,
+  notificationsReadAll: "/notification/read-all",
+  notificationsClear: "/notification/clear",
+  // Friends
+  friendList: (userId: string | number) => `/friend/list/${userId}`,
+  friendPending: "/friend/pending",
+  friendRequest: "/friend/request",
+  friendRespond: (id: string | number) => `/friend/request/${id}/respond`,
+  friendCancel: (id: string | number) => `/friend/request/${id}`,
+  friendRemove: "/friend/remove",
+  friendStatus: (userId: string | number) => `/friend/status/${userId}`,
 };
 
 export const authApis = (token: string): AxiosInstance => {
   return axios.create({
     baseURL: BASE_URL,
     headers: {
-      Authorization: `${token}`,
+      Authorization: `Bearer ${token}`,
     },
   });
 };

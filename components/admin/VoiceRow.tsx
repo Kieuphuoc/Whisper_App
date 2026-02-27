@@ -23,13 +23,28 @@ export function VoiceRow({ voice, onHide, onDelete }: Props) {
         <View style={styles.content}>
           <Text style={styles.idText}>ID: {voice.id}</Text>
           <Text style={styles.contentText} numberOfLines={2}>{voice.content}</Text>
-          <Text style={styles.addressText} numberOfLines={1}>📍 {voice.address}</Text>
-          <Text style={styles.infoText}>
-            Visible: {voice.visibility} | {voice.isAnonymous ? '👤 Anonymous' : '👥 Public'}
-          </Text>
-          <Text style={styles.statsText}>
-            🎧 {voice.listensCount} · ❤️ {voice.reactionsCount} · 💬 {voice.commentsCount}
-          </Text>
+
+          <View style={styles.iconRow}>
+            <Ionicons name="location-outline" size={12} color="#9ca3af" />
+            <Text style={styles.addressText} numberOfLines={1}>{voice.address}</Text>
+          </View>
+
+          <View style={styles.iconRow}>
+            <Ionicons name="eye-outline" size={12} color="#6b7280" />
+            <Text style={styles.infoText}>
+              {voice.visibility} | {voice.isAnonymous ? 'Anonymous' : 'Public'}
+            </Text>
+          </View>
+
+          <View style={styles.statsRow}>
+            <Ionicons name="headset-outline" size={12} color="#8b5cf6" />
+            <Text style={styles.statsText}>{voice.listensCount}</Text>
+            <Ionicons name="heart-outline" size={12} color="#f87171" style={{ marginLeft: 8 }} />
+            <Text style={styles.statsText}>{voice.reactionsCount}</Text>
+            <Ionicons name="chatbubble-outline" size={12} color="#60a5fa" style={{ marginLeft: 8 }} />
+            <Text style={styles.statsText}>{voice.commentsCount}</Text>
+          </View>
+
           <Text style={styles.emotionText}>
             Mood: {voice.emotionLabel} ({voice.emotionScore})
           </Text>
@@ -93,18 +108,28 @@ const styles = StyleSheet.create({
   addressText: {
     color: '#9ca3af',
     fontSize: 12,
-    marginBottom: 4,
+    flex: 1,
+  },
+  iconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 3,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 3,
   },
   infoText: {
     color: '#6b7280',
     fontSize: 11,
-    marginBottom: 2,
+    flex: 1,
   },
   statsText: {
     color: '#8b5cf6',
     fontSize: 11,
     fontWeight: '500',
-    marginBottom: 2,
   },
   emotionText: {
     color: '#6b7280',

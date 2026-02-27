@@ -22,31 +22,38 @@ export default function TabLayout() {
           paddingTop: 8,
           height: 70,
         },
-        tabBarLabelStyle: { fontSize: 12, fontWeight: '500' },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
       }}
     >
       <Tabs.Screen name="home"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} />,
+          title: 'Bản đồ',
+          tabBarIcon: ({ color, size }) => <Ionicons name="map-outline" size={size} color={color} />,
         }}
       />
 
       <Tabs.Screen name="memory"
         options={{
-          title: 'Memories',
+          title: 'Ký ức',
           tabBarIcon: ({ color, size }) => <Ionicons name="heart-outline" size={size} color={color} />,
+        }}
+      />
+
+      <Tabs.Screen name="notification/index"
+        options={{
+          title: 'Thông báo',
+          tabBarIcon: ({ color, size }) => <Ionicons name="notifications-outline" size={size} color={color} />,
         }}
       />
 
       <Tabs.Screen name="profile"
         options={{
-          title: 'Profile',
+          title: 'Hồ sơ',
           tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
         }}
       />
 
-      <Tabs.Screen name="admin"
+      <Tabs.Screen name="admin/index"
         options={{
           title: 'Admin',
           tabBarIcon: ({ color, size }) => <Ionicons name="shield-checkmark-outline" size={size} color={color} />,

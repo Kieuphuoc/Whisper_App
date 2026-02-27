@@ -8,9 +8,9 @@ export const VISIBILITY_LIST: Visibility[] = [
 ];
 
 export const VISIBILITY_LABEL: Record<Visibility, string> = {
-    PRIVATE: 'Private',
-    FRIENDS: 'Friends',
-    PUBLIC: 'Public',
+    PRIVATE: 'Riêng tư',
+    FRIENDS: 'Bạn bè',
+    PUBLIC: 'Công khai',
 };
 
 export type FriendRequestStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';

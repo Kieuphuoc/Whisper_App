@@ -45,7 +45,7 @@ export default function VoiceButton({ isRecording, onPress }: VoiceButtonProps) 
             float.stop(); // Ngừng nhấp nhô khi đang ghi
             floatAnim.setValue(0);
             pulse.start();
-            
+
             // Hiệu ứng "giật mình" nhẹ khi bắt đầu nhấn
             Animated.spring(scaleAnim, {
                 toValue: 1.1,
@@ -56,7 +56,7 @@ export default function VoiceButton({ isRecording, onPress }: VoiceButtonProps) 
             pulse.stop();
             pulseAnim.setValue(0);
             float.start();
-            
+
             Animated.spring(scaleAnim, {
                 toValue: 1,
                 friction: 3,
@@ -78,15 +78,15 @@ export default function VoiceButton({ isRecording, onPress }: VoiceButtonProps) 
                     style={[
                         styles.pulseRing,
                         {
-                            transform: [{ 
-                                scale: pulseAnim.interpolate({ 
-                                    inputRange: [0, 1], 
-                                    outputRange: [1, 2.2] 
-                                }) 
+                            transform: [{
+                                scale: pulseAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [1, 2.2]
+                                })
                             }],
-                            opacity: pulseAnim.interpolate({ 
-                                inputRange: [0, 0.5, 1], 
-                                outputRange: [0, 0.4, 0] 
+                            opacity: pulseAnim.interpolate({
+                                inputRange: [0, 0.5, 1],
+                                outputRange: [0, 0.4, 0]
                             }),
                         },
                     ]}
@@ -94,12 +94,12 @@ export default function VoiceButton({ isRecording, onPress }: VoiceButtonProps) 
             )}
 
             {/* Nút chính */}
-            <Animated.View 
-                style={{ 
+            <Animated.View
+                style={{
                     transform: [
                         { translateY: floatAnim },
                         { scale: scaleAnim }
-                    ] 
+                    ]
                 }}
             >
                 <TouchableOpacity
@@ -107,10 +107,10 @@ export default function VoiceButton({ isRecording, onPress }: VoiceButtonProps) 
                     style={[styles.button, isRecording && styles.recordingButton]}
                     onPress={onPress}
                 >
-                    <Ionicons 
-                        name={isRecording ? 'stop' : 'mic'} 
-                        size={30} 
-                        color="white" 
+                    <Ionicons
+                        name={isRecording ? 'stop' : 'mic'}
+                        size={30}
+                        color="white"
                     />
                 </TouchableOpacity>
             </Animated.View>
