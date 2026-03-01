@@ -1,14 +1,16 @@
+import { User, UserAction } from '@/types';
 import { createContext, Dispatch } from 'react';
 
-// 1. Định nghĩa kiểu dữ liệu cho user
-export type User = {
-  id: string;
-  name: string;
-  email: string;
-}
-
-// 2. Context lưu user hoặc null
 export const MyUserContext = createContext<User | null>(null);
+export const MyDispatchContext = createContext<Dispatch<UserAction> | null>(null);
 
-// 3. Context lưu hàm dispatch (giả sử bạn dùng useReducer cho user)
-export const MyDispatchContext = createContext<Dispatch<any> | null>(null);
+export const userReducer = (state: User | null, action: UserAction): User | null => {
+    switch (action.type) {
+        case 'SET_USER':
+            return action.payload;
+        case 'LOGOUT':
+            return null;
+        default:
+            return state;
+    }
+};

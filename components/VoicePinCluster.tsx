@@ -1,38 +1,10 @@
 import { MyUserContext } from '@/configs/Context';
-import { Colors } from '@/constants/Colors';
+import { VoicePinClusterProps } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useContext, useState } from 'react';
 import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-type VoicePin = {
-  id: string;
-  latitude: number;
-  longitude: number;
-  emotion: string;
-  description: string;
-  duration: number;
-  visibility: 'PUBLIC' | 'PRIVATE' | 'FRIENDS';
-  audioUrl: string;
-  imageUrl?: string;
-  address?: string;
-  createdAt: string;
-  user?: {
-    displayName: string;
-    username: string;
-    avatar?: string;
-  };
-  likes?: number;
-  replies?: number;
-};
-
-type VoicePinClusterProps = {
-  voicePins: VoicePin[];
-  latitude: number;
-  longitude: number;
-  onPress: (voicePin: VoicePin) => void;
-};
-
-export default function VoicePinCluster({ voicePins, latitude, longitude, onPress }: VoicePinClusterProps) {
+export default function VoicePinCluster({ voicePins, onPress }: VoicePinClusterProps) {
   const [showClusterModal, setShowClusterModal] = useState(false);
 
   const handleClusterPress = () => {
@@ -111,26 +83,26 @@ export default function VoicePinCluster({ voicePins, latitude, longitude, onPres
                       </View>
                     </View>
                     <View style={styles.emotionContainer}>
-                      <Text style={styles.emotionText}>{voicePin.emotion}</Text>
+                      <Text style={styles.emotionText}>{voicePin.emotionLabel || '🎤'}</Text>
                     </View>
                   </View>
 
                   <Text style={styles.description} numberOfLines={2}>
-                    {voicePin.description}
+                    {voicePin.content}
                   </Text>
 
                   <View style={styles.voiceStats}>
                     <View style={styles.statItem}>
                       <Ionicons name="heart-outline" size={14} color="#6b7280" />
-                      <Text style={styles.statText}>{voicePin.likes || 0}</Text>
+                      <Text style={styles.statText}>{voicePin.reactionsCount || 0}</Text>
                     </View>
                     <View style={styles.statItem}>
                       <Ionicons name="chatbubble-outline" size={14} color="#6b7280" />
-                      <Text style={styles.statText}>{voicePin.replies || 0}</Text>
+                      <Text style={styles.statText}>{voicePin.commentsCount || 0}</Text>
                     </View>
                     <View style={styles.statItem}>
                       <Ionicons name="time-outline" size={14} color="#6b7280" />
-                      <Text style={styles.statText}>{voicePin.duration}s</Text>
+                      <Text style={styles.statText}>{voicePin.listensCount || 0}</Text>
                     </View>
                   </View>
                 </TouchableOpacity>

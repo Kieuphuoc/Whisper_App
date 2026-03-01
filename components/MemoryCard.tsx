@@ -1,6 +1,6 @@
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { Colors } from '@/constants/Colors';
+import { VoicePin } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useAudioPlayer } from 'expo-audio';
 import { Image } from 'expo-image';
@@ -15,31 +15,13 @@ type MemoryCardProps = {
     nameUser?: string; // <== optional
 };
 
-type Memory = {
-    id: string;
-    latitude: number;
-    longitude: number;
-    emotion: string;
-    description: string;
-    duration: number;
-    visibility: 'PUBLIC' | 'PRIVATE' | 'FRIENDS';
-    audioUrl: string;
-    imageUrl?: string;
-    address?: string;
-    createdAt: string;
-    user?: {
-        id: string,
-        username: string;
-        avatar?: string;
-    };
-    likes?: number;
-    replies?: number;
+type Props = {
+    item: VoicePin;
+    onPress?: () => void;
 };
 
-export function MemoryCard({ memory, nameUser }: MemoryCardProps) {
-    console.log("Uri", memory?.audioUrl)
-
-    const player = useAudioPlayer(memory.audioUrl);
+export function MemoryCard({ item, onPress }: Props) {
+    const player = useAudioPlayer(item.audioUrl);
     const [isPlaying, setIsPlaying] = useState<boolean>(false);
     const [duration, setDuration] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
@@ -98,25 +80,16 @@ export function MemoryCard({ memory, nameUser }: MemoryCardProps) {
     return (
         <ThemedView style={styles.card}>
             <View style={styles.header}>
-                <TouchableOpacity style={styles.emotionContainer} onPress={() => {
-
-                    router.push({ pathname: '/(home)/profile', params: { userId: memory?.user?.id } });
-
-                }}>
-                    {/* <Text style={styles.emotionText}>{memory.emotion}</Text> */}
-                    {memory.user?.avatar ? (
-                        <Image source={{ uri: memory.user.avatar }} style={{ width: '100%', height: '100%' }} />
-                    ) : (
-                        <Ionicons name="person" size={16} color={Colors.primary} />
-                    )}
-                </TouchableOpacity>
+                <View style={styles.emotionContainer}>
+                    <Text style={styles.emotionText}>{item.emotionLabel || '🎵'}</Text>
+                </View>
 
                 <View style={styles.infoContainer}>
                     <View style={styles.titleRow}>
 
                         {nameUser && <ThemedText type='defaultSemiBold'>{nameUser}</ThemedText>}
                         <Text style={styles.dateTime}>
-                            {new Date(memory.createdAt).toLocaleDateString('en-GB', {
+                            {new Date(item.createdAt).toLocaleDateString('en-US', {
                                 month: 'short',
                                 day: 'numeric',
                                 hour: '2-digit',
@@ -135,13 +108,13 @@ export function MemoryCard({ memory, nameUser }: MemoryCardProps) {
 
 
                     <ThemedText style={styles.description}>
-                        {memory.description}
+                        {item.content}
                     </ThemedText>
 
                     <View style={styles.locationContainer}>
                         <Ionicons name="location" size={14} color="#6b7280" />
                         <Text style={styles.location}>
-                            {locationName}
+                            {item.address || 'Unknown location'}
                         </Text>
                     </View>
                 </View>

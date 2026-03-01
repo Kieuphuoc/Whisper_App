@@ -3,9 +3,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Image, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import Apis, { endpoints } from '../../configs/Apis';
+import Apis, { endpoints, authApis } from '../../configs/Apis';
+import { MyDispatchContext } from '../../configs/Context';
 
 type UserLogin = {
   username?: string;
@@ -23,7 +24,7 @@ export default function LoginScreen() {
   const [user, setUser] = useState<UserLogin>({});
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
-  // const dispatch = useContext(MyDispatchContext);
+  const dispatch = useContext(MyDispatchContext);
   const navigation = useNavigation<NavigationProp<any>>();
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -70,10 +71,17 @@ export default function LoginScreen() {
         });
 
         const data = res.data;
-        console.log(data);
+        console.log("Login success:", data);
 
+        // The login endpoint already returns { token, user }
         await AsyncStorage.setItem('token', data.token);
-        router.push('/');
+        await AsyncStorage.setItem('user', JSON.stringify(data.user));
+
+        if (dispatch) {
+          dispatch({ type: "SET_USER", payload: data.user });
+        }
+
+        router.replace('/(tabs)/home');
       } catch (err) {
         console.error('Lỗi đăng nhập:', (err as Error).message);
         setMsg((err as Error).message);
@@ -146,12 +154,12 @@ export default function LoginScreen() {
           ))}
 
           {/* Error Message */}
-          {/* {error ? (
+          {msg ? (
             <View style={styles.errorBento}>
               <Ionicons name="alert-circle-outline" size={16} color="#ef4444" />
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={styles.errorText}>{msg}</Text>
             </View>
-          ) : null} */}
+          ) : null}
 
           {/* Login Button */}
           <TouchableOpacity
@@ -190,12 +198,12 @@ export default function LoginScreen() {
           </View>
 
           {/* Sign Up Link */}
-          {/* <View style={styles.signupBento}>
+          <View style={styles.signupBento}>
             <Text style={styles.signupText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/register')}>
+            <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
               <Text style={styles.loginText}>Sign up</Text>
             </TouchableOpacity>
-          </View> */}
+          </View>
         </View>
       </View>
     </View>

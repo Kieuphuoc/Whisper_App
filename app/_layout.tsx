@@ -1,69 +1,63 @@
-import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform } from 'react-native';
+import { MyDispatchContext, MyUserContext, userReducer } from "@/configs/Context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Stack, useRouter, useSegments } from "expo-router";
+import { useEffect, useReducer, useState } from "react";
+import { ActivityIndicator, View } from "react-native";
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
-  // const user = useContext(MyUserContext); // lấy user từ context
-  const user = { id: 1, name: 'Phuoc' };
+export default function RootLayout() {
+  const [user, dispatch] = useReducer(userReducer, null);
+  const [isReady, setIsReady] = useState(false);
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        const userData = await AsyncStorage.getItem("user");
+
+        if (token && userData) {
+          dispatch({ type: "SET_USER", payload: JSON.parse(userData) });
+        }
+      } catch (e) {
+        console.error("Failed to load user state", e);
+      } finally {
+        setIsReady(true);
+      }
+    };
+
+    loadUser();
+  }, []);
+
+  useEffect(() => {
+    if (!isReady) return;
+
+    const inAuthGroup = segments[0] === "(auth)";
+
+    if (!user && !inAuthGroup) {
+      router.replace("/login");
+    } else if (user && (inAuthGroup || !segments[0])) {
+      router.replace("/home");
+    }
+  }, [user, segments, isReady]);
+
+  if (!isReady) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: '#f8fafc' }}>
+        <ActivityIndicator size="large" color="#8b5cf6" />
+      </View>
+    );
+  }
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: { position: 'absolute' },
-          default: {},
-        }),
-      }}>
-      <Tabs.Screen
-        name="(home)"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      />
-
-
-
-     
-          <Tabs.Screen
-            name="(memory)"
-            options={{
-              title: 'Memory',
-              tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-            }}
-          />
-          <Tabs.Screen
-            name="(profile)"
-            options={{
-              title: 'Profile',
-              tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
-            }}
-          />
-           <Tabs.Screen
-        name="(login)"
-        options={{
-          title: 'Login',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
-        }}
-      />
-          
-      <Tabs.Screen
-        name="(register)"
-        options={{
-          title: 'Register',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.2.fill" color={color} />,
-        }}
-      />
-    </Tabs>
+    <MyUserContext.Provider value={user}>
+      <MyDispatchContext.Provider value={dispatch}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
+          <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+          <Stack.Screen name="index" options={{ animation: 'fade' }} />
+        </Stack>
+      </MyDispatchContext.Provider>
+    </MyUserContext.Provider>
   );
 }

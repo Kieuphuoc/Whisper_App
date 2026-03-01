@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 
-const BASE_URL = "http://192.168.88.104:5000/";
+const BASE_URL = "http://172.20.10.6:5000";
 
 export const endpoints = {
   // Auth
@@ -21,27 +21,37 @@ export const endpoints = {
   voicePublic: "/voice/public/",
   voicePublicByUser: (id: string | number) => `/voice/user/${id}/public/`,
   voiceFriends: "/voice/friends/",
-
-  // Comments
-  getComments: (voiceId: string | number) => `/voice/${voiceId}/comment`,
-  createComment: "/voice/", // (nên xem lại route cụ thể)
-  updateComment: (commentId: string | number) => `/voice/${commentId}`,
-  deleteComment: (commentId: string | number) => `/voice/${commentId}`,
-
+  voiceDetail: (id: string | number): string => `/voice/${id}/`,
+  voiceReactions: (id: string | number): string => `/voice/${id}/reactions/`,
+  voiceComments: (id: string | number): string => `/voice/${id}/comments/`,
+  commentReplies: (commentId: string | number): string => `/comments/${commentId}/replies/`,
+  translate: (sourceText: string, targetLang = 'vi'): string => `/translate/?q=${encodeURIComponent(sourceText)}&target=${encodeURIComponent(targetLang)}`,
+  login: "/auth/login/",
+  register: "/auth/register/",
+  review: (event_id: string | number): string => `/event/${event_id}/reviews/`,
+  userMe: "/user/me",
+  userStats: "/user/me/stats",
+  // Notifications
+  notifications: "/notification/",
+  notificationsUnread: "/notification/unread",
+  notificationRead: (id: string | number) => `/notification/${id}/read`,
+  notificationsReadAll: "/notification/read-all",
+  notificationsClear: "/notification/clear",
   // Friends
+  friendList: (userId: string | number) => `/friend/list/${userId}`,
+  friendPending: "/friend/pending",
   friendRequest: "/friend/request",
   friendRespond: (id: string | number) => `/friend/request/${id}/respond`,
   friendCancel: (id: string | number) => `/friend/request/${id}`,
   friendRemove: "/friend/remove",
-  friendList: "/friend/list/",
-  friendPending: "/friend/pending"
+  friendStatus: (userId: string | number) => `/friend/status/${userId}`,
 };
 
 export const authApis = (token: string): AxiosInstance => {
   return axios.create({
     baseURL: BASE_URL,
     headers: {
-      Authorization: `${token}`,
+      Authorization: `Bearer ${token}`,
     },
   });
 };
