@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // ─── Emotion colours ─────────────────────────────────────
 const EMOTION_COLOR: Record<string, string> = {
@@ -180,19 +181,69 @@ export default function ProfileScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchAll(true)} tintColor="#8b5cf6" />}
           contentContainerStyle={{ paddingBottom: 40 }}
         >
-          {/* ── Avatar + name ── */}
-          <View style={s.avatarSection}>
-            {avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={s.avatar} />
-            ) : (
-              <View style={s.avatarPlaceholder}>
-                <Text style={s.avatarInitial}>{displayName.slice(0, 2).toUpperCase()}</Text>
+          {/* ── Profile Card (Dribbble Style) ── */}
+          <View style={s.cardWrapper}>
+            <LinearGradient
+              colors={['#8b5cf6', '#6366f1']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={s.profileCard}
+            >
+              <View style={s.cardContent}>
+                <View style={s.avatarContainer}>
+                  {avatarUri ? (
+                    <Image source={{ uri: avatarUri }} style={s.avatar} />
+                  ) : (
+                    <View style={s.avatarPlaceholder}>
+                      <Text style={s.avatarInitial}>{displayName.slice(0, 2).toUpperCase()}</Text>
+                    </View>
+                  )}
+                  {/* Status Indicator */}
+                  <View style={[s.statusDot, { backgroundColor: (profile as any)?.status === 'ACTIVE' || true ? '#10b981' : '#f59e0b' }]} />
+                </View>
+
+                <View style={s.infoContainer}>
+                  <Text style={s.displayName}>{displayName}</Text>
+                  <Text style={s.emailText}>{(profile as any)?.email || 'jane@example.com'}</Text>
+                  <Text style={s.bioText}>{(profile as any)?.bio || 'Sharing stories one voice at a time'}</Text>
+
+                  <View style={s.badgesContainer}>
+                    <View style={s.badge}>
+                      <Ionicons name="star" size={12} color="#facc15" />
+                      <Text style={s.badgeText}>Level {(profile as any)?.level || 5}</Text>
+                    </View>
+                    <View style={[s.badge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                      <Ionicons name="flash" size={12} color="#60a5fa" />
+                      <Text style={s.badgeText}>{(profile as any)?.xp || 1200} XP</Text>
+                    </View>
+                  </View>
+                </View>
               </View>
-            )}
-            <Text style={s.displayName}>{displayName}</Text>
-            <Text style={s.username}>@{profile?.username ?? '—'}</Text>
-            <Text style={s.joinDate}>Tham gia {(profile as any)?.createdAt ? fmtDate((profile as any).createdAt) : '—'}</Text>
+
+              {/* Horizontal Stats Row */}
+              <View style={s.profileStatsRow}>
+                <View style={s.profileStat}>
+                  <Text style={s.profileStatVal}>{(profile as any)?.xp || 1200}</Text>
+                  <Text style={s.profileStatLbl}>XP</Text>
+                </View>
+                <View style={s.profileStatDivider} />
+                <View style={s.profileStat}>
+                  <Text style={s.profileStatVal}>{(profile as any)?.scanRadius || 3000}m</Text>
+                  <Text style={s.profileStatLbl}>Bán kính</Text>
+                </View>
+                <View style={s.profileStatDivider} />
+                <View style={s.profileStat}>
+                  <Text style={s.profileStatVal}>ACTIVE</Text>
+                  <Text style={s.profileStatLbl}>Trạng thái</Text>
+                </View>
+              </View>
+            </LinearGradient>
           </View>
+
+          {/* CTA Button */}
+          <TouchableOpacity style={s.ctaButton}>
+            <Text style={s.ctaButtonText}>Chỉnh sửa hồ sơ</Text>
+          </TouchableOpacity>
 
           {/* ── Stats row ── */}
           <View style={s.statsRow}>
@@ -277,14 +328,33 @@ const s = StyleSheet.create({
 
   center: { justifyContent: 'center', alignItems: 'center', gap: 12, padding: 40, minHeight: 200 },
 
-  // Avatar section
-  avatarSection: { alignItems: 'center', paddingVertical: 24, paddingHorizontal: 16 },
-  avatar: { width: 88, height: 88, borderRadius: 44, borderWidth: 3, borderColor: '#ede9fe' },
-  avatarPlaceholder: { width: 88, height: 88, borderRadius: 44, backgroundColor: '#ede9fe', justifyContent: 'center', alignItems: 'center' },
-  avatarInitial: { fontSize: 32, fontWeight: '800', color: '#8b5cf6' },
-  displayName: { fontSize: 22, fontWeight: '800', color: '#111827', marginTop: 12 },
-  username: { fontSize: 14, color: '#9ca3af', marginTop: 2 },
-  joinDate: { fontSize: 12, color: '#d1d5db', marginTop: 4 },
+  // Profile Card
+  cardWrapper: { marginHorizontal: 16, marginTop: 16, marginBottom: 24, shadowColor: '#6366f1', shadowOpacity: 0.25, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 8 },
+  profileCard: { borderRadius: 28, padding: 20, overflow: 'hidden' },
+  cardContent: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  avatarContainer: { position: 'relative', marginRight: 16 },
+  avatar: { width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: '#ffffff' },
+  avatarPlaceholder: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255, 255, 255, 0.2)', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#ffffff' },
+  avatarInitial: { fontSize: 32, fontWeight: '800', color: '#ffffff' },
+  statusDot: { position: 'absolute', bottom: 2, right: 2, width: 16, height: 16, borderRadius: 8, borderWidth: 2, borderColor: '#ffffff' },
+  infoContainer: { flex: 1 },
+  displayName: { fontSize: 22, fontWeight: '800', color: '#ffffff', marginBottom: 2 },
+  emailText: { fontSize: 13, color: 'rgba(255, 255, 255, 0.8)', marginBottom: 6 },
+  bioText: { fontSize: 14, color: 'rgba(255, 255, 255, 0.95)', marginBottom: 12, fontStyle: 'italic' },
+  badgesContainer: { flexDirection: 'row', gap: 8 },
+  badge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.15)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, gap: 4 },
+  badgeText: { fontSize: 12, fontWeight: '700', color: '#ffffff' },
+
+  // Profile Stats Row Inside Card
+  profileStatsRow: { flexDirection: 'row', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 16, paddingVertical: 12 },
+  profileStat: { flex: 1, alignItems: 'center' },
+  profileStatVal: { fontSize: 16, fontWeight: '800', color: '#ffffff' },
+  profileStatLbl: { fontSize: 11, color: 'rgba(255, 255, 255, 0.7)', marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
+  profileStatDivider: { width: 1, backgroundColor: 'rgba(255, 255, 255, 0.2)', marginVertical: 4 },
+
+  // CTA Button
+  ctaButton: { backgroundColor: '#111827', marginHorizontal: 16, paddingVertical: 16, borderRadius: 20, alignItems: 'center', marginBottom: 24, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
+  ctaButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
 
   // Stats
   statsRow: {

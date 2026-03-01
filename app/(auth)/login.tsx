@@ -154,12 +154,12 @@ export default function LoginScreen() {
           ))}
 
           {/* Error Message */}
-          {/* {error ? (
+          {msg ? (
             <View style={styles.errorBento}>
               <Ionicons name="alert-circle-outline" size={16} color="#ef4444" />
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={styles.errorText}>{msg}</Text>
             </View>
-          ) : null} */}
+          ) : null}
 
           {/* Login Button */}
           <TouchableOpacity
@@ -198,12 +198,12 @@ export default function LoginScreen() {
           </View>
 
           {/* Sign Up Link */}
-          {/* <View style={styles.signupBento}>
+          <View style={styles.signupBento}>
             <Text style={styles.signupText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/register')}>
+            <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
               <Text style={styles.loginText}>Sign up</Text>
             </TouchableOpacity>
-          </View> */}
+          </View>
         </View>
       </View>
     </View>

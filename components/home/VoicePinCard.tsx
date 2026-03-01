@@ -105,8 +105,9 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
           <View style={styles.vinylShadow}>
             <Animated.View style={[styles.vinylPlate, { transform: [{ rotate: spin }] }]}>
               <Image
-                source={{ uri: pin.imageUrl ?? 'https://i.pinimg.com/736x/fd/1f/c3/fd1fc3bb9231406261397b7f647e999f.jpg' }}
+                source={{ uri: pin.imageUrl ?? pin.images?.[0]?.imageUrl ?? 'https://i.pinimg.com/736x/fd/1f/c3/fd1fc3bb9231406261397b7f647e999f.jpg' }}
                 style={styles.recordImage}
+                resizeMode="cover"
               />
               <View style={styles.recordCenter} />
             </Animated.View>
