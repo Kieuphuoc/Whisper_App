@@ -37,13 +37,6 @@ export default function TabLayout() {
         ),
       }}
     >
-      <Tabs.Screen name="home"
-        options={{
-          title: 'Bản đồ',
-          tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? "map" : "map-outline"} size={26} color={color} />,
-        }}
-      />
-
       <Tabs.Screen name="memory"
         options={{
           title: 'Ký ức',
@@ -51,9 +44,9 @@ export default function TabLayout() {
         }}
       />
 
-      <Tabs.Screen name="notification/index"
+      <Tabs.Screen name="home"
         options={{
-          title: 'Thông báo',
+          title: 'Bản đồ',
           tabBarIcon: ({ focused }) => (
             <View style={{
               width: 52,
@@ -62,14 +55,14 @@ export default function TabLayout() {
               backgroundColor: '#000000',
               justifyContent: 'center',
               alignItems: 'center',
-              marginBottom: 4, // Slight adjustment to center within the circle visually
+              marginBottom: 4,
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 6 },
               shadowOpacity: 0.2,
               shadowRadius: 12,
               elevation: 6,
             }}>
-              <Ionicons name={focused ? "notifications" : "notifications-outline"} size={24} color="#ffffff" />
+              <Ionicons name={focused ? "map" : "map-outline"} size={24} color="#ffffff" />
             </View>
           ),
         }}
@@ -82,10 +75,15 @@ export default function TabLayout() {
         }}
       />
 
+      <Tabs.Screen name="notification/index"
+        options={{
+          href: null,
+        }}
+      />
+
       <Tabs.Screen name="admin/index"
         options={{
-          title: 'Admin',
-          tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? "shield-checkmark" : "shield-checkmark-outline"} size={26} color={color} />,
+          href: null,
         }}
       />
     </Tabs>

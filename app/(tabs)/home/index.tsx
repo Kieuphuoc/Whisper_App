@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 import { useContext, useState } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 
@@ -28,6 +29,7 @@ export default function HomeScreen() {
   const { visibility, setVisibility } = useVisibility("PUBLIC");
   const { pins, refetch } = useVoicePins(visibility);
   const dispatch = useContext(MyDispatchContext);
+  const router = useRouter();
 
   // Step state
   const [pendingAudioUri, setPendingAudioUri] = useState<string | null>(null);
@@ -94,6 +96,11 @@ export default function HomeScreen() {
         <Ionicons name="people-outline" size={22} color="#8b5cf6" />
       </TouchableOpacity>
 
+      {/* Notification button */}
+      <TouchableOpacity style={styles.notifButton} onPress={() => router.push("/(tabs)/notification")}>
+        <Ionicons name="notifications-outline" size={22} color="#f59e0b" />
+      </TouchableOpacity>
+
       <VisibilityFilter value={visibility} onChange={setVisibility} />
 
       {/* Step 3: Camera */}
@@ -140,6 +147,20 @@ const styles = StyleSheet.create({
     position: "absolute" as const,
     top: 60,
     right: 76,
+    backgroundColor: "white",
+    padding: 10,
+    borderRadius: 25,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    zIndex: 1000,
+  },
+  notifButton: {
+    position: "absolute" as const,
+    top: 60,
+    left: 20,
     backgroundColor: "white",
     padding: 10,
     borderRadius: 25,
