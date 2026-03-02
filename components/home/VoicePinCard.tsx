@@ -105,7 +105,7 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
           <View style={styles.vinylShadow}>
             <Animated.View style={[styles.vinylPlate, { transform: [{ rotate: spin }] }]}>
               <Image
-                source={{ uri: pin.imageUrl ?? pin.images?.[0]?.imageUrl ?? 'https://i.pinimg.com/736x/fd/1f/c3/fd1fc3bb9231406261397b7f647e999f.jpg' }}
+                source={{ uri: pin.images?.[0]?.imageUrl ?? pin.imageUrl ?? 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&q=80' }}
                 style={styles.recordImage}
                 resizeMode="cover"
               />
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   recordImage: {
     width: "100%",
     height: "100%",
-    opacity: 0.75,
+    opacity: 0.95,
   },
   recordCenter: {
     position: "absolute",

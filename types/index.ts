@@ -94,6 +94,7 @@ export interface VoicePin {
     // --- Relations ---
     userId?: number;
     user?: UserBasic;
+    images?: Image[];
 
     // --- System ---
     createdAt: string;

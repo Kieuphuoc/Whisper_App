@@ -177,13 +177,13 @@ export const userStyles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 15, height: 50,
   },
-  hiddenBox:{
-     flexDirection: 'row',
+  hiddenBox: {
+    flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f8f8f8',
     borderRadius: 12,
     paddingHorizontal: 15, height: 50,
-        marginBottom: 15,
+    marginBottom: 15,
 
   }
 }); 

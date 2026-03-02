@@ -1,305 +1,546 @@
 import VoicePinTurntable from '@/components/home/VoicePinCard';
+import { Colors } from '@/constants/Colors';
 import { useMyPins } from '@/hooks/useMyPins';
 import { VoicePin } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Dimensions,
   FlatList,
   Image,
+  LayoutAnimation,
+  Platform,
+  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
+  UIManager,
   View,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 
-const { width } = Dimensions.get('window');
-const CARD_W = (width - 48) / 2;
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+export const { width } = Dimensions.get('window');
+export const CARD_WIDTH = width * 0.6;
+export const CARD_SPACING = 12;
 
 // ─── Emotion meta ─────────────────────────────────────────
-const EMOTION_META: Record<string, { color: string; bg: string; icon: keyof typeof Ionicons.glyphMap; vi: string }> = {
-  Happy: { color: '#facc15', bg: '#fffbeb', icon: 'sunny-outline', vi: 'Vui vẻ' },
-  Sad: { color: '#60a5fa', bg: '#eff6ff', icon: 'rainy-outline', vi: 'Buồn bã' },
-  Calm: { color: '#34d399', bg: '#ecfdf5', icon: 'leaf-outline', vi: 'Bình yên' },
-  Nostalgic: { color: '#f472b6', bg: '#fdf2f8', icon: 'hourglass-outline', vi: 'Nhớ nhung' },
-  Romantic: { color: '#fb7185', bg: '#fff1f2', icon: 'heart-outline', vi: 'Lãng mạn' },
-  Curious: { color: '#a78bfa', bg: '#f5f3ff', icon: 'telescope-outline', vi: 'Tò mò' },
-  Angry: { color: '#f87171', bg: '#fef2f2', icon: 'flame-outline', vi: 'Bực bội' },
+const EMOTION_META: Record<string, { color: string; gradient: string; icon: keyof typeof Ionicons.glyphMap; vi: string }> = {
+  Happy: { color: '#f59e0b', gradient: '#fef3c7', icon: 'sunny-outline', vi: 'Vui vẻ' },
+  Sad: { color: '#3b82f6', gradient: '#dbeafe', icon: 'rainy-outline', vi: 'Buồn bã' },
+  Calm: { color: '#10b981', gradient: '#d1fae5', icon: 'leaf-outline', vi: 'Bình yên' },
+  Nostalgic: { color: '#ec4899', gradient: '#fce7f3', icon: 'hourglass-outline', vi: 'Nhớ nhung' },
+  Romantic: { color: '#f43f5e', gradient: '#ffe4e6', icon: 'heart-outline', vi: 'Lãng mạn' },
+  Curious: { color: '#8b5cf6', gradient: '#ede9fe', icon: 'telescope-outline', vi: 'Tò mò' },
+  Angry: { color: '#ef4444', gradient: '#fee2e2', icon: 'flame-outline', vi: 'Bực bội' },
+  Relaxed: { color: '#14b8a6', gradient: '#ccfbf1', icon: 'water-outline', vi: 'Thư giãn' },
+  Excited: { color: '#f97316', gradient: '#ffedd5', icon: 'flash-outline', vi: 'Phấn khích' },
+  Mysterious: { color: '#6366f1', gradient: '#e0e7ff', icon: 'eye-outline', vi: 'Bí ẩn' },
+  Thoughtful: { color: '#8b5cf6', gradient: '#f3e8ff', icon: 'bulb-outline', vi: 'Trầm tư' },
+  Enthusiastic: { color: '#f59e0b', gradient: '#fef9c3', icon: 'rocket-outline', vi: 'Nhiệt huyết' },
+  Inspiring: { color: '#06b6d4', gradient: '#cffafe', icon: 'sparkles-outline', vi: 'Cảm hứng' },
 };
-const DEFAULT_META = { color: '#9ca3af', bg: '#f9fafb', icon: 'mic-outline' as keyof typeof Ionicons.glyphMap, vi: 'Chưa phân loại' };
+const DEFAULT_META = { color: '#9ca3af', gradient: '#f3f4f6', icon: 'mic-outline' as keyof typeof Ionicons.glyphMap, vi: 'Khác' };
 
-function getEmotionMeta(label?: string) {
+export function getMeta(label?: string) {
   return label ? (EMOTION_META[label] ?? DEFAULT_META) : DEFAULT_META;
 }
 
-function StackedThumbs({ pins }: { pins: VoicePin[] }) {
-  const top3 = pins.slice(0, 3);
+export function getPinImage(pin: VoicePin): string | undefined {
+  return pin.images?.[0]?.imageUrl ?? pin.imageUrl;
+}
+
+// ─── Filter chips ─────────────────────────────────────────
+type FilterType = 'mood' | 'time' | 'visibility' | 'location';
+const FILTERS: { key: FilterType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'mood', label: 'Tâm trạng', icon: 'happy-outline' },
+  { key: 'time', label: 'Thời gian', icon: 'time-outline' },
+  { key: 'visibility', label: 'Quyền riêng tư', icon: 'lock-closed-outline' },
+  { key: 'location', label: 'Địa điểm', icon: 'location-outline' },
+];
+
+function FilterChips({ active, onChange }: { active: FilterType; onChange: (f: FilterType) => void }) {
   return (
-    <View style={stack.container}>
-      {top3.map((p, i) => {
-        const angle = (i - 1) * 7; // -7, 0, +7 degrees
-        const zI = top3.length - i;
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={filterStyles.row}>
+      {FILTERS.map(f => {
+        const isActive = f.key === active;
         return (
-          <View
-            key={p.id}
-            style={[
-              stack.frame,
-              {
-                transform: [{ rotate: `${angle}deg` }],
-                zIndex: zI,
-                left: i * 6,
-                top: i * 2,
-              },
-            ]}
+          <TouchableOpacity
+            key={f.key}
+            onPress={() => onChange(f.key)}
+            style={[filterStyles.chip, isActive && filterStyles.chipActive]}
+            activeOpacity={0.7}
           >
-            {p.imageUrl ? (
-              <Image source={{ uri: p.imageUrl }} style={stack.img} />
-            ) : (
-              <View style={[stack.img, stack.placeholder]}>
-                <Ionicons name="mic" size={26} color="#d1d5db" />
-              </View>
-            )}
-          </View>
+            <Ionicons name={f.icon} size={14} color={isActive ? '#fff' : '#6b7280'} />
+            <Text style={[filterStyles.chipText, isActive && filterStyles.chipTextActive]}>{f.label}</Text>
+          </TouchableOpacity>
         );
       })}
+    </ScrollView>
+  );
+}
+
+const filterStyles = StyleSheet.create({
+  row: { paddingHorizontal: 20, gap: 8, paddingBottom: 4 },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f8f9fa',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  chipActive: {
+    backgroundColor: Colors.primary,
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  chipText: { fontSize: 12, fontWeight: '600', color: '#6b7280' },
+  chipTextActive: { color: '#fff' },
+});
+
+// ─── Waveform (visual only) ──────────────────────────────
+export function Waveform({ color, barCount = 20 }: { color: string; barCount?: number }) {
+  const bars = useMemo(() => {
+    const arr = [];
+    for (let i = 0; i < barCount; i++) {
+      // Create a gentle parabolic wave pattern with some randomness
+      const norm = i / (barCount - 1);
+      const base = Math.sin(norm * Math.PI) * 0.7 + 0.3;
+      const random = 0.85 + Math.random() * 0.3;
+      arr.push(Math.min(1, base * random));
+    }
+    return arr;
+  }, [barCount]);
+
+  return (
+    <View style={waveStyles.container}>
+      {bars.map((h, i) => (
+        <View
+          key={i}
+          style={[
+            waveStyles.bar,
+            {
+              height: 4 + h * 18,
+              backgroundColor: color,
+              opacity: 0.4 + h * 0.5,
+            },
+          ]}
+        />
+      ))}
     </View>
   );
 }
 
-const stack = StyleSheet.create({
+const waveStyles = StyleSheet.create({
   container: {
-    width: CARD_W - 24,
-    height: (CARD_W - 24) * 0.75,
-    position: 'relative',
-    marginBottom: 12,
-    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 1.5,
+    height: 24,
+    marginTop: 8,
   },
-  frame: {
-    position: 'absolute',
-    width: (CARD_W - 40),
-    height: (CARD_W - 40) * 0.75,
-    borderRadius: 12,
-    borderWidth: 3,
-    borderColor: '#fff',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 6,
-    backgroundColor: '#e5e7eb',
-  },
-  img: {
-    width: '100%',
-    height: '100%',
-  },
-  placeholder: {
-    backgroundColor: '#f3f4f6',
-    justifyContent: 'center',
-    alignItems: 'center',
+  bar: {
+    width: 2.5,
+    borderRadius: 2,
   },
 });
 
-// ─── Album card (one emotion group) ──────────────────────
-function AlbumCard({ emotion, pins, onPress }: { emotion: string; pins: VoicePin[]; onPress: () => void }) {
-  const meta = getEmotionMeta(emotion);
+// ─── Memory Card ──────────────────────────────────────────
+export function MemoryCard({ pin, onPress, customWidth, customMarginRight }: { pin: VoicePin; onPress: () => void; customWidth?: number; customMarginRight?: number }) {
+  const meta = getMeta(pin.emotionLabel);
+  const imgUrl = getPinImage(pin);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, { toValue: 0.96, useNativeDriver: true, speed: 50 }).start();
+  };
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 30 }).start();
+  };
+
+  const dateStr = new Date(pin.createdAt).toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: 'short',
+  });
+
+  const w = customWidth ?? CARD_WIDTH;
+  const mr = customMarginRight ?? CARD_SPACING;
+
   return (
-    <TouchableOpacity style={[card.container, { backgroundColor: meta.bg }]} onPress={onPress} activeOpacity={0.88}>
-      <StackedThumbs pins={pins} />
-      <View style={card.footer}>
-        <View style={[card.iconBadge, { backgroundColor: meta.color + '22' }]}>
+    <Animated.View style={[{ width: w, marginRight: mr, transform: [{ scale: scaleAnim }] }]}>
+      <TouchableOpacity
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={1}
+        style={[memCard.container, { backgroundColor: meta.gradient }]}
+      >
+        {/* Mood badge */}
+        <View style={[memCard.moodBadge, { backgroundColor: meta.color + '20' }]}>
           <Ionicons name={meta.icon} size={14} color={meta.color} />
         </View>
-        <Text style={card.label} numberOfLines={1}>{meta.vi}</Text>
-      </View>
-      <View style={card.countBadge}>
-        <Text style={card.countText}>{pins.length}</Text>
-      </View>
-    </TouchableOpacity>
+
+        {/* Image */}
+        {imgUrl ? (
+          <Image source={{ uri: imgUrl }} style={[memCard.image, { height: w * 0.6 }]} />
+        ) : (
+          <View style={[memCard.image, memCard.imagePlaceholder, { height: w * 0.6 }]}>
+            <Ionicons name="musical-notes-outline" size={32} color={meta.color + '60'} />
+          </View>
+        )}
+
+        {/* Info */}
+        <View style={memCard.info}>
+          <Text style={memCard.content} numberOfLines={2}>
+            {pin.content ?? 'Ký ức giọng nói'}
+          </Text>
+
+          <View style={memCard.metaRow}>
+            <Ionicons name="location-outline" size={11} color="#9ca3af" />
+            <Text style={memCard.metaText} numberOfLines={1}>
+              {pin.address ?? 'Không rõ vị trí'}
+            </Text>
+          </View>
+
+          <Waveform color={meta.color} />
+
+          <View style={memCard.bottomRow}>
+            <Text style={memCard.dateText}>{dateStr}</Text>
+            <View style={memCard.statsRow}>
+              <Ionicons name="headset-outline" size={10} color="#9ca3af" />
+              <Text style={memCard.statNum}>{pin.listensCount ?? 0}</Text>
+              <Ionicons name="heart" size={10} color="#f9a8d4" style={{ marginLeft: 6 }} />
+              <Text style={memCard.statNum}>{pin.reactionsCount ?? 0}</Text>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
-const card = StyleSheet.create({
+const memCard = StyleSheet.create({
+  wrapper: { width: CARD_WIDTH, marginRight: CARD_SPACING },
   container: {
-    width: CARD_W,
     borderRadius: 20,
-    padding: 14,
-    marginBottom: 16,
-    position: 'relative',
-    // shadowColor: '#000',
-    // shadowOffset: { width: 0, height: 4 },
-    // shadowOpacity: 0.08,
-    // shadowRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
     elevation: 5,
   },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-  },
-  iconBadge: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+  moodBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    zIndex: 2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  label: {
+  image: {
+    width: '100%',
+    height: CARD_WIDTH * 0.6,
+    backgroundColor: '#f3f4f6',
+  },
+  imagePlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  info: {
+    padding: 12,
+    gap: 2,
+  },
+  content: {
     fontSize: 13,
     fontWeight: '700',
     color: '#1f2937',
+    lineHeight: 18,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 3,
+  },
+  metaText: {
+    fontSize: 10,
+    color: '#9ca3af',
     flex: 1,
   },
-  countBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: '#1f2937',
-    borderRadius: 10,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 6,
   },
-  countText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '700',
+  dateText: {
+    fontSize: 10,
+    color: '#b0b0b0',
+    fontWeight: '500',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  statNum: {
+    fontSize: 10,
+    color: '#b0b0b0',
+    marginLeft: 2,
   },
 });
 
-// ─── Emotion detail list ──────────────────────────────────
-function EmotionDetail({
-  emotion, pins, onBack, onSelectPin,
-}: { emotion: string; pins: VoicePin[]; onBack: () => void; onSelectPin: (p: VoicePin) => void }) {
-  const meta = getEmotionMeta(emotion);
-  const formatDate = (d: string) => new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: 'short', year: 'numeric' });
-  const formatDur = (s?: number) => s ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '--:--';
+// ─── Section (carousel) ──────────────────────────────────
+function Section({
+  title,
+  icon,
+  iconColor,
+  pins,
+  onSeeAll,
+  onSelectPin,
+}: {
+  title: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  iconColor: string;
+  pins: VoicePin[];
+  onSeeAll?: () => void;
+  onSelectPin: (p: VoicePin) => void;
+}) {
+  if (pins.length === 0) return null;
+  const displayPins = pins.slice(0, 10);
 
   return (
-    <View style={[detail.container, { backgroundColor: meta.bg }]}>
-      <StatusBar barStyle="dark-content" />
-      {/* Header */}
-      <View style={detail.header}>
-        <TouchableOpacity onPress={onBack} style={detail.backBtn}>
-          <Ionicons name="arrow-back" size={22} color="#1f2937" />
-        </TouchableOpacity>
-        <View style={detail.headerTitle}>
-          <Ionicons name={meta.icon} size={20} color={meta.color} />
-          <Text style={detail.titleText}>{meta.vi}</Text>
+    <View style={section.container}>
+      <View style={section.header}>
+        <View style={section.titleRow}>
+          <View style={[section.iconDot, { backgroundColor: iconColor + '18' }]}>
+            <Ionicons name={icon} size={14} color={iconColor} />
+          </View>
+          <Text style={section.title}>{title}</Text>
         </View>
-        <Text style={detail.countLabel}>{pins.length} ký ức</Text>
+        {pins.length > 10 && onSeeAll && (
+          <TouchableOpacity onPress={onSeeAll} style={section.seeAllBtn}>
+            <Text style={section.seeAllText}>Xem tất cả</Text>
+            <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <FlatList
-        data={pins}
-        keyExtractor={(p) => String(p.id)}
-        contentContainerStyle={{ padding: 16, paddingTop: 8 }}
-        renderItem={({ item: pin }) => (
-          <TouchableOpacity style={detail.pinCard} onPress={() => onSelectPin(pin)} activeOpacity={0.85}>
-            {pin.imageUrl ? (
-              <Image source={{ uri: pin.imageUrl }} style={detail.pinThumb} />
-            ) : (
-              <View style={[detail.pinThumb, detail.pinThumbPlaceholder]}>
-                <Ionicons name="mic" size={22} color={meta.color} />
-              </View>
-            )}
-            <View style={detail.pinInfo}>
-              <Text style={detail.pinContent} numberOfLines={2}>
-                {pin.content ?? 'Ký ức không có tiêu đề'}
-              </Text>
-              <View style={detail.pinMeta}>
-                <Ionicons name="location-outline" size={12} color="#9ca3af" />
-                <Text style={detail.pinMetaText} numberOfLines={1}>
-                  {pin.address ?? 'Vị trí không xác định'}
-                </Text>
-              </View>
-              <View style={detail.pinMeta}>
-                <Ionicons name="time-outline" size={12} color="#9ca3af" />
-                <Text style={detail.pinMetaText}>{formatDate(pin.createdAt)}</Text>
-                <Ionicons name="timer-outline" size={12} color="#9ca3af" style={{ marginLeft: 8 }} />
-                <Text style={detail.pinMetaText}>{formatDur(pin.duration)}</Text>
-              </View>
-              <View style={detail.pinStats}>
-                <Ionicons name="headset-outline" size={12} color="#8b5cf6" />
-                <Text style={detail.statText}>{pin.listensCount}</Text>
-                <Ionicons name="heart-outline" size={12} color="#f87171" style={{ marginLeft: 8 }} />
-                <Text style={detail.statText}>{pin.reactionsCount}</Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color="#d1d5db" />
-          </TouchableOpacity>
+        data={displayPins}
+        horizontal
+        keyExtractor={p => String(p.id)}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 20 }}
+        snapToInterval={CARD_WIDTH + CARD_SPACING}
+        decelerationRate="fast"
+        renderItem={({ item }) => (
+          <MemoryCard pin={item} onPress={() => onSelectPin(item)} />
         )}
       />
     </View>
   );
 }
 
-const detail = StyleSheet.create({
-  container: { flex: 1 },
+const section = StyleSheet.create({
+  container: { marginBottom: 28 },
   header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 56,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-    gap: 10,
+    paddingHorizontal: 20,
+    marginBottom: 14,
   },
-  backBtn: { padding: 6 },
-  headerTitle: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  titleText: { fontSize: 20, fontWeight: '800', color: '#1f2937' },
-  countLabel: { color: '#9ca3af', fontSize: 13, fontWeight: '500' },
-  pinCard: {
+  titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 12,
-    marginBottom: 12,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    gap: 8,
   },
-  pinThumb: {
-    width: 70,
-    height: 70,
+  iconDot: {
+    width: 28,
+    height: 28,
     borderRadius: 14,
-    backgroundColor: '#f3f4f6',
-  },
-  pinThumbPlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  pinInfo: { flex: 1, gap: 4 },
-  pinContent: { fontSize: 14, fontWeight: '600', color: '#1f2937', lineHeight: 19 },
-  pinMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  pinMetaText: { fontSize: 11, color: '#9ca3af', flex: 1 },
-  pinStats: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  statText: { fontSize: 11, color: '#6b7280', marginLeft: 3 },
+  title: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1f2937',
+    letterSpacing: -0.3,
+  },
+  seeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  seeAllText: {
+    fontSize: 12,
+    color: Colors.primary,
+    fontWeight: '600',
+  },
 });
 
 // ─── Main Memory Screen ───────────────────────────────────
 export default function MemoryScreen() {
+  const router = useRouter();
   const { pins, loading, error, refetch } = useMyPins();
-  const [selectedEmotion, setSelectedEmotion] = useState<string | null>(null);
   const [selectedPin, setSelectedPin] = useState<VoicePin | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<FilterType>('mood');
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Group pins by emotionLabel
-  const groups = useMemo(() => {
-    const map: Record<string, VoicePin[]> = {};
-    for (const p of pins) {
-      const key = p.emotionLabel ?? 'Chưa phân loại';
-      (map[key] = map[key] ?? []).push(p);
+  const handleFilterChange = (f: FilterType) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setActiveFilter(f);
+  };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
+
+  // Filter by search
+  const filtered = useMemo(() => {
+    if (!searchQuery.trim()) return pins;
+    const q = searchQuery.toLowerCase();
+    return pins.filter(p =>
+      (p.content?.toLowerCase().includes(q)) ||
+      (p.address?.toLowerCase().includes(q)) ||
+      (p.emotionLabel?.toLowerCase().includes(q))
+    );
+  }, [pins, searchQuery]);
+
+  // Build sections
+  const sections = useMemo(() => {
+    const now = new Date();
+    const result: { key: string; title: string; icon: keyof typeof Ionicons.glyphMap; iconColor: string; pins: VoicePin[] }[] = [];
+
+    if (activeFilter === 'time') {
+      // 1. Recently Added (last 7 days)
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const recent = filtered
+        .filter(p => new Date(p.createdAt) >= sevenDaysAgo)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      if (recent.length > 0) {
+        result.push({ key: 'recent', title: 'Mới thêm gần đây', icon: 'time-outline', iconColor: '#8b5cf6', pins: recent });
+      }
+
+      // 2. This Month
+      const thisMonth = filtered
+        .filter(p => {
+          const d = new Date(p.createdAt);
+          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        })
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      if (thisMonth.length > 0) {
+        result.push({ key: 'month', title: 'Tháng này', icon: 'calendar-outline', iconColor: '#3b82f6', pins: thisMonth });
+      }
+
+      // Group by month-year for older ones
+      const timeMap: Record<string, VoicePin[]> = {};
+      for (const p of filtered) {
+        const d = new Date(p.createdAt);
+        // Avoid grouping this month and recent here to avoid duplicates
+        const isRecent = new Date(p.createdAt) >= sevenDaysAgo;
+        const isThisMonth = d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        if (isRecent || isThisMonth) continue;
+
+        const key = d.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
+        (timeMap[key] = timeMap[key] ?? []).push(p);
+      }
+      const sortedTime = Object.entries(timeMap)
+        .sort((a, b) => new Date(b[1][0].createdAt).getTime() - new Date(a[1][0].createdAt).getTime());
+      for (const [label, tpins] of sortedTime) {
+        result.push({ key: `time-${label}`, title: label, icon: 'calendar-outline', iconColor: '#10b981', pins: tpins });
+      }
     }
-    // Sort groups by count desc
-    return Object.entries(map).sort((a, b) => b[1].length - a[1].length);
-  }, [pins]);
 
-  const totalCount = pins.length;
+    if (activeFilter === 'mood') {
+      // Group by emotion
+      const emotionMap: Record<string, VoicePin[]> = {};
+      for (const p of filtered) {
+        const key = p.emotionLabel ?? 'Khác';
+        (emotionMap[key] = emotionMap[key] ?? []).push(p);
+      }
+      const sorted = Object.entries(emotionMap).sort((a, b) => b[1].length - a[1].length);
+      for (const [emotion, epins] of sorted) {
+        const meta = getMeta(emotion);
+        result.push({ key: `emo-${emotion}`, title: meta.vi, icon: meta.icon, iconColor: meta.color, pins: epins });
+      }
+    }
+
+    if (activeFilter === 'visibility') {
+      const visMap: Record<string, VoicePin[]> = {};
+      for (const p of filtered) {
+        const key = p.visibility ?? 'PRIVATE';
+        (visMap[key] = visMap[key] ?? []).push(p);
+      }
+      const VIS_META: Record<string, { label: string, icon: keyof typeof Ionicons.glyphMap, color: string }> = {
+        'PRIVATE': { label: 'Chỉ mình tôi', icon: 'lock-closed-outline', color: '#6b7280' },
+        'FRIENDS': { label: 'Bạn bè', icon: 'people-outline', color: '#3b82f6' },
+        'PUBLIC': { label: 'Công khai', icon: 'earth-outline', color: '#10b981' }
+      };
+
+      const sorted = Object.entries(visMap).sort((a, b) => b[1].length - a[1].length);
+      for (const [vis, vpins] of sorted) {
+        const meta = VIS_META[vis] || VIS_META['PRIVATE'];
+        result.push({ key: `vis-${vis}`, title: meta.label, icon: meta.icon, iconColor: meta.color, pins: vpins });
+      }
+    }
+
+    if (activeFilter === 'location') {
+      // Group by location (extract city/district)
+      const locMap: Record<string, VoicePin[]> = {};
+      for (const p of filtered) {
+        if (!p.address) continue;
+        const parts = p.address.split(',').map(s => s.trim());
+        const cityKey = parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+        (locMap[cityKey] = locMap[cityKey] ?? []).push(p);
+      }
+      const sortedLoc = Object.entries(locMap).sort((a, b) => b[1].length - a[1].length);
+      for (const [loc, lpins] of sortedLoc) {
+        if (lpins.length >= 1) {
+          result.push({ key: `loc-${loc}`, title: loc, icon: 'location-outline', iconColor: '#f59e0b', pins: lpins });
+        }
+      }
+
+      const noLoc = filtered.filter(p => !p.address);
+      if (noLoc.length > 0) {
+        result.push({ key: `loc-unknown`, title: 'Không rõ vị trí', icon: 'help-circle-outline', iconColor: '#9ca3af', pins: noLoc });
+      }
+    }
+
+    // Deduplicate: remove sections with same key
+    const seen = new Set<string>();
+    return result.filter(s => {
+      if (seen.has(s.key)) return false;
+      seen.add(s.key);
+      return true;
+    });
+  }, [filtered, activeFilter]);
 
   // ── Show VoicePinCard overlay ─────────────────────────
   if (selectedPin) {
@@ -311,127 +552,200 @@ export default function MemoryScreen() {
     );
   }
 
-  // ── Show emotion detail ───────────────────────────────
-  if (selectedEmotion) {
-    const emotionPins = groups.find(([e]) => e === selectedEmotion)?.[1] ?? [];
-    return (
-      <EmotionDetail
-        emotion={selectedEmotion}
-        pins={emotionPins}
-        onBack={() => setSelectedEmotion(null)}
-        onSelectPin={(p) => setSelectedPin(p)}
-      />
-    );
-  }
-
-  // ── Bookshelf grid ────────────────────────────────────
   return (
     <View style={main.container}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Header */}
-      <View style={main.header}>
-        <View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+        }
+      >
+        {/* ── Header ─────────────────────────────── */}
+        <View style={main.header}>
           <Text style={main.title}>Ký ức của tôi</Text>
-          <Text style={main.subtitle}>{totalCount} giọng nói đã lưu</Text>
+          <Text style={main.subtitle}>
+            {pins.length > 0 ? `${pins.length} khoảnh khắc` : 'Bắt đầu ghi lại kỷ niệm'}
+          </Text>
         </View>
-        <TouchableOpacity onPress={refetch} style={main.refreshBtn}>
-          <Ionicons name="refresh-outline" size={20} color="#8b5cf6" />
-        </TouchableOpacity>
-      </View>
 
-      {/* Loading / Error */}
-      {loading && (
-        <View style={main.center}>
-          <ActivityIndicator size="large" color="#8b5cf6" />
-          <Text style={main.centerText}>Đang tải ký ức...</Text>
+        {/* ── Search ─────────────────────────────── */}
+        <View style={main.searchContainer}>
+          <Ionicons name="search-outline" size={16} color="#b0b0b0" style={{ marginLeft: 14 }} />
+          <TextInput
+            style={main.searchInput}
+            placeholder="Tìm theo nội dung, địa điểm..."
+            placeholderTextColor="#c5c5c5"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={{ paddingRight: 14 }}>
+              <Ionicons name="close-circle" size={16} color="#d1d5db" />
+            </TouchableOpacity>
+          )}
         </View>
-      )}
-      {!!error && !loading && (
-        <View style={main.center}>
-          <Ionicons name="cloud-offline-outline" size={48} color="#d1d5db" />
-          <Text style={main.centerText}>{error}</Text>
-          <TouchableOpacity style={main.retryBtn} onPress={refetch}>
-            <Text style={main.retryText}>Thử lại</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      {!loading && !error && groups.length === 0 && (
-        <View style={main.center}>
-          <Ionicons name="mic-off-outline" size={56} color="#d1d5db" />
-          <Text style={main.emptyTitle}>Chưa có ký ức nào</Text>
-          <Text style={main.emptySubtitle}>Hãy ghi âm giọng nói đầu tiên của bạn!</Text>
-        </View>
-      )}
 
-      {/* 2-column bookshelf grid */}
-      {!loading && groups.length > 0 && (
-        <ScrollView contentContainerStyle={main.grid} showsVerticalScrollIndicator={false}>
-          {/* Pair up groups into rows */}
-          {Array.from({ length: Math.ceil(groups.length / 2) }, (_, i) => {
-            const left = groups[i * 2];
-            const right = groups[i * 2 + 1];
-            return (
-              <View key={i} style={main.row}>
-                <AlbumCard
-                  emotion={left[0]}
-                  pins={left[1]}
-                  onPress={() => setSelectedEmotion(left[0])}
-                />
-                {right ? (
-                  <AlbumCard
-                    emotion={right[0]}
-                    pins={right[1]}
-                    onPress={() => setSelectedEmotion(right[0])}
-                  />
-                ) : (
-                  <View style={{ width: CARD_W }} />
-                )}
-              </View>
-            );
-          })}
-        </ScrollView>
-      )}
+        {/* ── Filter chips ───────────────────────── */}
+        <View style={{ marginBottom: 24 }}>
+          <FilterChips active={activeFilter} onChange={handleFilterChange} />
+        </View>
+
+        {/* ── Loading ─────────────────────────────── */}
+        {loading && (
+          <View style={main.center}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+            <Text style={main.centerText}>Đang tải ký ức...</Text>
+          </View>
+        )}
+
+        {/* ── Error ──────────────────────────────── */}
+        {!!error && !loading && (
+          <View style={main.center}>
+            <Ionicons name="cloud-offline-outline" size={48} color="#d1d5db" />
+            <Text style={main.centerText}>{error}</Text>
+            <TouchableOpacity style={main.retryBtn} onPress={refetch}>
+              <Text style={main.retryText}>Thử lại</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ── Empty ──────────────────────────────── */}
+        {!loading && !error && pins.length === 0 && (
+          <View style={main.emptyContainer}>
+            <View style={main.emptyIconBg}>
+              <Ionicons name="musical-notes-outline" size={40} color={Colors.primary} />
+            </View>
+            <Text style={main.emptyTitle}>Chưa có ký ức nào</Text>
+            <Text style={main.emptySubtitle}>
+              Hãy ghi lại giọng nói đầu tiên{'\n'}để bắt đầu bộ sưu tập của bạn
+            </Text>
+          </View>
+        )}
+
+        {/* ── No search results ──────────────────── */}
+        {!loading && !error && pins.length > 0 && filtered.length === 0 && (
+          <View style={main.center}>
+            <Ionicons name="search-outline" size={40} color="#d1d5db" />
+            <Text style={main.centerText}>Không tìm thấy ký ức nào</Text>
+          </View>
+        )}
+
+        {/* ── Sections ─────────────────────────────── */}
+        {!loading && sections.map(s => (
+          <Section
+            key={s.key}
+            title={s.title}
+            icon={s.icon}
+            iconColor={s.iconColor}
+            pins={s.pins}
+            onSelectPin={p => setSelectedPin(p)}
+            onSeeAll={() => {
+              router.push({
+                pathname: '/(tabs)/memory/grid',
+                params: { title: s.title, sectionKey: s.key, filter: activeFilter, query: searchQuery }
+              });
+            }}
+          />
+        ))}
+
+        {/* Bottom breathing space */}
+        <View style={{ height: 60 }} />
+      </ScrollView>
     </View>
   );
 }
 
 const main = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fafafa' },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingTop: 56,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    backgroundColor: '#fafafa',
+  container: {
+    flex: 1,
+    backgroundColor: '#fafbfd',
   },
-  title: { fontSize: 26, fontWeight: '800', color: '#111827', letterSpacing: -0.5 },
-  subtitle: { fontSize: 13, color: '#9ca3af', marginTop: 3 },
-  refreshBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f3f0ff',
+  header: {
+    paddingTop: 60,
+    paddingBottom: 8,
+    paddingHorizontal: 20,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#1a1a2e',
+    letterSpacing: -0.8,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: '#b0b0b0',
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    color: '#374151',
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+  },
+  center: {
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 12,
+    padding: 40,
   },
-  grid: { paddingHorizontal: 16, paddingBottom: 40 },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 0,
+  centerText: {
+    color: '#b0b0b0',
+    fontSize: 14,
+    textAlign: 'center',
   },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, padding: 32 },
-  centerText: { color: '#9ca3af', fontSize: 15, textAlign: 'center' },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#374151' },
-  emptySubtitle: { fontSize: 13, color: '#9ca3af', textAlign: 'center' },
+  emptyContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+    gap: 12,
+  },
+  emptyIconBg: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.primary + '10',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: '#b0b0b0',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
   retryBtn: {
-    backgroundColor: '#8b5cf6',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 20,
   },
-  retryText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  retryText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14,
+  },
 });
