@@ -7,6 +7,9 @@ import MapView, { Callout, Marker, Region } from "react-native-maps";
 import MapViewClustering from "react-native-map-clustering";
 import VoicePinCard from "./VoicePinCard";
 
+import RadarOverlay from "../discovery/RadarOverlay";
+import SpawnedVoicePin from "../discovery/SpawnedVoicePin";
+
 const DEFAULT_DELTA = 0.01;
 const FALLBACK_LAT = 10.7769;
 const FALLBACK_LNG = 106.7009;
@@ -14,9 +17,12 @@ const FALLBACK_LNG = 106.7009;
 type Props = {
   location: Location.LocationObject | null;
   pins: VoicePin[];
+  isScanning?: boolean;
+  discoveredPin?: VoicePin | null;
+  onPressDiscoveredPin?: () => void;
 };
 
-export default function MapSection({ location, pins }: Props) {
+export default function MapSection({ location, pins, isScanning = false, discoveredPin, onPressDiscoveredPin }: Props) {
   const [selectedPin, setSelectedPin] = useState<VoicePin | null>(null);
 
   const initialRegion: Region = {
@@ -130,7 +136,16 @@ export default function MapSection({ location, pins }: Props) {
             </Marker>
           );
         })}
+
+        {discoveredPin && (
+          <SpawnedVoicePin
+            pin={discoveredPin}
+            onPress={() => onPressDiscoveredPin?.()}
+          />
+        )}
       </MapViewClustering>
+
+      <RadarOverlay isScanning={isScanning} />
 
       {/* Full-screen overlay when pin selected */}
       {selectedPin && (

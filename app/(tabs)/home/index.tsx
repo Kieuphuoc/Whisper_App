@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 
 import MapContainer from "@/components/home/MapContainer";
@@ -15,6 +15,10 @@ import { useRecorder } from "@/hooks/useRecorder";
 import { useVisibility } from "@/hooks/useVisibility";
 import { useVoicePins } from "@/hooks/useVoicePins";
 import { Ionicons } from "@expo/vector-icons";
+import { useDiscovery } from "@/hooks/useDiscovery";
+import ScanButton from "@/components/discovery/ScanButton";
+import VoicePinMiniCard from "@/components/discovery/VoicePinMiniCard";
+import { Alert } from "react-native";
 
 /**
  * Flow:
@@ -37,6 +41,16 @@ export default function HomeScreen() {
   const [cameraVisible, setCameraVisible] = useState(false);
   const [uploadSheetVisible, setUploadSheetVisible] = useState(false);
   const [friendsVisible, setFriendsVisible] = useState(false);
+
+  // Discovery
+  const { isScanning, discoveredPin, error, triggerScan, resetDiscovery } = useDiscovery();
+  const [isMiniCardOpen, setIsMiniCardOpen] = useState(false);
+
+  useEffect(() => {
+    if (error) {
+      Alert.alert("Khám phá", error);
+    }
+  }, [error]);
 
   // Step 1 & 2: record
   const { isRecording, record, stop } = useRecorder({
@@ -80,7 +94,13 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <MapContainer location={location} pins={pins} />
+      <MapContainer
+        location={location}
+        pins={pins}
+        isScanning={isScanning}
+        discoveredPin={discoveredPin}
+        onPressDiscoveredPin={() => setIsMiniCardOpen(true)}
+      />
 
       <VoiceButton
         isRecording={isRecording}
@@ -102,6 +122,30 @@ export default function HomeScreen() {
       </TouchableOpacity>
 
       <VisibilityFilter value={visibility} onChange={setVisibility} />
+
+      <ScanButton
+        isScanning={isScanning}
+        onPress={() => {
+          if (location) {
+            triggerScan(location.coords.latitude, location.coords.longitude);
+          } else {
+            Alert.alert("Vị trí", "Đang lấy vị trí của bạn, vui lòng đợi trong giây lát.");
+          }
+        }}
+      />
+
+      {isMiniCardOpen && discoveredPin && (
+        <VoicePinMiniCard
+          pin={discoveredPin}
+          onClose={() => setIsMiniCardOpen(false)}
+          onRandomAgain={() => {
+            if (location) {
+              setIsMiniCardOpen(false);
+              triggerScan(location.coords.latitude, location.coords.longitude);
+            }
+          }}
+        />
+      )}
 
       {/* Step 3: Camera */}
       <VoiceCameraCapture

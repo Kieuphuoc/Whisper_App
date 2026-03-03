@@ -6,9 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Animated,
   Dimensions,
-  FlatList,
   Image,
   LayoutAnimation,
   Platform,
@@ -23,6 +21,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import Animated, { useSharedValue, useAnimatedScrollHandler, useAnimatedStyle, interpolate, Extrapolation, SharedValue, withSpring } from 'react-native-reanimated';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -163,17 +162,44 @@ const waveStyles = StyleSheet.create({
 });
 
 // ─── Memory Card ──────────────────────────────────────────
-export function MemoryCard({ pin, onPress, customWidth, customMarginRight }: { pin: VoicePin; onPress: () => void; customWidth?: number; customMarginRight?: number }) {
+export function MemoryCard({ pin, onPress, customWidth, customMarginRight, index, scrollX }: { pin: VoicePin; onPress: () => void; customWidth?: number; customMarginRight?: number; index?: number; scrollX?: SharedValue<number> }) {
   const meta = getMeta(pin.emotionLabel);
   const imgUrl = getPinImage(pin);
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const pressedScale = useSharedValue(1);
 
   const handlePressIn = () => {
-    Animated.spring(scaleAnim, { toValue: 0.96, useNativeDriver: true, speed: 50 }).start();
+    pressedScale.value = withSpring(0.96, { mass: 1, damping: 20, stiffness: 300 });
   };
   const handlePressOut = () => {
-    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 30 }).start();
+    pressedScale.value = withSpring(1, { mass: 1, damping: 20, stiffness: 300 });
   };
+
+  const ITEM_SIZE = CARD_WIDTH + CARD_SPACING;
+
+  const animatedStyle = useAnimatedStyle(() => {
+    let carouselScale = 1;
+    let opacity = 1;
+
+    if (index !== undefined && scrollX !== undefined) {
+      carouselScale = interpolate(
+        scrollX.value,
+        [(index - 1) * ITEM_SIZE, index * ITEM_SIZE, (index + 1) * ITEM_SIZE],
+        [0.85, 1, 0.85],
+        Extrapolation.CLAMP
+      );
+      opacity = interpolate(
+        scrollX.value,
+        [(index - 1.5) * ITEM_SIZE, index * ITEM_SIZE, (index + 1.5) * ITEM_SIZE],
+        [0.7, 1, 0.7],
+        Extrapolation.CLAMP
+      );
+    }
+
+    return {
+      transform: [{ scale: carouselScale * pressedScale.value }],
+      opacity,
+    };
+  });
 
   const dateStr = new Date(pin.createdAt).toLocaleDateString('vi-VN', {
     day: '2-digit',
@@ -184,50 +210,58 @@ export function MemoryCard({ pin, onPress, customWidth, customMarginRight }: { p
   const mr = customMarginRight ?? CARD_SPACING;
 
   return (
-    <Animated.View style={[{ width: w, marginRight: mr, transform: [{ scale: scaleAnim }] }]}>
+    <Animated.View style={[{ width: w, marginRight: mr }, animatedStyle]}>
       <TouchableOpacity
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={1}
-        style={[memCard.container, { backgroundColor: meta.gradient }]}
+        className="rounded-[20px] overflow-hidden"
+        style={{
+          backgroundColor: meta.gradient,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.08,
+          shadowRadius: 16,
+          elevation: 5
+        }}
       >
         {/* Mood badge */}
-        <View style={[memCard.moodBadge, { backgroundColor: meta.color + '20' }]}>
+        <View className="absolute top-2.5 left-2.5 z-10 w-7 h-7 rounded-full justify-center items-center" style={{ backgroundColor: meta.color + '20' }}>
           <Ionicons name={meta.icon} size={14} color={meta.color} />
         </View>
 
         {/* Image */}
         {imgUrl ? (
-          <Image source={{ uri: imgUrl }} style={[memCard.image, { height: w * 0.6 }]} />
+          <Image source={{ uri: imgUrl }} className="w-full bg-gray-100" style={{ height: w * 0.6 }} />
         ) : (
-          <View style={[memCard.image, memCard.imagePlaceholder, { height: w * 0.6 }]}>
+          <View className="w-full bg-gray-100 justify-center items-center" style={{ height: w * 0.6 }}>
             <Ionicons name="musical-notes-outline" size={32} color={meta.color + '60'} />
           </View>
         )}
 
         {/* Info */}
-        <View style={memCard.info}>
-          <Text style={memCard.content} numberOfLines={2}>
+        <View className="p-3 gap-0.5">
+          <Text className="text-[13px] font-bold text-gray-800 leading-[18px]" numberOfLines={2}>
             {pin.content ?? 'Ký ức giọng nói'}
           </Text>
 
-          <View style={memCard.metaRow}>
+          <View className="flex-row items-center gap-[3px] mt-[3px]">
             <Ionicons name="location-outline" size={11} color="#9ca3af" />
-            <Text style={memCard.metaText} numberOfLines={1}>
+            <Text className="text-[10px] text-gray-400 flex-1" numberOfLines={1}>
               {pin.address ?? 'Không rõ vị trí'}
             </Text>
           </View>
 
           <Waveform color={meta.color} />
 
-          <View style={memCard.bottomRow}>
-            <Text style={memCard.dateText}>{dateStr}</Text>
-            <View style={memCard.statsRow}>
+          <View className="flex-row justify-between items-center mt-1.5">
+            <Text className="text-[10px] text-[#b0b0b0] font-medium">{dateStr}</Text>
+            <View className="flex-row items-center gap-[2px]">
               <Ionicons name="headset-outline" size={10} color="#9ca3af" />
-              <Text style={memCard.statNum}>{pin.listensCount ?? 0}</Text>
+              <Text className="text-[10px] text-[#b0b0b0] ml-[2px]">{pin.listensCount ?? 0}</Text>
               <Ionicons name="heart" size={10} color="#f9a8d4" style={{ marginLeft: 6 }} />
-              <Text style={memCard.statNum}>{pin.reactionsCount ?? 0}</Text>
+              <Text className="text-[10px] text-[#b0b0b0] ml-[2px]">{pin.reactionsCount ?? 0}</Text>
             </View>
           </View>
         </View>
@@ -329,25 +363,32 @@ function Section({
 }) {
   if (pins.length === 0) return null;
   const displayPins = pins.slice(0, 10);
+  const scrollX = useSharedValue(0);
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollX.value = event.contentOffset.x;
+    },
+  });
 
   return (
-    <View style={section.container}>
-      <View style={section.header}>
-        <View style={section.titleRow}>
-          <View style={[section.iconDot, { backgroundColor: iconColor + '18' }]}>
+    <View className="mb-7">
+      <View className="flex-row justify-between items-center px-5 mb-3.5">
+        <View className="flex-row items-center gap-2">
+          <View className="w-7 h-7 rounded-full justify-center items-center" style={{ backgroundColor: iconColor + '18' }}>
             <Ionicons name={icon} size={14} color={iconColor} />
           </View>
-          <Text style={section.title}>{title}</Text>
+          <Text className="text-base font-bold text-gray-800 tracking-tight">{title}</Text>
         </View>
         {pins.length > 10 && onSeeAll && (
-          <TouchableOpacity onPress={onSeeAll} style={section.seeAllBtn}>
-            <Text style={section.seeAllText}>Xem tất cả</Text>
+          <TouchableOpacity onPress={onSeeAll} className="flex-row items-center gap-0.5">
+            <Text className="text-xs font-semibold" style={{ color: Colors.primary }}>Xem tất cả</Text>
             <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
           </TouchableOpacity>
         )}
       </View>
 
-      <FlatList
+      <Animated.FlatList
         data={displayPins}
         horizontal
         keyExtractor={p => String(p.id)}
@@ -355,8 +396,10 @@ function Section({
         contentContainerStyle={{ paddingHorizontal: 20 }}
         snapToInterval={CARD_WIDTH + CARD_SPACING}
         decelerationRate="fast"
-        renderItem={({ item }) => (
-          <MemoryCard pin={item} onPress={() => onSelectPin(item)} />
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        renderItem={({ item, index }) => (
+          <MemoryCard pin={item} onPress={() => onSelectPin(item)} index={index} scrollX={scrollX} />
         )}
       />
     </View>

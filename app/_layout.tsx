@@ -1,3 +1,4 @@
+import "../global.css";
 import { MyDispatchContext, MyUserContext, userReducer } from "@/configs/Context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter, useSegments } from "expo-router";
