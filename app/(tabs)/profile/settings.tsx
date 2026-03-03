@@ -4,6 +4,7 @@ import { User } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import React, { useContext, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -20,10 +21,20 @@ export default function SettingsScreen() {
     const router = useRouter();
     const userContext = useContext(MyUserContext) as User | null;
     const dispatch = useContext(MyDispatchContext);
+    const { colorScheme, setColorScheme, toggleColorScheme } = useColorScheme();
 
     const [notifications, setNotifications] = useState(true);
-    const [darkMode, setDarkMode] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    const toggleDarkMode = async (value: boolean) => {
+        const newScheme = value ? 'dark' : 'light';
+        setColorScheme(newScheme);
+        try {
+            await AsyncStorage.setItem('theme', newScheme);
+        } catch (e) {
+            console.error('Failed to save theme', e);
+        }
+    };
 
     const logout = async () => {
         try {
@@ -116,16 +127,16 @@ export default function SettingsScreen() {
                                 <Switch
                                     value={notifications}
                                     onValueChange={setNotifications}
-                                    trackColor={{ false: '#e2e8f0', true: '#1e293b' }}
+                                    trackColor={{ false: '#e2e8f0', true: '#7ea000' }}
                                     thumbColor="#fff"
                                 />
                             </SettingItem>
                             <View className="h-[1px] bg-gray-50 mx-2" />
                             <SettingItem icon="moon-outline" label="Chế độ tối" showArrow={false}>
                                 <Switch
-                                    value={darkMode}
-                                    onValueChange={setDarkMode}
-                                    trackColor={{ false: '#e2e8f0', true: '#1e293b' }}
+                                    value={colorScheme === 'dark'}
+                                    onValueChange={toggleDarkMode}
+                                    trackColor={{ false: '#e2e8f0', true: '#7ea000' }}
                                     thumbColor="#fff"
                                 />
                             </SettingItem>
@@ -164,7 +175,7 @@ export default function SettingsScreen() {
 
             {loading && (
                 <View className="absolute inset-0 bg-white/50 justify-center items-center">
-                    <ActivityIndicator size="large" color="#1e293b" />
+                    <ActivityIndicator size="large" color="#7ea000" />
                 </View>
             )}
         </View>

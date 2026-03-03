@@ -132,7 +132,7 @@ export default function ChangePasswordScreen() {
                     <TouchableOpacity
                         onPress={handleChangePassword}
                         disabled={loading}
-                        className={`mt-10 py-5 rounded-3xl items-center shadow-lg shadow-blue-200 ${loading ? 'bg-gray-300' : 'bg-[#1e293b]'}`}
+                        className={`mt-10 py-5 rounded-3xl items-center shadow-lg shadow-primary-200 ${loading ? 'bg-gray-300' : 'bg-primary-500'}`}
                     >
                         {loading ? (
                             <ActivityIndicator color="#fff" />

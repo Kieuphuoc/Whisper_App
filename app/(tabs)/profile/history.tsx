@@ -58,8 +58,8 @@ export default function HistoryScreen() {
                     onPress={() => router.push({ pathname: '/(tabs)/home', params: { voicePinId: voicePin.id } })}
                     className="flex-row items-center bg-white p-4 mb-3 rounded-3xl border border-gray-100 shadow-sm shadow-gray-200"
                 >
-                    <View className="w-12 h-12 bg-purple-100 rounded-full items-center justify-center mr-4">
-                        <Ionicons name="mic" size={24} color="#8b5cf6" />
+                    <View className="w-12 h-12 bg-primary-100 rounded-full items-center justify-center mr-4">
+                        <Ionicons name="mic" size={24} color="#7ea000" />
                     </View>
                     <View className="flex-1">
                         <Text className="text-lg font-bold text-[#1e293b]" numberOfLines={1}>
@@ -96,7 +96,7 @@ export default function HistoryScreen() {
 
             {loading && !refreshing ? (
                 <View className="flex-1 justify-center items-center">
-                    <ActivityIndicator size="large" color="#8b5cf6" />
+                    <ActivityIndicator size="large" color="#7ea000" />
                 </View>
             ) : (
                 <FlatList
@@ -105,7 +105,7 @@ export default function HistoryScreen() {
                     renderItem={renderHistoryItem}
                     contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
                     refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={() => fetchHistory(true)} tintColor="#8b5cf6" />
+                        <RefreshControl refreshing={refreshing} onRefresh={() => fetchHistory(true)} tintColor="#7ea000" />
                     }
                     ListEmptyComponent={
                         <View className="items-center justify-center pt-20">

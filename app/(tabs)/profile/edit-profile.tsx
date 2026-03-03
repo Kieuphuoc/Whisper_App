@@ -121,11 +121,11 @@ export default function EditProfileScreen() {
                             source={{ uri: avatar || getAvatarUri(userContext?.avatar) }}
                             className="w-32 h-32 rounded-full border-4 border-gray-50"
                         />
-                        <View className="absolute bottom-0 right-0 bg-blue-500 w-10 h-10 rounded-full items-center justify-center border-4 border-white">
+                        <View className="absolute bottom-0 right-0 bg-secondary-500 w-10 h-10 rounded-full items-center justify-center border-4 border-white">
                             <Ionicons name="camera" size={20} color="#fff" />
                         </View>
                     </TouchableOpacity>
-                    <Text className="text-blue-500 font-semibold mt-4">Thay đổi ảnh đại diện</Text>
+                    <Text className="text-secondary-500 font-semibold mt-4">Thay đổi ảnh đại diện</Text>
                 </Animated.View>
 
                 <Animated.View entering={FadeInDown.delay(100).duration(500)}>
@@ -159,7 +159,7 @@ export default function EditProfileScreen() {
                     <TouchableOpacity
                         onPress={handleSave}
                         disabled={loading}
-                        className={`mt-10 py-5 rounded-3xl items-center shadow-lg shadow-blue-200 ${loading ? 'bg-gray-300' : 'bg-[#1e293b]'}`}
+                        className={`mt-10 py-5 rounded-3xl items-center shadow-lg shadow-primary-200 ${loading ? 'bg-gray-300' : 'bg-primary-500'}`}
                     >
                         {loading ? (
                             <ActivityIndicator color="#fff" />
