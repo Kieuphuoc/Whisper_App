@@ -83,7 +83,7 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
   const emotionColor = EMOTION_COLOR[pin.emotionLabel ?? ""] ?? "#8b5cf6";
   const authorLabel = pin.isAnonymous
     ? "Anonymous"
-    : pin.user?.name ?? pin.user?.username ?? `Voice #${pin.id}`;
+    : pin.user?.displayName ?? pin.user?.username ?? `Voice #${pin.id}`;
 
   return (
     <View style={styles.overlay}>
@@ -135,7 +135,13 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
           <View style={styles.infoLeft}>
             {/* Author */}
             <View style={styles.authorRow}>
-              <Ionicons name="person-circle-outline" size={14} color="#6b7280" />
+              <View style={styles.authorAvatar}>
+                {pin.user?.avatar ? (
+                  <Image source={{ uri: pin.user.avatar }} style={styles.avatarImg} />
+                ) : (
+                  <Ionicons name="person-circle-outline" size={18} color="#6b7280" />
+                )}
+              </View>
               <Text style={styles.authorText}>{authorLabel}</Text>
               {pin.type === "HIDDEN_AR" && (
                 <View style={styles.arBadge}>
@@ -373,6 +379,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
+  },
+  authorAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: "#1f1f2e",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarImg: {
+    width: "100%",
+    height: "100%",
   },
   authorText: {
     color: "#6b7280",

@@ -32,7 +32,7 @@ export interface User {
 
 
 export interface UserBasic {
-    name?: string;
+    displayName?: string;
     username?: string;
     avatar?: string;
 }

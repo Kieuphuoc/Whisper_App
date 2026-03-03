@@ -25,7 +25,7 @@ import { useContext } from 'react';
 interface FriendUser {
     id: number;
     username: string;
-    name?: string;
+    displayName?: string;
     avatar?: string;
 }
 interface PendingRequest {
@@ -38,7 +38,7 @@ interface PendingRequest {
 
 // ─── Avatar helper ─────────────────────────────────────────
 function Avatar({ user, size = 44 }: { user: FriendUser; size?: number }) {
-    const initials = (user.name ?? user.username).slice(0, 2).toUpperCase();
+    const initials = (user.displayName ?? user.username).slice(0, 2).toUpperCase();
     return user.avatar ? (
         <Image source={{ uri: user.avatar }} style={{ width: size, height: size, borderRadius: size / 2 }} />
     ) : (
@@ -190,7 +190,7 @@ export default function FriendsModal({ visible, onClose }: Props) {
                             <View style={styles.row}>
                                 <Avatar user={item} />
                                 <View style={styles.rowInfo}>
-                                    <Text style={styles.rowName}>{item.name ?? item.username}</Text>
+                                    <Text style={styles.rowName}>{item.displayName ?? item.username}</Text>
                                     <Text style={styles.rowSub}>@{item.username}</Text>
                                 </View>
                                 <TouchableOpacity style={styles.removeBtn} onPress={() => removeFriend(item.id)}>
@@ -221,7 +221,7 @@ export default function FriendsModal({ visible, onClose }: Props) {
                                 <View style={styles.row}>
                                     <Avatar user={who} />
                                     <View style={styles.rowInfo}>
-                                        <Text style={styles.rowName}>{who.name ?? who.username}</Text>
+                                        <Text style={styles.rowName}>{who.displayName ?? who.username}</Text>
                                         <Text style={styles.rowSub}>
                                             {item.direction === 'received' ? 'Gửi lời mời cho bạn' : 'Đang chờ phản hồi'}
                                         </Text>
