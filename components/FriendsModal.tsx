@@ -4,6 +4,7 @@
  */
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -59,10 +60,16 @@ interface Props { visible: boolean; onClose: () => void; }
 
 export default function FriendsModal({ visible, onClose }: Props) {
     const user = useContext(MyUserContext);
+    const router = useRouter();
     const [tab, setTab] = useState<Tab>('friends');
     const [friends, setFriends] = useState<FriendUser[]>([]);
     const [pending, setPending] = useState<PendingRequest[]>([]);
     const [loading, setLoading] = useState(false);
+
+    const navigateToProfile = (userId: number) => {
+        onClose();
+        router.push(`/user/${userId}`);
+    };
 
     const load = useCallback(async () => {
         if (!user) return;
@@ -187,16 +194,19 @@ export default function FriendsModal({ visible, onClose }: Props) {
                         keyExtractor={f => String(f.id)}
                         contentContainerStyle={{ padding: 16 }}
                         renderItem={({ item }) => (
-                            <View style={styles.row}>
+                            <TouchableOpacity style={styles.row} onPress={() => navigateToProfile(item.id)}>
                                 <Avatar user={item} />
                                 <View style={styles.rowInfo}>
                                     <Text style={styles.rowName}>{item.displayName ?? item.username}</Text>
                                     <Text style={styles.rowSub}>@{item.username}</Text>
                                 </View>
-                                <TouchableOpacity style={styles.removeBtn} onPress={() => removeFriend(item.id)}>
+                                <TouchableOpacity style={styles.removeBtn} onPress={(e) => {
+                                    e.stopPropagation();
+                                    removeFriend(item.id);
+                                }}>
                                     <Ionicons name="person-remove-outline" size={18} color="#9ca3af" />
                                 </TouchableOpacity>
-                            </View>
+                            </TouchableOpacity>
                         )}
                         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
                         ListEmptyComponent={
@@ -218,7 +228,7 @@ export default function FriendsModal({ visible, onClose }: Props) {
                         renderItem={({ item }) => {
                             const who = item.direction === 'received' ? item.sender! : item.receiver!;
                             return (
-                                <View style={styles.row}>
+                                <TouchableOpacity style={styles.row} onPress={() => navigateToProfile(who.id)}>
                                     <Avatar user={who} />
                                     <View style={styles.rowInfo}>
                                         <Text style={styles.rowName}>{who.displayName ?? who.username}</Text>
@@ -228,17 +238,23 @@ export default function FriendsModal({ visible, onClose }: Props) {
                                     </View>
                                     {item.direction === 'received' ? (
                                         <View style={styles.reqActions}>
-                                            <TouchableOpacity style={styles.acceptBtn} onPress={() => respondRequest(item.id, 'ACCEPTED')}>
+                                            <TouchableOpacity style={styles.acceptBtn} onPress={(e) => {
+                                                e.stopPropagation();
+                                                respondRequest(item.id, 'ACCEPTED');
+                                            }}>
                                                 <Ionicons name="checkmark" size={18} color="#fff" />
                                             </TouchableOpacity>
-                                            <TouchableOpacity style={styles.rejectBtn} onPress={() => respondRequest(item.id, 'REJECTED')}>
+                                            <TouchableOpacity style={styles.rejectBtn} onPress={(e) => {
+                                                e.stopPropagation();
+                                                respondRequest(item.id, 'REJECTED');
+                                            }}>
                                                 <Ionicons name="close" size={18} color="#6b7280" />
                                             </TouchableOpacity>
                                         </View>
                                     ) : (
                                         <Text style={styles.pendingLabel}>Đang chờ</Text>
                                     )}
-                                </View>
+                                </TouchableOpacity>
                             );
                         }}
                         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}

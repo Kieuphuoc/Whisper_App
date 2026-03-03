@@ -23,8 +23,13 @@ export type SortType = 'time' | 'location' | 'emotion';
 export interface User {
     id: number;
     username: string;
+    email?: string;
     displayName?: string;
     avatar?: string;
+    bio?: string;
+    level?: number;
+    xp?: number;
+    scanRadius?: number;
     token?: string;
     createdAt: string;
     updatedAt: string;
@@ -200,7 +205,13 @@ export interface ProfileVoicePin {
     location: string;
 }
 
-// ============ Navigation Types ============
+export interface ViewHistory {
+    id: number;
+    viewedAt: string;
+    userId: number;
+    voicePinId: number;
+    voicePin: VoicePin;
+}
 
 export type RootStackParamList = {
     voiceDetail: { voicePinId: string };

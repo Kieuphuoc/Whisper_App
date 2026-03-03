@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useRouter } from "expo-router";
 
 const { width } = Dimensions.get("window");
 
@@ -31,9 +32,9 @@ function formatDuration(secs?: number): string {
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const h = Math.floor(diff / 3_600_000);
-  if (h < 1) return "Just now";
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+  if (h < 1) return "Vừa xong";
+  if (h < 24) return `${h} giờ trước`;
+  return `${Math.floor(h / 24)} ngày trước`;
 }
 
 const VISIBILITY_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -53,6 +54,7 @@ const EMOTION_COLOR: Record<string, string> = {
 };
 
 export default function VoicePinTurntable({ pin, onClose }: Props) {
+  const router = useRouter();
   const [isPlaying, setIsPlaying] = useState(false);
 
   const rotateAnim = useRef(new Animated.Value(0)).current;
@@ -82,8 +84,15 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
 
   const emotionColor = EMOTION_COLOR[pin.emotionLabel ?? ""] ?? "#8b5cf6";
   const authorLabel = pin.isAnonymous
-    ? "Anonymous"
+    ? "Ẩn danh"
     : pin.user?.displayName ?? pin.user?.username ?? `Voice #${pin.id}`;
+
+  const navigateToProfile = () => {
+    if (!pin.isAnonymous && pin.userId) {
+      onClose();
+      router.push(`/user/${pin.userId}`);
+    }
+  };
 
   return (
     <View style={styles.overlay}>
@@ -134,7 +143,7 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
         <View style={styles.infoRow}>
           <View style={styles.infoLeft}>
             {/* Author */}
-            <View style={styles.authorRow}>
+            <TouchableOpacity onPress={navigateToProfile} style={styles.authorRow}>
               <View style={styles.authorAvatar}>
                 {pin.user?.avatar ? (
                   <Image source={{ uri: pin.user.avatar }} style={styles.avatarImg} />
@@ -148,18 +157,18 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
                   <Text style={styles.arBadgeText}>AR</Text>
                 </View>
               )}
-            </View>
+            </TouchableOpacity>
 
             {/* Title / content */}
             <Text style={styles.title} numberOfLines={2}>
-              {pin.content ?? (pin.isAnonymous ? "Unknown Voice" : `Recording #${String(pin.id).slice(-4)}`)}
+              {pin.content ?? (pin.isAnonymous ? "Ký ức thầm lặng" : `Bản ghi #${String(pin.id).slice(-4)}`)}
             </Text>
 
             {/* Location + time */}
             <View style={styles.metaRow}>
               <Ionicons name="location-outline" size={12} color="#6b7280" />
               <Text style={styles.metaText} numberOfLines={1}>
-                {pin.address ?? "Unknown location"}
+                {pin.address ?? "Không rõ vị trí"}
               </Text>
             </View>
             <View style={styles.metaRow}>
@@ -182,25 +191,25 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
           <View style={styles.statItem}>
             <Ionicons name="headset-outline" size={14} color="#9ca3af" />
             <Text style={styles.statValue}>{pin.listensCount ?? 0}</Text>
-            <Text style={styles.statLabel}>plays</Text>
+            <Text style={styles.statLabel}>nghe</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Ionicons name="heart-outline" size={14} color="#f87171" />
             <Text style={styles.statValue}>{pin.reactionsCount ?? 0}</Text>
-            <Text style={styles.statLabel}>likes</Text>
+            <Text style={styles.statLabel}>thích</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Ionicons name="chatbubble-outline" size={14} color="#60a5fa" />
             <Text style={styles.statValue}>{pin.commentsCount ?? 0}</Text>
-            <Text style={styles.statLabel}>comments</Text>
+            <Text style={styles.statLabel}>lời nhắn</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Ionicons name="timer-outline" size={14} color="#9ca3af" />
             <Text style={styles.statValue}>{formatDuration(pin.duration)}</Text>
-            <Text style={styles.statLabel}>duration</Text>
+            <Text style={styles.statLabel}>thời lượng</Text>
           </View>
         </View>
 
@@ -209,7 +218,7 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
           <View style={styles.footerLeft}>
             <Ionicons name={VISIBILITY_ICON[pin.visibility] ?? "earth-outline"} size={13} color="#6b7280" />
             <Text style={styles.visLabel}>
-              {pin.visibility.charAt(0) + pin.visibility.slice(1).toLowerCase()}
+              {pin.visibility === 'PUBLIC' ? 'Công khai' : pin.visibility === 'FRIENDS' ? 'Bạn bè' : 'Riêng tư'}
             </Text>
           </View>
           <Text style={styles.dateText}>{new Date(pin.createdAt).toLocaleDateString()}</Text>

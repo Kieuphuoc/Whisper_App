@@ -3,6 +3,7 @@ import { MyDispatchContext, MyUserContext } from '@/configs/Context';
 import { User } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useContext, useEffect, useState } from 'react';
 import {
@@ -11,41 +12,20 @@ import {
   RefreshControl,
   ScrollView,
   StatusBar,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  Dimensions
 } from 'react-native';
 import Animated, {
   FadeInDown,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
 } from 'react-native-reanimated';
 
-const AnimatedPressable = ({ children, onPress, className, style }: any) => {
-  const scale = useSharedValue(1);
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
-    <Animated.View style={[animatedStyle, style]} className={className}>
-      <TouchableOpacity
-        activeOpacity={1}
-        onPressIn={() => (scale.value = withSpring(0.95))}
-        onPressOut={() => (scale.value = withSpring(1))}
-        onPress={onPress}
-        className="w-full flex-row justify-center items-center"
-      >
-        {children}
-      </TouchableOpacity>
-    </Animated.View>
-  );
-};
+const { width, height } = Dimensions.get('window');
 
 export default function ProfileScreen() {
   const userContext = useContext(MyUserContext) as User | null;
-  const dispatch = useContext(MyDispatchContext);
   const router = useRouter();
 
   const [profile, setProfile] = useState<any>(null);
@@ -61,10 +41,9 @@ export default function ProfileScreen() {
       const api = authApis(token);
       const [pRes, sRes] = await Promise.all([
         api.get(endpoints.userMe),
-        api.get(endpoints.userStats).catch(() => ({ data: {} })),
+        api.get(endpoints.meStats).catch(() => ({ data: {} })),
       ]);
       const profileData = pRes.data?.data ?? pRes.data;
-      console.log('Profile Data:', profileData);
       setProfile(profileData);
       setStats(sRes.data?.data ?? sRes.data ?? {});
     } catch (e) {
@@ -80,37 +59,29 @@ export default function ProfileScreen() {
   }, []);
 
   const getAvatarUri = (avatar?: string) => {
-    if (!avatar) return 'https://i.pinimg.com/736x/8e/71/84/8e7184285e6b72a4f49492167d4f6696.jpg';
+    if (!avatar) return 'https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg';
     if (avatar.startsWith('http')) return avatar;
     return `http://10.5.1.149:5000${avatar.startsWith('/') ? '' : '/'}${avatar}`;
   };
 
-  const displayName = profile?.displayName || profile?.username || userContext?.username || 'Sophie Bennett';
-  const avatarUri = getAvatarUri(profile?.avatar);
-  const bio = profile?.bio || 'Product Designer who focuses on simplicity & usability.';
+  // Combine local state with userContext for reliable avatar data
+  const currentAvatar = profile?.avatar || userContext?.avatar;
+  const displayName = profile?.displayName || profile?.username || userContext?.displayName || userContext?.username || 'User';
+  const avatarUri = getAvatarUri(currentAvatar);
+  const bio = profile?.bio || userContext?.bio || 'Chưa có tiểu sử';
+  const level = profile?.level || userContext?.level || 1;
 
   if (loading && !refreshing) {
     return (
-      <View className="flex-1 justify-center items-center bg-gray-50">
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#8b5cf6" />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-white">
-      <StatusBar barStyle="dark-content" />
-
-      {/* Header with Settings Icon */}
-      <View className="mt-8 px-6 flex-row justify-between items-center z-50">
-        <Text className="text-xl font-bold opacity-0">Profile</Text>
-        <TouchableOpacity
-          onPress={() => router.push('/(tabs)/profile/settings')}
-          className="p-2"
-        >
-          <Ionicons name="settings-outline" size={24} color="#1e293b" />
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -121,61 +92,271 @@ export default function ProfileScreen() {
             tintColor="#8b5cf6"
           />
         }
-        contentContainerClassName="pb-10 items-center"
+        contentContainerStyle={styles.scrollContent}
+        bounces={false}
       >
-        <Animated.View
-          entering={FadeInDown.duration(800).springify()}
-          className="w-[90%] bg-white rounded-[40px] overflow-hidden shadow-2xl shadow-black/10 border-8 border-[#f8fafc] mt-4"
-        >
-          {/* Large Image Section */}
-          <View className="relative h-[480px]">
-            <Image
-              source={{ uri: avatarUri }}
-              className="w-full h-full"
-              resizeMode="cover"
-            />
+        {/* Full Screen Image Header */}
+        <View style={styles.heroContainer}>
+          <Image
+            source={{ uri: avatarUri }}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
+
+          {/* Top Icons Overlay */}
+          <View style={styles.topIconsRow}>
+            <View style={styles.levelBadge}>
+              <Text style={styles.levelText}>Lv.{level}</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => router.push('/(tabs)/profile/settings')}
+              style={styles.settingsButton}
+            >
+              <Ionicons name="settings-outline" size={24} color="#fff" />
+            </TouchableOpacity>
           </View>
 
-          {/* User Info Section */}
-          <View className="p-8">
-            <View className="flex-row items-center mb-3">
-              <Text className="text-3xl font-bold text-[#1e293b] mr-2" numberOfLines={1}>{displayName}</Text>
-              <View className="bg-green-600 rounded-full p-1 w-6 h-6 items-center justify-center">
-                <Ionicons name="checkmark" size={14} color="#fff" />
-              </View>
-            </View>
-
-            <Text className="text-lg text-gray-500 leading-6 mb-8">
-              {bio}
-            </Text>
-
-            {/* Bottom Stats and Action */}
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center gap-6">
-                <View className="flex-row items-center">
-                  <Ionicons name="person-outline" size={20} color="#94a3b8" />
-                  <Text className="ml-2 text-lg font-bold text-[#1e293b]">
-                    {stats?.friendCount || 312}
-                  </Text>
-                </View>
-                <View className="flex-row items-center">
-                  <Ionicons name="grid-outline" size={20} color="#94a3b8" />
-                  <Text className="ml-2 text-lg font-bold text-[#1e293b]">
-                    {stats?.voicePinCount || 48}
-                  </Text>
+          {/* Bottom Info Gradient Area */}
+          <LinearGradient
+            colors={['transparent', 'rgba(255,255,255,0.7)', 'rgba(255,255,255,1)']}
+            style={styles.gradientOverlay}
+          >
+            <Animated.View
+              entering={FadeInDown.duration(600).springify()}
+              style={styles.infoContent}
+            >
+              <View style={styles.nameRow}>
+                <Text style={styles.nameText} numberOfLines={1}>{displayName}</Text>
+                <View style={styles.verifiedBadge}>
+                  <Ionicons name="checkmark" size={12} color="#fff" />
                 </View>
               </View>
 
-              <AnimatedPressable
-                className="bg-[#f1f5f9] px-6 py-4 rounded-[26px]"
-                onPress={() => { }}
-              >
-                <Text className="text-[#1e293b] font-bold text-lg">Follow +</Text>
-              </AnimatedPressable>
+              <Text style={styles.bioText}>
+                {bio}
+              </Text>
+
+              {/* Inline Stats */}
+              <View style={styles.cardBottomRow}>
+                <View style={styles.statsInline}>
+                  <View style={styles.statInlineItem}>
+                    <Ionicons name="person-outline" size={20} color="#64748b" />
+                    <Text style={styles.statInlineValue}>{stats?.friendCount || 0}</Text>
+                  </View>
+                  <View style={styles.statInlineItem}>
+                    <Ionicons name="mic-outline" size={20} color="#64748b" />
+                    <Text style={styles.statInlineValue}>{stats?.voicePinCount || 0}</Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.followButton}
+                  onPress={() => router.push('/(tabs)/profile/settings')}
+                >
+                  <Text style={styles.followButtonText}>Follow +</Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          </LinearGradient>
+        </View>
+
+        {/* Extra Information Below Hero */}
+        <View style={styles.extraSection}>
+          <View style={styles.extraStatsRow}>
+            <View style={styles.extraStatBox}>
+              <Text style={styles.extraStatValue}>{stats?.totalListens || 0}</Text>
+              <Text style={styles.extraStatLabel}>Lượt nghe</Text>
+            </View>
+            <View style={[styles.extraStatBox, { borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#f1f5f9' }]}>
+              <Text style={styles.extraStatValue}>{stats?.achievementCount || 0}</Text>
+              <Text style={styles.extraStatLabel}>Thành tựu</Text>
+            </View>
+            <View style={styles.extraStatBox}>
+              <Text style={styles.extraStatValue}>{profile?.xp || userContext?.xp || 0}</Text>
+              <Text style={styles.extraStatLabel}>XP</Text>
             </View>
           </View>
-        </Animated.View>
+
+          <TouchableOpacity
+            style={styles.editProfileFull}
+            onPress={() => router.push('/(tabs)/profile/settings')}
+          >
+            <Text style={styles.editProfileFullText}>Chỉnh sửa hồ sơ công khai</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  heroContainer: {
+    width: width,
+    height: height * 0.72,
+    backgroundColor: '#f1f5f9',
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  topIconsRow: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  settingsButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  levelBadge: {
+    backgroundColor: 'rgba(139, 92, 246, 0.9)',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  levelText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  gradientOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 300,
+    justifyContent: 'flex-end',
+    paddingBottom: 40,
+    paddingHorizontal: 30,
+  },
+  infoContent: {
+    width: '100%',
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  nameText: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginRight: 10,
+  },
+  verifiedBadge: {
+    backgroundColor: '#10b981',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bioText: {
+    fontSize: 17,
+    color: '#475569',
+    lineHeight: 26,
+    marginBottom: 25,
+  },
+  cardBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  statsInline: {
+    flexDirection: 'row',
+    gap: 20,
+  },
+  statInlineItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statInlineValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  followButton: {
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  followButtonText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1e293b',
+  },
+  extraSection: {
+    paddingHorizontal: 20,
+    marginTop: -20,
+  },
+  extraStatsRow: {
+    flexDirection: 'row',
+    backgroundColor: '#f8fafc',
+    borderRadius: 28,
+    paddingVertical: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  extraStatBox: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  extraStatValue: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginBottom: 5,
+  },
+  extraStatLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  editProfileFull: {
+    marginTop: 20,
+    backgroundColor: '#1e293b',
+    paddingVertical: 18,
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  editProfileFullText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+});

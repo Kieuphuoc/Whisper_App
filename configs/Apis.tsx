@@ -5,12 +5,15 @@ const BASE_URL = "http://10.5.1.149:5000";
 export const endpoints = {
   // Auth
   login: "/auth/login/",
+  register: "/auth/register/",
 
   // User
-  me: "/user/me/",
-  meStats: "/me/stats/",
+  userMe: "/user/me",
+  meStats: "/user/me/stats",
   userProfile: (id: string | number) => `/user/${id}`,
-  userStats: (id: string | number) => `/user/${id}/stats/`,
+  userStats: (id: string | number) => `/user/${id}/stats`,
+  userHistory: "/user/me/history",
+  changePassword: "/user/me/password",
 
   // Voice Pins
   voice: "/voice/",
@@ -22,22 +25,18 @@ export const endpoints = {
   voicePublicByUser: (id: string | number) => `/voice/user/${id}/public/`,
   voiceFriends: "/voice/friends/",
   voiceRandom: "/voice/random",
-  voiceDetail: (id: string | number): string => `/voice/${id}/`,
   voiceReactions: (id: string | number): string => `/voice/${id}/reactions/`,
   voiceComments: (id: string | number): string => `/voice/${id}/comments/`,
   commentReplies: (commentId: string | number): string => `/comments/${commentId}/replies/`,
   translate: (sourceText: string, targetLang = 'vi'): string => `/translate/?q=${encodeURIComponent(sourceText)}&target=${encodeURIComponent(targetLang)}`,
-  login: "/auth/login/",
-  register: "/auth/register/",
-  review: (event_id: string | number): string => `/event/${event_id}/reviews/`,
-  userMe: "/user/me",
-  userStats: "/user/me/stats",
+
   // Notifications
   notifications: "/notification/",
   notificationsUnread: "/notification/unread",
   notificationRead: (id: string | number) => `/notification/${id}/read`,
   notificationsReadAll: "/notification/read-all",
   notificationsClear: "/notification/clear",
+
   // Friends
   friendList: (userId: string | number) => `/friend/list/${userId}`,
   friendPending: "/friend/pending",

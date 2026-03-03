@@ -6,6 +6,7 @@ import { Audio } from 'expo-av';
 import Animated, { FadeInUp, FadeOutDown } from 'react-native-reanimated';
 import { VoicePin } from '@/types';
 import { Colors } from '@/constants/Colors';
+import { useRouter } from 'expo-router';
 
 type Props = {
     pin: VoicePin;
@@ -14,6 +15,7 @@ type Props = {
 };
 
 export default function VoicePinMiniCard({ pin, onClose, onRandomAgain }: Props) {
+    const router = useRouter();
     const [isPlaying, setIsPlaying] = useState(false);
     const [sound, setSound] = useState<Audio.Sound | null>(null);
 
@@ -53,6 +55,13 @@ export default function VoicePinMiniCard({ pin, onClose, onRandomAgain }: Props)
         onClose();
     };
 
+    const navigateToProfile = () => {
+        if (!pin.isAnonymous && pin.userId) {
+            onClose();
+            router.push(`/user/${pin.userId}`);
+        }
+    };
+
     return (
         <Animated.View
             entering={FadeInUp}
@@ -63,12 +72,14 @@ export default function VoicePinMiniCard({ pin, onClose, onRandomAgain }: Props)
                 <View className="p-5">
                     {/* Header */}
                     <View className="flex-row justify-between items-start mb-4">
-                        <View>
-                            <Text className="text-violet-600 font-bold text-xs mb-1">KHÁM PHÁ KÝ ỨC</Text>
-                            <Text className="text-gray-800 text-lg font-bold leading-6 mr-10" numberOfLines={2}>
+                        <TouchableOpacity onPress={navigateToProfile} className="flex-1 mr-4">
+                            <Text className="text-violet-600 font-bold text-xs mb-1">
+                                {pin.isAnonymous ? "ẨN DANH" : (pin.user?.displayName || pin.user?.username || "NGƯỜI DÙNG")} • KHÁM PHÁ
+                            </Text>
+                            <Text className="text-gray-800 text-lg font-bold leading-6" numberOfLines={2}>
                                 {pin.content || "Một ký ức thầm lặng..."}
                             </Text>
-                        </View>
+                        </TouchableOpacity>
                         <TouchableOpacity onPress={onClose} className="bg-gray-200/50 p-1 rounded-full">
                             <Ionicons name="close" size={20} color="#4b5563" />
                         </TouchableOpacity>

@@ -1,3 +1,36 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+    .bento-container {
+        @apply bg-white/95 rounded-[40px] p-6 shadow-2xl border border-white/20;
+        shadow-color: #000;
+        shadow-offset: 0px 16px;
+        shadow-opacity: 0.25;
+        shadow-radius: 24px;
+        elevation: 16;
+    }
+
+    .input-wrapper {
+        @apply flex-row items-center bg-white rounded-2xl px-4 py-3 border border-gray-200 shadow-sm;
+        shadow-color: #000;
+        shadow-offset: 0px 2px;
+        shadow-opacity: 0.05;
+        shadow-radius: 4px;
+        elevation: 2;
+    }
+
+    .primary-button {
+        @apply flex-row items-center justify-center bg-[#1A1A1A] rounded-[30px] py-4 shadow-xl;
+        shadow-color: #000;
+        shadow-offset: 12px 30px;
+        shadow-opacity: 0.3;
+        shadow-radius: 20px;
+        elevation: 8;
+    }
+
+    .social-button {
+        @apply flex-1 flex-row items-center justify-center bg-white rounded-2xl py-3 px-4 border border-gray-200 shadow-sm;
+    }
+}
