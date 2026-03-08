@@ -4,16 +4,12 @@ import { VoicePin } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useAudioPlayer } from 'expo-audio';
 import { Image } from 'expo-image';
-
 import { router } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { getLocationName } from '../utils/geocoding';
-
-type MemoryCardProps = {
-    memory: Memory;
-    nameUser?: string; // <== optional
-};
+import { theme } from '@/constants/Theme';
+import { Colors } from '@/constants/Colors';
 
 type Props = {
     item: VoicePin;
@@ -24,9 +20,10 @@ export function MemoryCard({ item, onPress }: Props) {
     const player = useAudioPlayer(item.audioUrl);
     const [isPlaying, setIsPlaying] = useState<boolean>(false);
     const [duration, setDuration] = useState<string | null>(null);
-    const [loading, setLoading] = useState<boolean>(false);
     const [positionMillis, setPositionMillis] = useState<number>(0);
     const [durationMillis, setDurationMillis] = useState<number>(0);
+    const colorScheme = useColorScheme() || 'light';
+    const currentTheme = theme[colorScheme];
     const [locationName, setLocationName] = useState<string>('Loading...');
 
     const play = () => {
@@ -35,33 +32,30 @@ export function MemoryCard({ item, onPress }: Props) {
             setIsPlaying(false);
         } else {
             player.seekTo(0);
-
             player.play();
             setIsPlaying(true);
         }
     };
 
     const formatDuration = (seconds: number): string => {
+        if (!seconds) return '0:00';
         const rounded = Math.round(seconds);
-        const mins = Math.round(rounded / 60);
+        const mins = Math.floor(rounded / 60);
         const secs = rounded % 60;
         const paddedSecs = secs < 10 ? `0${secs}` : secs.toString();
         return `${mins}:${paddedSecs}`;
     };
 
     useEffect(() => {
-        const interval = setInterval(() => {
+        if (player.duration) {
             setDuration(formatDuration(player.duration));
-            clearInterval(interval);
-        }, 200);
-
-        return () => clearInterval(interval);
-    }, [player]);
+        }
+    }, [player.duration]);
 
     useEffect(() => {
         const loadLocationName = async () => {
             try {
-                const name = await getLocationName(memory.latitude, memory.longitude);
+                const name = await getLocationName(item.latitude, item.longitude);
                 setLocationName(name);
             } catch (error) {
                 console.error('Error loading location name:', error);
@@ -69,26 +63,21 @@ export function MemoryCard({ item, onPress }: Props) {
             }
         };
 
-        loadLocationName();
-    }, [memory.latitude, memory.longitude]);
+        if (item.latitude && item.longitude) {
+            loadLocationName();
+        }
+    }, [item.latitude, item.longitude]);
 
-    const progress = useMemo(() => {
-        if (!durationMillis) return 0;
-        return positionMillis / durationMillis;
-    }, [positionMillis, durationMillis]);
-    
     return (
-        <ThemedView style={styles.card}>
+        <ThemedView style={[styles.card, { backgroundColor: currentTheme.colors.surface, borderColor: currentTheme.colors.border }]}>
             <View style={styles.header}>
-                <View style={styles.emotionContainer}>
+                <View style={[styles.emotionContainer, { backgroundColor: currentTheme.colors.surfaceAlt, borderColor: currentTheme.colors.primary }]}>
                     <Text style={styles.emotionText}>{item.emotionLabel || '🎵'}</Text>
                 </View>
 
                 <View style={styles.infoContainer}>
                     <View style={styles.titleRow}>
-
-                        {nameUser && <ThemedText type='defaultSemiBold'>{nameUser}</ThemedText>}
-                        <Text style={styles.dateTime}>
+                        <Text style={[styles.dateTime, { color: currentTheme.colors.textSecondary }]}>
                             {new Date(item.createdAt).toLocaleDateString('en-US', {
                                 month: 'short',
                                 day: 'numeric',
@@ -99,67 +88,52 @@ export function MemoryCard({ item, onPress }: Props) {
                     </View>
 
                     <View style={styles.titleRow}>
-                        {/* <ThemedText  type='defaultSemiBold'>{nameUser}<ThemedText/> */}
-                        <ThemedText style={styles.duration}>
+                        <ThemedText style={[styles.duration, { backgroundColor: currentTheme.colors.surfaceAlt, color: currentTheme.colors.primary }]}>
                             {duration ? duration : '---'}
                         </ThemedText>
-
                     </View>
 
-
-                    <ThemedText style={styles.description}>
+                    <ThemedText style={[styles.description, { color: currentTheme.colors.text }]}>
                         {item.content}
                     </ThemedText>
 
                     <View style={styles.locationContainer}>
-                        <Ionicons name="location" size={14} color="#6b7280" />
-                        <Text style={styles.location}>
-                            {item.address || 'Unknown location'}
+                        <Ionicons name="location" size={14} color={currentTheme.colors.textMuted} />
+                        <Text style={[styles.location, { color: currentTheme.colors.textMuted }]}>
+                            {locationName || item.address || 'Unknown location'}
                         </Text>
                     </View>
                 </View>
             </View>
 
-            <View style={styles.actions}>
+            <View style={[styles.actions, { borderTopColor: currentTheme.colors.border }]}>
                 <TouchableOpacity
-                    style={[styles.playButton, isPlaying && styles.playingButton]}
+                    style={[
+                        styles.playButton, 
+                        { backgroundColor: currentTheme.colors.surfaceAlt, borderColor: currentTheme.colors.primary },
+                        isPlaying && { backgroundColor: currentTheme.colors.primary }
+                    ]}
                     onPress={play}
                 >
                     <Ionicons
                         name={isPlaying ? 'pause' : 'play'}
                         size={16}
-                        color={isPlaying ? '#ffffff' : '#8b5cf6'}
+                        color={isPlaying ? Colors.white : currentTheme.colors.primary}
                     />
-                    <Text style={[styles.playButtonText, isPlaying && styles.playingButtonText]}>
+                    <Text style={[styles.playButtonText, { color: isPlaying ? Colors.white : currentTheme.colors.primary }]}>
                         {isPlaying ? 'Pause' : 'Play'}
                     </Text>
                 </TouchableOpacity>
-                {/* <View style={styles.progressWrap}>
-                    <Pressable
-                        style={styles.progressBar}
-                        onPress={(e) => {
-                            // const { locationX, nativeEvent } = e;
-                            // const width = (nativeEvent as any).target ? undefined : undefined; // placeholder
-                            // Use layout to compute ratio
-                        }}
-                    >
-                        <View style={[styles.progressFill, { width: `${Math.max(0, Math.min(1, progress)) * 100}%` }]} />
-                    </Pressable>
-                    <View style={styles.timeRow}>
-                        <ThemedText style={styles.muted}>{formattedTime(positionMillis)}</ThemedText>
-                        <ThemedText style={styles.muted}>{formattedTime(durationMillis)}</ThemedText>
-                    </View>
-                </View> */}
 
                 <View style={styles.actionButtons}>
-                    <TouchableOpacity style={styles.actionButton}>
-                        <Ionicons name="heart-outline" size={16} color="#6b7280" />
+                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: currentTheme.colors.surfaceAlt }]}>
+                        <Ionicons name="heart-outline" size={16} color={currentTheme.colors.textMuted} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionButton}>
-                        <Ionicons name="share-outline" size={16} color="#6b7280" />
+                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: currentTheme.colors.surfaceAlt }]}>
+                        <Ionicons name="share-outline" size={16} color={currentTheme.colors.textMuted} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionButton}>
-                        <Ionicons name="bookmark-outline" size={16} color="#6b7280" />
+                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: currentTheme.colors.surfaceAlt }]}>
+                        <Ionicons name="bookmark-outline" size={16} color={currentTheme.colors.textMuted} />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -168,29 +142,7 @@ export function MemoryCard({ item, onPress }: Props) {
 }
 
 const styles = StyleSheet.create({
-    muted: {
-        color: '#888',
-    },
-    progressWrap: {
-        flex: 1,
-    },
-    progressBar: {
-        height: 8,
-        backgroundColor: '#e5e5e5',
-        borderRadius: 999,
-        overflow: 'hidden',
-    },
-    progressFill: {
-        height: '100%',
-        backgroundColor: '#3b82f6',
-    },
-    timeRow: {
-        marginTop: 6,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
     card: {
-        backgroundColor: "#ffffff",
         borderRadius: 16,
         padding: 16,
         marginVertical: 6,
@@ -201,7 +153,6 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 3,
         borderWidth: 1,
-        borderColor: '#f3f4f6',
     },
     header: {
         flexDirection: "row",
@@ -212,11 +163,9 @@ const styles = StyleSheet.create({
         width: 56,
         height: 56,
         borderRadius: 28,
-        backgroundColor: '#faf5ff',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
-        borderColor: '#8b5cf6',
         overflow: 'hidden'
     },
     emotionText: {
@@ -232,8 +181,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     duration: {
-        backgroundColor: '#f3e8ff',
-        color: '#7c3aed',
         borderRadius: 12,
         paddingHorizontal: 8,
         paddingVertical: 2,
@@ -242,12 +189,10 @@ const styles = StyleSheet.create({
     },
     dateTime: {
         fontSize: 12,
-        color: '#6b7280',
         fontWeight: '500',
     },
     description: {
         fontSize: 14,
-        color: "#374151",
         lineHeight: 20,
         fontWeight: '400',
     },
@@ -258,7 +203,6 @@ const styles = StyleSheet.create({
     },
     location: {
         fontSize: 12,
-        color: "#6b7280",
         fontWeight: '400',
     },
     actions: {
@@ -267,7 +211,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: 12,
         borderTopWidth: 1,
-        borderTopColor: '#f3f4f6',
     },
     playButton: {
         flexDirection: 'row',
@@ -276,20 +219,11 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 20,
-        backgroundColor: '#faf5ff',
         borderWidth: 1,
-        borderColor: '#8b5cf6',
-    },
-    playingButton: {
-        backgroundColor: '#8b5cf6',
     },
     playButtonText: {
         fontSize: 12,
-        color: '#8b5cf6',
         fontWeight: '600',
-    },
-    playingButtonText: {
-        color: '#ffffff',
     },
     actionButtons: {
         flexDirection: 'row',
@@ -299,7 +233,6 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: '#f9fafb',
         justifyContent: 'center',
         alignItems: 'center',
     },

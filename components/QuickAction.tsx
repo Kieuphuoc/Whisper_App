@@ -3,7 +3,8 @@ import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { theme } from '@/constants/Theme';
 
 type QuickActionItem = {
   iconName: keyof typeof Ionicons.glyphMap;
@@ -13,8 +14,11 @@ type QuickActionItem = {
 
 export default function QuickAction() {
   const router = useRouter();
+  const colorScheme = useColorScheme() || 'light';
+  const currentTheme = theme[colorScheme];
 
   const handleFriendsPress = () => {
+    // @ts-ignore: Route not yet implemented
     router.push('/(home)/listfriend');
   };
 
@@ -29,17 +33,17 @@ export default function QuickAction() {
   ];
 
   return (
-    <View style={styles.quickActionsBento}>
+    <View style={[styles.quickActionsBento, { backgroundColor: currentTheme.colors.surface, borderColor: currentTheme.colors.primary + '1A' }]}>
       {actions.map((item) => (
         <TouchableOpacity
           key={item.label}
           style={styles.quickActionButton}
           onPress={item.onPress}
         >
-          <View style={styles.quickActionIcon}>
-            <Ionicons name={item.iconName} size={20} color={Colors.primary}/>
+          <View style={[styles.quickActionIcon, { backgroundColor: Colors.primary + '15' }]}>
+            <Ionicons name={item.iconName} size={20} color={Colors.primary} />
           </View>
-          <Text style={styles.quickActionText}>{item.label}</Text>
+          <Text style={[styles.quickActionText, { color: currentTheme.colors.textSecondary }]}>{item.label}</Text>
         </TouchableOpacity>
       ))}
     </View>
@@ -51,16 +55,15 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 140,
     left: 16,
-    backgroundColor: Colors.button,
     borderRadius: 20,
-    padding: 16,
+    padding: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 8,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.1)',
+    zIndex: 10,
   },
   quickActionButton: {
     alignItems: 'center',
@@ -72,14 +75,12 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(205, 188, 250, 0.26)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 4,
   },
   quickActionText: {
     fontSize: 10,
-    color: Colors.lightText,
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });

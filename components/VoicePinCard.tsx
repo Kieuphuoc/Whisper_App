@@ -4,15 +4,20 @@ import { useAudioPlayer } from 'expo-audio';
 import { Image } from 'expo-image';
 import { useNavigation } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { theme } from '@/constants/Theme';
+import { Colors } from '@/constants/Colors';
 
 export default function VoicePinCard({ voicePin, onClose }: VoicePinCardProps) {
+  const colorScheme = useColorScheme() || 'light';
+  const currentTheme = theme[colorScheme];
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [totalDuration, setTotalDuration] = useState(0);
 
   const player = useAudioPlayer(voicePin.audioUrl);
-  const navigation = useNavigation<any>()
+  const navigation = useNavigation<any>();
+
   const playPause = () => {
     if (isPlaying) {
       player.pause();
@@ -29,21 +34,21 @@ export default function VoicePinCard({ voicePin, onClose }: VoicePinCardProps) {
     }
   }, [voicePin, navigation]);
 
-
   const formatTime = (seconds: number): string => {
+    if (!seconds) return '0:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const progressPercent = totalDuration > 0 ? (currentTime / totalDuration) * 100 : 0;
-  console.log("Ma chi tiet voice", voicePin.id);
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: currentTheme.colors.surface, borderColor: currentTheme.colors.primary + '1A' }]}>
       {/* Header with close button */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Ionicons name="close" size={20} color="#6b7280" />
+        <TouchableOpacity onPress={onClose} style={[styles.closeButton, { backgroundColor: currentTheme.colors.surfaceAlt }]}>
+          <Ionicons name="close" size={20} color={currentTheme.colors.textMuted} />
         </TouchableOpacity>
       </View>
 
@@ -51,16 +56,16 @@ export default function VoicePinCard({ voicePin, onClose }: VoicePinCardProps) {
       <View style={styles.userSection}>
         <View style={styles.avatarContainer}>
           {voicePin.user?.avatar ? (
-            <Image source={{ uri: voicePin?.user?.avatar }} style={styles.avatar} />
+            <Image source={{ uri: voicePin?.user?.avatar }} style={[styles.avatar, { borderColor: currentTheme.colors.primary }]} />
           ) : (
-            <View style={styles.defaultAvatar}>
-              <Ionicons name="person" size={20} color={Colors.primary} />
+            <View style={[styles.defaultAvatar, { backgroundColor: currentTheme.colors.surfaceAlt, borderColor: currentTheme.colors.border }]}>
+              <Ionicons name="person" size={20} color={currentTheme.colors.primary} />
             </View>
           )}
         </View>
         <View style={styles.userInfo}>
-          <Text style={styles.userName}>{voicePin?.user?.displayName || 'Anonymous'}</Text>
-          <Text style={styles.timestamp}>
+          <Text style={[styles.userName, { color: currentTheme.colors.text }]}>{voicePin?.user?.displayName || 'Anonymous'}</Text>
+          <Text style={[styles.timestamp, { color: currentTheme.colors.textMuted }]}>
             {new Date(voicePin.createdAt).toLocaleDateString('vi-VN', {
               month: 'short',
               day: 'numeric',
@@ -72,27 +77,27 @@ export default function VoicePinCard({ voicePin, onClose }: VoicePinCardProps) {
       </View>
 
       {/* Description */}
-      <Text style={styles.description} numberOfLines={2}>
+      <Text style={[styles.description, { color: currentTheme.colors.textSecondary }]} numberOfLines={2}>
         {voicePin.content}
       </Text>
 
       {/* Audio Player */}
-      <View style={styles.audioSection}>
-        <TouchableOpacity onPress={playPause} style={styles.playButton}>
+      <View style={[styles.audioSection, { backgroundColor: currentTheme.colors.surfaceAlt }]}>
+        <TouchableOpacity onPress={playPause} style={[styles.playButton, { backgroundColor: currentTheme.colors.primary }]}>
           <Ionicons
             name={isPlaying ? 'pause' : 'play'}
             size={20}
-            color="#ffffff"
+            color={Colors.white}
           />
         </TouchableOpacity>
 
         <View style={styles.audioInfo}>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+          <View style={[styles.progressBar, { backgroundColor: currentTheme.colors.border }]}>
+            <View style={[styles.progressFill, { width: `${progressPercent}%`, backgroundColor: currentTheme.colors.primary }]} />
           </View>
           <View style={styles.timeInfo}>
-            <Text style={styles.timeText}>{formatTime(currentTime)}</Text>
-            <Text style={styles.timeText}>{formatTime(totalDuration)}</Text>
+            <Text style={[styles.timeText, { color: currentTheme.colors.textMuted }]}>{formatTime(currentTime)}</Text>
+            <Text style={[styles.timeText, { color: currentTheme.colors.textMuted }]}>{formatTime(totalDuration)}</Text>
           </View>
         </View>
       </View>
@@ -100,19 +105,22 @@ export default function VoicePinCard({ voicePin, onClose }: VoicePinCardProps) {
       {/* Stats */}
       <View style={styles.statsSection}>
         <View style={styles.statItem}>
-          <Ionicons name="heart-outline" size={16} color="#6b7280" />
-          <Text style={styles.statText}>{voicePin.reactionsCount || 0}</Text>
+          <Ionicons name="heart-outline" size={16} color={currentTheme.colors.textMuted} />
+          <Text style={[styles.statText, { color: currentTheme.colors.textMuted }]}>{voicePin.reactionsCount || 0}</Text>
         </View>
         <View style={styles.statItem}>
-          <Ionicons name="chatbubble-outline" size={16} color="#6b7280" />
-          <Text style={styles.statText}>{voicePin.commentsCount || 0}</Text>
+          <Ionicons name="chatbubble-outline" size={16} color={currentTheme.colors.textMuted} />
+          <Text style={[styles.statText, { color: currentTheme.colors.textMuted }]}>{voicePin.commentsCount || 0}</Text>
         </View>
       </View>
 
       {/* View Detail Button */}
-      <TouchableOpacity style={styles.detailButton} onPress={handlePress}>
-        <Text style={styles.detailButtonText}>Detail Voice Pin</Text>
-        <Ionicons name="arrow-forward" size={16} color="#8b5cf6" />
+      <TouchableOpacity 
+        style={[styles.detailButton, { backgroundColor: currentTheme.colors.surfaceAlt, borderColor: currentTheme.colors.primary + '33' }]} 
+        onPress={handlePress}
+      >
+        <Text style={[styles.detailButtonText, { color: currentTheme.colors.primary }]}>Detail Voice Pin</Text>
+        <Ionicons name="arrow-forward" size={16} color={currentTheme.colors.primary} />
       </TouchableOpacity>
     </View>
   );
@@ -120,7 +128,6 @@ export default function VoicePinCard({ voicePin, onClose }: VoicePinCardProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 16,
     margin: 16,
@@ -130,7 +137,6 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.1)',
   },
   header: {
     alignItems: 'flex-end',
@@ -140,7 +146,6 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#f3f4f6',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -156,16 +161,15 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
+    borderWidth: 2,
   },
   defaultAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f3f4f6',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#e5e7eb',
+    borderWidth: 1,
   },
   userInfo: {
     flex: 1,
@@ -173,23 +177,19 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 2,
   },
   timestamp: {
     fontSize: 12,
-    color: '#6b7280',
   },
   description: {
     fontSize: 14,
-    color: '#374151',
     lineHeight: 20,
     marginBottom: 16,
   },
   audioSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
     borderRadius: 12,
     padding: 12,
     marginBottom: 16,
@@ -198,7 +198,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#8b5cf6',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -208,14 +207,12 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 4,
-    backgroundColor: '#e5e7eb',
     borderRadius: 2,
     overflow: 'hidden',
     marginBottom: 6,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#8b5cf6',
   },
   timeInfo: {
     flexDirection: 'row',
@@ -223,7 +220,6 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 11,
-    color: '#6b7280',
     fontWeight: '500',
   },
   statsSection: {
@@ -238,7 +234,6 @@ const styles = StyleSheet.create({
   },
   statText: {
     fontSize: 12,
-    color: '#6b7280',
     fontWeight: '500',
   },
   detailButton: {
@@ -248,15 +243,11 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#f0f9ff',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e0f2fe',
   },
   detailButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#8b5cf6',
   },
 });
-

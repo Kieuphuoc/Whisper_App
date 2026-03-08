@@ -1,14 +1,17 @@
 import { VoicePin, VoiceType } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import MapView, { Callout, Marker, Region } from "react-native-maps";
+import { useState, useEffect, useCallback } from "react";
+import { StyleSheet, Text, TouchableOpacity, View, useColorScheme } from "react-native";
+import MapView, { Callout, Marker, Region, MapType } from "react-native-maps";
 import MapViewClustering from "react-native-map-clustering";
 import VoicePinCard from "./VoicePinCard";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from '@react-navigation/native';
 
 import RadarOverlay from "../discovery/RadarOverlay";
 import SpawnedVoicePin from "../discovery/SpawnedVoicePin";
+import QuickAction from "../QuickAction";
 
 const DEFAULT_DELTA = 0.01;
 const FALLBACK_LAT = 10.7769;
@@ -24,6 +27,25 @@ type Props = {
 
 export default function MapSection({ location, pins, isScanning = false, discoveredPin, onPressDiscoveredPin }: Props) {
   const [selectedPin, setSelectedPin] = useState<VoicePin | null>(null);
+  const [mapType, setMapType] = useState<MapType>('standard');
+  const colorScheme = useColorScheme();
+
+  const loadMapType = useCallback(async () => {
+    try {
+      const savedMapType = await AsyncStorage.getItem('mapType');
+      if (savedMapType) {
+        setMapType(savedMapType as MapType);
+      }
+    } catch (e) {
+      console.error("Failed to load map type", e);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadMapType();
+    }, [loadMapType])
+  );
 
   const initialRegion: Region = {
     latitude: location?.coords.latitude ?? FALLBACK_LAT,
@@ -49,6 +71,7 @@ export default function MapSection({ location, pins, isScanning = false, discove
         initialRegion={initialRegion}
         showsUserLocation
         showsMyLocationButton={false}
+        mapType={mapType}
         // Clustering config
         radius={60}           // pixel radius of each cluster
         minPoints={3}         // min pins before forming a cluster
@@ -144,6 +167,7 @@ export default function MapSection({ location, pins, isScanning = false, discove
           />
         )}
       </MapViewClustering>
+
 
       <RadarOverlay isScanning={isScanning} />
 

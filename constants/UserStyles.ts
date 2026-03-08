@@ -1,9 +1,14 @@
 import { StyleSheet } from 'react-native';
+import { Colors } from './Colors';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const tokens = require('./tokens');
+
+const { borderRadius, shadow } = tokens;
 
 export const userStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "white",
+    backgroundColor: Colors.light.background,
   },
   keyboardView: {
     flex: 1,
@@ -22,14 +27,14 @@ export const userStyles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: tokens.fontSize['2xl'],
+    fontWeight: 'bold' as const,
+    color: Colors.light.text,
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: tokens.fontSize.md,
+    color: Colors.light.textSecondary,
   },
   form: {
     padding: 20,
@@ -37,26 +42,25 @@ export const userStyles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f8f8',
-    borderRadius: 12,
+    backgroundColor: Colors.light.surfaceAlt,
+    borderRadius: borderRadius.input,
     marginBottom: 15,
     paddingHorizontal: 15,
   },
   errorText: {
-    color: 'red',
-    fontSize: 14,
+    color: Colors.error,
+    fontSize: tokens.fontSize.sm,
     marginBottom: 10,
     marginLeft: 10,
-  }
-  ,
+  },
   inputIcon: {
     marginRight: 10,
   },
   input: {
     flex: 1,
     paddingVertical: 15,
-    color: '#333',
-    fontSize: 16,
+    color: Colors.light.text,
+    fontSize: tokens.fontSize.md,
   },
   eyeIcon: {
     padding: 5,
@@ -66,42 +70,31 @@ export const userStyles = StyleSheet.create({
     marginBottom: 20,
   },
   forgotPasswordText: {
-    color: 'yellow',
-    fontSize: 14,
+    color: Colors.primary,
+    fontSize: tokens.fontSize.sm,
   },
   imagePicker: {
-    backgroundColor: '#f8f8f8',
+    backgroundColor: Colors.light.surfaceAlt,
     height: 200,
-    borderRadius: 12,
+    borderRadius: borderRadius.card,
     marginBottom: 20,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    ...shadow.md,
   },
   loginButton: {
-    color: 'yellow',
+    backgroundColor: Colors.primary,
     padding: 16,
-    borderRadius: 25,
+    borderRadius: borderRadius.btn,
     alignItems: 'center',
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
+    ...shadow.md,
   },
   loginButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: Colors.white,
+    fontSize: tokens.fontSize.lg,
+    fontWeight: 'bold' as const,
   },
   divider: {
     flexDirection: 'row',
@@ -111,12 +104,12 @@ export const userStyles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: Colors.light.border,
   },
   dividerText: {
     marginHorizontal: 10,
-    color: '#666',
-    fontSize: 14,
+    color: Colors.light.textSecondary,
+    fontSize: tokens.fontSize.sm,
   },
   socialButtons: {
     flexDirection: 'row',
@@ -127,15 +120,11 @@ export const userStyles = StyleSheet.create({
   socialButton: {
     width: 50,
     height: 50,
-    borderRadius: 25,
-    backgroundColor: '#f8f8f8',
+    borderRadius: borderRadius.avatar,
+    backgroundColor: Colors.light.surfaceAlt,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadow.sm,
   },
   signupContainer: {
     flexDirection: 'row',
@@ -143,47 +132,44 @@ export const userStyles = StyleSheet.create({
     marginTop: 10,
   },
   signupText: {
-    color: '#666',
-    fontSize: 14,
+    color: Colors.light.textSecondary,
+    fontSize: tokens.fontSize.sm,
   },
   signupLink: {
-    color: 'yellow',
-    fontSize: 14,
-    fontWeight: '600',
+    color: Colors.primary,
+    fontSize: tokens.fontSize.sm,
+    fontWeight: '600' as const,
   },
   dropdown: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.light.background,
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
+    borderColor: Colors.light.border,
+    borderRadius: borderRadius.md,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadow.sm,
     marginBottom: 20,
   },
   dropdownItem: {
     paddingVertical: 8,
-    fontSize: 16,
-    color: '#333',
+    fontSize: tokens.fontSize.md,
+    color: Colors.light.text,
   },
   comboBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f8f8',
-    borderRadius: 12,
-    paddingHorizontal: 15, height: 50,
+    backgroundColor: Colors.light.surfaceAlt,
+    borderRadius: borderRadius.input,
+    paddingHorizontal: 15,
+    height: 50,
   },
   hiddenBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f8f8',
-    borderRadius: 12,
-    paddingHorizontal: 15, height: 50,
+    backgroundColor: Colors.light.surfaceAlt,
+    borderRadius: borderRadius.input,
+    paddingHorizontal: 15,
+    height: 50,
     marginBottom: 15,
-
-  }
-}); 
+  },
+});

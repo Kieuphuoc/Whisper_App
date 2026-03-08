@@ -1,9 +1,10 @@
 import VoicePinTurntable from '@/components/home/VoicePinCard';
-import { Colors } from '@/constants/Colors';
+import { theme } from '@/constants/Theme';
 import { useMyPins } from '@/hooks/useMyPins';
 import { VoicePin } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -19,9 +20,17 @@ import {
   TouchableOpacity,
   UIManager,
   View,
+  useColorScheme
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import Animated, { useSharedValue, useAnimatedScrollHandler, useAnimatedStyle, interpolate, Extrapolation, SharedValue, withSpring } from 'react-native-reanimated';
+import Animated, {
+  Extrapolation,
+  SharedValue,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring
+} from 'react-native-reanimated';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -33,21 +42,15 @@ export const CARD_SPACING = 12;
 
 // ─── Emotion meta ─────────────────────────────────────────
 const EMOTION_META: Record<string, { color: string; gradient: string; icon: keyof typeof Ionicons.glyphMap; vi: string }> = {
-  Happy: { color: '#f59e0b', gradient: '#fef3c7', icon: 'sunny-outline', vi: 'Vui vẻ' },
-  Sad: { color: '#3b82f6', gradient: '#dbeafe', icon: 'rainy-outline', vi: 'Buồn bã' },
-  Calm: { color: '#10b981', gradient: '#d1fae5', icon: 'leaf-outline', vi: 'Bình yên' },
-  Nostalgic: { color: '#ec4899', gradient: '#fce7f3', icon: 'hourglass-outline', vi: 'Nhớ nhung' },
-  Romantic: { color: '#f43f5e', gradient: '#ffe4e6', icon: 'heart-outline', vi: 'Lãng mạn' },
-  Curious: { color: '#8b5cf6', gradient: '#ede9fe', icon: 'telescope-outline', vi: 'Tò mò' },
-  Angry: { color: '#ef4444', gradient: '#fee2e2', icon: 'flame-outline', vi: 'Bực bội' },
-  Relaxed: { color: '#14b8a6', gradient: '#ccfbf1', icon: 'water-outline', vi: 'Thư giãn' },
-  Excited: { color: '#f97316', gradient: '#ffedd5', icon: 'flash-outline', vi: 'Phấn khích' },
-  Mysterious: { color: '#6366f1', gradient: '#e0e7ff', icon: 'eye-outline', vi: 'Bí ẩn' },
-  Thoughtful: { color: '#8b5cf6', gradient: '#f3e8ff', icon: 'bulb-outline', vi: 'Trầm tư' },
-  Enthusiastic: { color: '#f59e0b', gradient: '#fef9c3', icon: 'rocket-outline', vi: 'Nhiệt huyết' },
-  Inspiring: { color: '#06b6d4', gradient: '#cffafe', icon: 'sparkles-outline', vi: 'Cảm hứng' },
+  Happy: { color: '#facc15', gradient: '#fef9c3', icon: 'sunny-outline', vi: 'Vui vẻ' },
+  Sad: { color: '#60a5fa', gradient: '#eff6ff', icon: 'rainy-outline', vi: 'Buồn bã' },
+  Calm: { color: '#34d399', gradient: '#ecfdf5', icon: 'leaf-outline', vi: 'Bình yên' },
+  Nostalgic: { color: '#f472b6', gradient: '#fdf2f8', icon: 'hourglass-outline', vi: 'Nhớ nhung' },
+  Romantic: { color: '#fb7185', gradient: '#fff1f2', icon: 'heart-outline', vi: 'Lãng mạn' },
+  Curious: { color: '#a78bfa', gradient: '#f5f3ff', icon: 'telescope-outline', vi: 'Tò mò' },
+  Angry: { color: '#f87171', gradient: '#fef2f2', icon: 'flame-outline', vi: 'Bực bội' },
 };
-const DEFAULT_META = { color: '#9ca3af', gradient: '#f3f4f6', icon: 'mic-outline' as keyof typeof Ionicons.glyphMap, vi: 'Khác' };
+const DEFAULT_META = { color: '#8b5cf6', gradient: '#f5f3ff', icon: 'mic-outline' as keyof typeof Ionicons.glyphMap, vi: 'Khác' };
 
 export function getMeta(label?: string) {
   return label ? (EMOTION_META[label] ?? DEFAULT_META) : DEFAULT_META;
@@ -66,7 +69,7 @@ const FILTERS: { key: FilterType; label: string; icon: keyof typeof Ionicons.gly
   { key: 'location', label: 'Địa điểm', icon: 'location-outline' },
 ];
 
-function FilterChips({ active, onChange }: { active: FilterType; onChange: (f: FilterType) => void }) {
+function FilterChips({ active, onChange, currentTheme }: { active: FilterType; onChange: (f: FilterType) => void; currentTheme: any }) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={filterStyles.row}>
       {FILTERS.map(f => {
@@ -75,11 +78,19 @@ function FilterChips({ active, onChange }: { active: FilterType; onChange: (f: F
           <TouchableOpacity
             key={f.key}
             onPress={() => onChange(f.key)}
-            style={[filterStyles.chip, isActive && filterStyles.chipActive]}
+            style={[
+              filterStyles.chip,
+              { backgroundColor: currentTheme.colors.background },
+              isActive && { backgroundColor: currentTheme.colors.primary }
+            ]}
             activeOpacity={0.7}
           >
-            <Ionicons name={f.icon} size={14} color={isActive ? '#fff' : '#6b7280'} />
-            <Text style={[filterStyles.chipText, isActive && filterStyles.chipTextActive]}>{f.label}</Text>
+            <Ionicons name={f.icon} size={14} color={isActive ? '#fff' : currentTheme.colors.icon} />
+            <Text style={[
+              filterStyles.chipText,
+              { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.sm },
+              isActive && filterStyles.chipTextActive
+            ]}>{f.label}</Text>
           </TouchableOpacity>
         );
       })}
@@ -96,21 +107,12 @@ const filterStyles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#f8f9fa',
-    shadowColor: '#000',
+    elevation: 2,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 1,
   },
-  chipActive: {
-    backgroundColor: Colors.primary,
-    shadowColor: Colors.primary,
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  chipText: { fontSize: 12, fontWeight: '600', color: '#6b7280' },
+  chipText: { fontWeight: '600' },
   chipTextActive: { color: '#fff' },
 });
 
@@ -119,7 +121,6 @@ export function Waveform({ color, barCount = 20 }: { color: string; barCount?: n
   const bars = useMemo(() => {
     const arr = [];
     for (let i = 0; i < barCount; i++) {
-      // Create a gentle parabolic wave pattern with some randomness
       const norm = i / (barCount - 1);
       const base = Math.sin(norm * Math.PI) * 0.7 + 0.3;
       const random = 0.85 + Math.random() * 0.3;
@@ -162,7 +163,7 @@ const waveStyles = StyleSheet.create({
 });
 
 // ─── Memory Card ──────────────────────────────────────────
-export function MemoryCard({ pin, onPress, customWidth, customMarginRight, index, scrollX }: { pin: VoicePin; onPress: () => void; customWidth?: number; customMarginRight?: number; index?: number; scrollX?: SharedValue<number> }) {
+export function MemoryCard({ pin, onPress, customWidth, customMarginRight, index, scrollX, currentTheme }: { pin: VoicePin; onPress: () => void; customWidth?: number; customMarginRight?: number; index?: number; scrollX?: SharedValue<number>; currentTheme: any }) {
   const meta = getMeta(pin.emotionLabel);
   const imgUrl = getPinImage(pin);
   const pressedScale = useSharedValue(1);
@@ -216,52 +217,57 @@ export function MemoryCard({ pin, onPress, customWidth, customMarginRight, index
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={1}
-        className="rounded-[20px] overflow-hidden"
-        style={{
-          backgroundColor: meta.gradient,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.08,
-          shadowRadius: 16,
-          elevation: 5
-        }}
+        style={[
+          memCard.container,
+          {
+            backgroundColor: currentTheme.colors.background === '#111118' ? '#1f1f2e' : meta.gradient,
+            borderColor: currentTheme.colors.icon + '15',
+            borderWidth: 1
+          }
+        ]}
       >
         {/* Mood badge */}
-        <View className="absolute top-2.5 left-2.5 z-10 w-7 h-7 rounded-full justify-center items-center" style={{ backgroundColor: meta.color + '20' }}>
+        <View style={[memCard.moodBadge, { backgroundColor: meta.color + '20' }]}>
           <Ionicons name={meta.icon} size={14} color={meta.color} />
         </View>
 
         {/* Image */}
         {imgUrl ? (
-          <Image source={{ uri: imgUrl }} className="w-full bg-gray-100" style={{ height: w * 0.6 }} />
+          <Image source={{ uri: imgUrl }} style={[memCard.image, { height: w * 0.6 }]} />
         ) : (
-          <View className="w-full bg-gray-100 justify-center items-center" style={{ height: w * 0.6 }}>
+          <View style={[memCard.image, memCard.imagePlaceholder, { height: w * 0.6 }]}>
             <Ionicons name="musical-notes-outline" size={32} color={meta.color + '60'} />
           </View>
         )}
 
         {/* Info */}
-        <View className="p-3 gap-0.5">
-          <Text className="text-[13px] font-bold text-gray-800 leading-[18px]" numberOfLines={2}>
+        <View style={memCard.info}>
+          <Text
+            style={[memCard.content, { color: currentTheme.colors.text, fontSize: currentTheme.typography.fontSizes.sm }]}
+            numberOfLines={2}
+          >
             {pin.content ?? 'Ký ức giọng nói'}
           </Text>
 
-          <View className="flex-row items-center gap-[3px] mt-[3px]">
-            <Ionicons name="location-outline" size={11} color="#9ca3af" />
-            <Text className="text-[10px] text-gray-400 flex-1" numberOfLines={1}>
+          <View style={memCard.metaRow}>
+            <Ionicons name="location-outline" size={11} color={currentTheme.colors.icon} />
+            <Text
+              style={[memCard.metaText, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.xs }]}
+              numberOfLines={1}
+            >
               {pin.address ?? 'Không rõ vị trí'}
             </Text>
           </View>
 
           <Waveform color={meta.color} />
 
-          <View className="flex-row justify-between items-center mt-1.5">
-            <Text className="text-[10px] text-[#b0b0b0] font-medium">{dateStr}</Text>
-            <View className="flex-row items-center gap-[2px]">
-              <Ionicons name="headset-outline" size={10} color="#9ca3af" />
-              <Text className="text-[10px] text-[#b0b0b0] ml-[2px]">{pin.listensCount ?? 0}</Text>
-              <Ionicons name="heart" size={10} color="#f9a8d4" style={{ marginLeft: 6 }} />
-              <Text className="text-[10px] text-[#b0b0b0] ml-[2px]">{pin.reactionsCount ?? 0}</Text>
+          <View style={memCard.bottomRow}>
+            <Text style={[memCard.dateText, { fontSize: currentTheme.typography.fontSizes.xs }]}>{dateStr}</Text>
+            <View style={memCard.statsRow}>
+              <Ionicons name="headset-outline" size={10} color={currentTheme.colors.icon} />
+              <Text style={[memCard.statNum, { fontSize: currentTheme.typography.fontSizes.xs }]}>{pin.listensCount ?? 0}</Text>
+              <Ionicons name="heart" size={10} color={currentTheme.colors.primary} style={{ marginLeft: 6 }} />
+              <Text style={[memCard.statNum, { fontSize: currentTheme.typography.fontSizes.xs }]}>{pin.reactionsCount ?? 0}</Text>
             </View>
           </View>
         </View>
@@ -271,15 +277,13 @@ export function MemoryCard({ pin, onPress, customWidth, customMarginRight, index
 }
 
 const memCard = StyleSheet.create({
-  wrapper: { width: CARD_WIDTH, marginRight: CARD_SPACING },
   container: {
     borderRadius: 20,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 5,
+    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
   },
   moodBadge: {
     position: 'absolute',
@@ -294,8 +298,7 @@ const memCard = StyleSheet.create({
   },
   image: {
     width: '100%',
-    height: CARD_WIDTH * 0.6,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: 'rgba(0,0,0,0.05)',
   },
   imagePlaceholder: {
     justifyContent: 'center',
@@ -306,9 +309,7 @@ const memCard = StyleSheet.create({
     gap: 2,
   },
   content: {
-    fontSize: 13,
     fontWeight: '700',
-    color: '#1f2937',
     lineHeight: 18,
   },
   metaRow: {
@@ -318,8 +319,6 @@ const memCard = StyleSheet.create({
     marginTop: 3,
   },
   metaText: {
-    fontSize: 10,
-    color: '#9ca3af',
     flex: 1,
   },
   bottomRow: {
@@ -329,7 +328,6 @@ const memCard = StyleSheet.create({
     marginTop: 6,
   },
   dateText: {
-    fontSize: 10,
     color: '#b0b0b0',
     fontWeight: '500',
   },
@@ -339,7 +337,6 @@ const memCard = StyleSheet.create({
     gap: 2,
   },
   statNum: {
-    fontSize: 10,
     color: '#b0b0b0',
     marginLeft: 2,
   },
@@ -353,6 +350,7 @@ function Section({
   pins,
   onSeeAll,
   onSelectPin,
+  currentTheme
 }: {
   title: string;
   icon: keyof typeof Ionicons.glyphMap;
@@ -360,6 +358,7 @@ function Section({
   pins: VoicePin[];
   onSeeAll?: () => void;
   onSelectPin: (p: VoicePin) => void;
+  currentTheme: any;
 }) {
   if (pins.length === 0) return null;
   const displayPins = pins.slice(0, 10);
@@ -372,18 +371,18 @@ function Section({
   });
 
   return (
-    <View className="mb-7">
-      <View className="flex-row justify-between items-center px-5 mb-3.5">
-        <View className="flex-row items-center gap-2">
-          <View className="w-7 h-7 rounded-full justify-center items-center" style={{ backgroundColor: iconColor + '18' }}>
+    <View style={section.container}>
+      <View style={section.header}>
+        <View style={section.titleRow}>
+          <View style={[section.iconDot, { backgroundColor: iconColor + '18' }]}>
             <Ionicons name={icon} size={14} color={iconColor} />
           </View>
-          <Text className="text-base font-bold text-gray-800 tracking-tight">{title}</Text>
+          <Text style={[section.title, { color: currentTheme.colors.text, fontSize: currentTheme.typography.fontSizes.md }]}>{title}</Text>
         </View>
         {pins.length > 10 && onSeeAll && (
-          <TouchableOpacity onPress={onSeeAll} className="flex-row items-center gap-0.5">
-            <Text className="text-xs font-semibold" style={{ color: Colors.primary }}>Xem tất cả</Text>
-            <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
+          <TouchableOpacity onPress={onSeeAll} style={section.seeAllBtn}>
+            <Text style={[section.seeAllText, { color: currentTheme.colors.primary, fontSize: currentTheme.typography.fontSizes.xs }]}>Xem tất cả</Text>
+            <Ionicons name="chevron-forward" size={14} color={currentTheme.colors.primary} />
           </TouchableOpacity>
         )}
       </View>
@@ -399,7 +398,7 @@ function Section({
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         renderItem={({ item, index }) => (
-          <MemoryCard pin={item} onPress={() => onSelectPin(item)} index={index} scrollX={scrollX} />
+          <MemoryCard pin={item} onPress={() => onSelectPin(item)} index={index} scrollX={scrollX} currentTheme={currentTheme} />
         )}
       />
     </View>
@@ -428,9 +427,7 @@ const section = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 16,
     fontWeight: '700',
-    color: '#1f2937',
     letterSpacing: -0.3,
   },
   seeAllBtn: {
@@ -439,14 +436,13 @@ const section = StyleSheet.create({
     gap: 2,
   },
   seeAllText: {
-    fontSize: 12,
-    color: Colors.primary,
     fontWeight: '600',
   },
 });
 
-// ─── Main Memory Screen ───────────────────────────────────
 export default function MemoryScreen() {
+  const colorScheme = useColorScheme() || 'light';
+  const currentTheme = theme[colorScheme];
   const router = useRouter();
   const { pins, loading, error, refetch } = useMyPins();
   const [selectedPin, setSelectedPin] = useState<VoicePin | null>(null);
@@ -465,7 +461,6 @@ export default function MemoryScreen() {
     setRefreshing(false);
   }, [refetch]);
 
-  // Filter by search
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return pins;
     const q = searchQuery.toLowerCase();
@@ -476,22 +471,19 @@ export default function MemoryScreen() {
     );
   }, [pins, searchQuery]);
 
-  // Build sections
   const sections = useMemo(() => {
     const now = new Date();
     const result: { key: string; title: string; icon: keyof typeof Ionicons.glyphMap; iconColor: string; pins: VoicePin[] }[] = [];
 
     if (activeFilter === 'time') {
-      // 1. Recently Added (last 7 days)
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const recent = filtered
         .filter(p => new Date(p.createdAt) >= sevenDaysAgo)
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       if (recent.length > 0) {
-        result.push({ key: 'recent', title: 'Mới thêm gần đây', icon: 'time-outline', iconColor: '#8b5cf6', pins: recent });
+        result.push({ key: 'recent', title: 'Mới thêm gần đây', icon: 'time-outline', iconColor: currentTheme.colors.primary, pins: recent });
       }
 
-      // 2. This Month
       const thisMonth = filtered
         .filter(p => {
           const d = new Date(p.createdAt);
@@ -502,11 +494,9 @@ export default function MemoryScreen() {
         result.push({ key: 'month', title: 'Tháng này', icon: 'calendar-outline', iconColor: '#3b82f6', pins: thisMonth });
       }
 
-      // Group by month-year for older ones
       const timeMap: Record<string, VoicePin[]> = {};
       for (const p of filtered) {
         const d = new Date(p.createdAt);
-        // Avoid grouping this month and recent here to avoid duplicates
         const isRecent = new Date(p.createdAt) >= sevenDaysAgo;
         const isThisMonth = d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
         if (isRecent || isThisMonth) continue;
@@ -522,7 +512,6 @@ export default function MemoryScreen() {
     }
 
     if (activeFilter === 'mood') {
-      // Group by emotion
       const emotionMap: Record<string, VoicePin[]> = {};
       for (const p of filtered) {
         const key = p.emotionLabel ?? 'Khác';
@@ -555,7 +544,6 @@ export default function MemoryScreen() {
     }
 
     if (activeFilter === 'location') {
-      // Group by location (extract city/district)
       const locMap: Record<string, VoicePin[]> = {};
       for (const p of filtered) {
         if (!p.address) continue;
@@ -576,7 +564,6 @@ export default function MemoryScreen() {
       }
     }
 
-    // Deduplicate: remove sections with same key
     const seen = new Set<string>();
     return result.filter(s => {
       if (seen.has(s.key)) return false;
@@ -585,7 +572,6 @@ export default function MemoryScreen() {
     });
   }, [filtered, activeFilter]);
 
-  // ── Show VoicePinCard overlay ─────────────────────────
   if (selectedPin) {
     return (
       <VoicePinTurntable
@@ -596,86 +582,89 @@ export default function MemoryScreen() {
   }
 
   return (
-    <View style={main.container}>
-      <StatusBar barStyle="dark-content" />
+    <View style={[main.container, { backgroundColor: currentTheme.colors.background }]}>
+      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={currentTheme.colors.primary} />
         }
       >
-        {/* ── Header ─────────────────────────────── */}
+        {/* Header */}
         <View style={main.header}>
-          <Text style={main.title}>Ký ức của tôi</Text>
-          <Text style={main.subtitle}>
+          <Text style={[main.title, { color: currentTheme.colors.text, fontSize: currentTheme.typography.fontSizes.h2 }]}>Ký ức của tôi</Text>
+          <Text style={[main.subtitle, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.sm }]}>
             {pins.length > 0 ? `${pins.length} khoảnh khắc` : 'Bắt đầu ghi lại kỷ niệm'}
           </Text>
         </View>
 
-        {/* ── Search ─────────────────────────────── */}
-        <View style={main.searchContainer}>
-          <Ionicons name="search-outline" size={16} color="#b0b0b0" style={{ marginLeft: 14 }} />
+        {/* Search */}
+        <View style={[main.searchContainer, { backgroundColor: currentTheme.colors.icon + '10', borderRadius: currentTheme.radius.md }]}>
+          <Ionicons name="search-outline" size={16} color={currentTheme.colors.icon} style={{ marginLeft: 14 }} />
           <TextInput
-            style={main.searchInput}
+            style={[main.searchInput, { color: currentTheme.colors.text, fontSize: currentTheme.typography.fontSizes.sm }]}
             placeholder="Tìm theo nội dung, địa điểm..."
-            placeholderTextColor="#c5c5c5"
+            placeholderTextColor={currentTheme.colors.icon + '80'}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')} style={{ paddingRight: 14 }}>
-              <Ionicons name="close-circle" size={16} color="#d1d5db" />
+              <Ionicons name="close-circle" size={16} color={currentTheme.colors.icon + '40'} />
             </TouchableOpacity>
           )}
         </View>
 
-        {/* ── Filter chips ───────────────────────── */}
+        {/* Filter chips */}
         <View style={{ marginBottom: 24 }}>
-          <FilterChips active={activeFilter} onChange={handleFilterChange} />
+          <FilterChips active={activeFilter} onChange={handleFilterChange} currentTheme={currentTheme} />
         </View>
 
-        {/* ── Loading ─────────────────────────────── */}
+        {/* Loading */}
         {loading && (
           <View style={main.center}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={main.centerText}>Đang tải ký ức...</Text>
+            <ActivityIndicator size="large" color={currentTheme.colors.primary} />
+            <Text style={[main.centerText, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.sm }]}>Đang tải ký ức...</Text>
           </View>
         )}
 
-        {/* ── Error ──────────────────────────────── */}
+        {/* Error */}
         {!!error && !loading && (
           <View style={main.center}>
-            <Ionicons name="cloud-offline-outline" size={48} color="#d1d5db" />
-            <Text style={main.centerText}>{error}</Text>
-            <TouchableOpacity style={main.retryBtn} onPress={refetch}>
+            <Ionicons name="cloud-offline-outline" size={48} color={currentTheme.colors.icon + '40'} />
+            <Text style={[main.centerText, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.sm }]}>{error}</Text>
+            <TouchableOpacity
+              style={[main.retryBtn, { backgroundColor: currentTheme.colors.primary, borderRadius: currentTheme.radius.full }]}
+              onPress={refetch}
+            >
               <Text style={main.retryText}>Thử lại</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {/* ── Empty ──────────────────────────────── */}
+        {/* Empty */}
         {!loading && !error && pins.length === 0 && (
           <View style={main.emptyContainer}>
-            <View style={main.emptyIconBg}>
-              <Ionicons name="musical-notes-outline" size={40} color={Colors.primary} />
+            <View style={[main.emptyIconBg, { backgroundColor: currentTheme.colors.primary + '10' }]}>
+              <Ionicons name="musical-notes-outline" size={40} color={currentTheme.colors.primary} />
             </View>
-            <Text style={main.emptyTitle}>Chưa có ký ức nào</Text>
-            <Text style={main.emptySubtitle}>
+            <Text style={[main.emptyTitle, { color: currentTheme.colors.text, fontSize: currentTheme.typography.fontSizes.lg }]}>Chưa có ký ức nào</Text>
+            <Text style={[main.emptySubtitle, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.sm }]}>
               Hãy ghi lại giọng nói đầu tiên{'\n'}để bắt đầu bộ sưu tập của bạn
             </Text>
           </View>
         )}
 
-        {/* ── No search results ──────────────────── */}
+        {/* No search results */}
         {!loading && !error && pins.length > 0 && filtered.length === 0 && (
           <View style={main.center}>
-            <Ionicons name="search-outline" size={40} color="#d1d5db" />
-            <Text style={main.centerText}>Không tìm thấy ký ức nào</Text>
+            <Ionicons name="search-outline" size={40} color={currentTheme.colors.icon + '40'} />
+            <Text style={[main.centerText, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.sm }]}>Không tìm thấy ký ức nào</Text>
           </View>
         )}
 
-        {/* ── Sections ─────────────────────────────── */}
+        {/* Sections */}
         {!loading && sections.map(s => (
           <Section
             key={s.key}
@@ -684,6 +673,7 @@ export default function MemoryScreen() {
             iconColor={s.iconColor}
             pins={s.pins}
             onSelectPin={p => setSelectedPin(p)}
+            currentTheme={currentTheme}
             onSeeAll={() => {
               router.push({
                 pathname: '/(tabs)/memory/grid',
@@ -693,7 +683,6 @@ export default function MemoryScreen() {
           />
         ))}
 
-        {/* Bottom breathing space */}
         <View style={{ height: 60 }} />
       </ScrollView>
     </View>
@@ -703,7 +692,6 @@ export default function MemoryScreen() {
 const main = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fafbfd',
   },
   header: {
     paddingTop: 60,
@@ -711,35 +699,26 @@ const main = StyleSheet.create({
     paddingHorizontal: 20,
   },
   title: {
-    fontSize: 28,
     fontWeight: '800',
-    color: '#1a1a2e',
     letterSpacing: -0.8,
   },
   subtitle: {
-    fontSize: 13,
-    color: '#b0b0b0',
     marginTop: 4,
     fontWeight: '500',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 16,
     marginHorizontal: 20,
     marginTop: 16,
     marginBottom: 16,
-    shadowColor: '#000',
+    elevation: 2,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
-    elevation: 2,
   },
   searchInput: {
     flex: 1,
-    fontSize: 13,
-    color: '#374151',
     paddingVertical: 12,
     paddingHorizontal: 10,
   },
@@ -750,8 +729,6 @@ const main = StyleSheet.create({
     padding: 40,
   },
   centerText: {
-    color: '#b0b0b0',
-    fontSize: 14,
     textAlign: 'center',
   },
   emptyContainer: {
@@ -763,28 +740,20 @@ const main = StyleSheet.create({
   emptyIconBg: {
     width: 80,
     height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.primary + '10',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
   },
   emptyTitle: {
-    fontSize: 18,
     fontWeight: '700',
-    color: '#374151',
   },
   emptySubtitle: {
-    fontSize: 13,
-    color: '#b0b0b0',
     textAlign: 'center',
     lineHeight: 20,
   },
   retryBtn: {
-    backgroundColor: Colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 20,
   },
   retryText: {
     color: '#fff',

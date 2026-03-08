@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, View, StyleSheet, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
     useAnimatedStyle,
@@ -9,6 +9,7 @@ import Animated, {
     withSpring,
     interpolate
 } from 'react-native-reanimated';
+import { theme } from '@/constants/Theme';
 
 type Props = {
     onPress: () => void;
@@ -16,6 +17,8 @@ type Props = {
 };
 
 export default function ScanButton({ onPress, isScanning }: Props) {
+    const colorScheme = useColorScheme() || 'light';
+    const currentTheme = theme[colorScheme];
     const pulse = useSharedValue(1);
     const pressed = useSharedValue(1);
 
@@ -45,10 +48,16 @@ export default function ScanButton({ onPress, isScanning }: Props) {
     };
 
     return (
-        <View className="absolute top-[125px] left-5 z-50">
+        <View style={styles.scanWrapper}>
             <Animated.View
-                className="absolute w-12 h-12 rounded-full bg-violet-400"
-                style={animatedPulse}
+                style={[
+                    styles.pulse,
+                    {
+                        backgroundColor: currentTheme.colors.secondary + '66',
+                        borderRadius: currentTheme.radius.full
+                    },
+                    animatedPulse
+                ]}
             />
             <TouchableOpacity
                 onPress={onPress}
@@ -58,22 +67,44 @@ export default function ScanButton({ onPress, isScanning }: Props) {
                 activeOpacity={1}
             >
                 <Animated.View
-                    className="w-12 h-12 rounded-full bg-white justify-center items-center shadow-lg"
-                    style={[{
-                        elevation: 5,
-                        shadowColor: '#8b5cf6',
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 8
-                    }, animatedButton]}
+                    style={[
+                        styles.button,
+                        {
+                            backgroundColor: currentTheme.colors.background,
+                            borderRadius: currentTheme.radius.full,
+                            shadowColor: currentTheme.colors.primary
+                        },
+                        animatedButton
+                    ]}
                 >
                     <Ionicons
                         name={isScanning ? "radio-outline" : "scan-outline"}
                         size={24}
-                        color="#8b5cf6"
+                        color={currentTheme.colors.primary}
                     />
                 </Animated.View>
             </TouchableOpacity>
         </View>
     );
 }
+
+const styles = StyleSheet.create({
+    scanWrapper: {
+        position: 'absolute',
+        top: 125,
+        left: 20,
+        zIndex: 50,
+    },
+    pulse: {
+        position: 'absolute',
+        width: 48,
+        height: 48,
+    },
+    button: {
+        width: 48,
+        height: 48,
+        justifyContent: 'center',
+        alignItems: 'center',
+        ...theme.light.shadows.md,
+    }
+});

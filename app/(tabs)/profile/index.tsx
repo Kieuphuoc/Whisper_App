@@ -1,6 +1,6 @@
 import { authApis, endpoints } from '@/configs/Apis';
-import { MyDispatchContext, MyUserContext } from '@/configs/Context';
-import { User } from '@/types';
+import { MyUserContext } from '@/configs/Context';
+import { User, VoicePin } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,20 +16,26 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Dimensions
+  Dimensions,
+  useColorScheme
 } from 'react-native';
 import Animated, {
   FadeInDown,
 } from 'react-native-reanimated';
+import { theme } from '@/constants/Theme';
+import { MemoryCard } from '../memory/index';
 
 const { width, height } = Dimensions.get('window');
 
 export default function ProfileScreen() {
+  const colorScheme = useColorScheme() || 'light';
+  const currentTheme = theme[colorScheme];
   const userContext = useContext(MyUserContext) as User | null;
   const router = useRouter();
 
   const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
+  const [publicPins, setPublicPins] = useState<VoicePin[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -39,13 +45,15 @@ export default function ProfileScreen() {
       const token = await AsyncStorage.getItem('token');
       if (!token) return;
       const api = authApis(token);
-      const [pRes, sRes] = await Promise.all([
+      const [pRes, sRes, vRes] = await Promise.all([
         api.get(endpoints.userMe),
         api.get(endpoints.meStats).catch(() => ({ data: {} })),
+        api.get(endpoints.voicePublicByUser(userContext?.id || '')).catch(() => ({ data: { data: [] } })),
       ]);
       const profileData = pRes.data?.data ?? pRes.data;
       setProfile(profileData);
       setStats(sRes.data?.data ?? sRes.data ?? {});
+      setPublicPins(vRes.data?.data || []);
     } catch (e) {
       console.error('Profile fetch error:', e);
     } finally {
@@ -64,7 +72,6 @@ export default function ProfileScreen() {
     return `http://10.5.1.149:5000${avatar.startsWith('/') ? '' : '/'}${avatar}`;
   };
 
-  // Combine local state with userContext for reliable avatar data
   const currentAvatar = profile?.avatar || userContext?.avatar;
   const displayName = profile?.displayName || profile?.username || userContext?.displayName || userContext?.username || 'User';
   const avatarUri = getAvatarUri(currentAvatar);
@@ -73,14 +80,14 @@ export default function ProfileScreen() {
 
   if (loading && !refreshing) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#8b5cf6" />
+      <View style={[styles.loadingContainer, { backgroundColor: currentTheme.colors.background }]}>
+        <ActivityIndicator size="large" color={currentTheme.colors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: currentTheme.colors.background }]}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
       <ScrollView
@@ -89,14 +96,14 @@ export default function ProfileScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => fetchAll(true)}
-            tintColor="#8b5cf6"
+            tintColor={currentTheme.colors.primary}
           />
         }
         contentContainerStyle={styles.scrollContent}
         bounces={false}
       >
         {/* Full Screen Image Header */}
-        <View style={styles.heroContainer}>
+        <View style={[styles.heroContainer, { backgroundColor: currentTheme.colors.icon + '10' }]}>
           <Image
             source={{ uri: avatarUri }}
             style={styles.heroImage}
@@ -105,7 +112,7 @@ export default function ProfileScreen() {
 
           {/* Top Icons Overlay */}
           <View style={styles.topIconsRow}>
-            <View style={styles.levelBadge}>
+            <View style={[styles.levelBadge, { backgroundColor: currentTheme.colors.primary, borderRadius: currentTheme.radius.full }]}>
               <Text style={styles.levelText}>Lv.{level}</Text>
             </View>
             <TouchableOpacity
@@ -118,7 +125,7 @@ export default function ProfileScreen() {
 
           {/* Bottom Info Gradient Area */}
           <LinearGradient
-            colors={['transparent', 'rgba(255,255,255,0.7)', 'rgba(255,255,255,1)']}
+            colors={['transparent', currentTheme.colors.background + 'B3', currentTheme.colors.background]}
             style={styles.gradientOverlay}
           >
             <Animated.View
@@ -126,62 +133,98 @@ export default function ProfileScreen() {
               style={styles.infoContent}
             >
               <View style={styles.nameRow}>
-                <Text style={styles.nameText} numberOfLines={1}>{displayName}</Text>
-                <View style={styles.verifiedBadge}>
-                  <Ionicons name="checkmark" size={12} color="#fff" />
+                <Text style={[styles.nameText, { color: currentTheme.colors.text, fontSize: currentTheme.typography.fontSizes.h3 }]} numberOfLines={1}>
+                  {displayName}
+                </Text>
+                <View style={[styles.verifiedBadge, { backgroundColor: '#3cd3bf', borderRadius: currentTheme.radius.full }]}>
+                  <Ionicons name="checkmark" size={10} color="#fff" />
                 </View>
               </View>
 
-              <Text style={styles.bioText}>
+              <Text style={[styles.bioText, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.sm }]}>
                 {bio}
               </Text>
 
               {/* Inline Stats */}
               <View style={styles.cardBottomRow}>
-                <View style={styles.statsInline}>
-                  <View style={styles.statInlineItem}>
-                    <Ionicons name="person-outline" size={20} color="#64748b" />
-                    <Text style={styles.statInlineValue}>{stats?.friendCount || 0}</Text>
+                <View style={[styles.statsInline, { gap: currentTheme.spacing.lg }]}>
+                  <View style={[styles.statInlineItem, { gap: currentTheme.spacing.sm }]}>
+                    <Ionicons name="person-outline" size={20} color={currentTheme.colors.icon} />
+                    <Text style={[styles.statInlineValue, { color: currentTheme.colors.text, fontSize: 18 }]}>{stats?.friendCount || 0}</Text>
                   </View>
-                  <View style={styles.statInlineItem}>
-                    <Ionicons name="mic-outline" size={20} color="#64748b" />
-                    <Text style={styles.statInlineValue}>{stats?.voicePinCount || 0}</Text>
+                  <View style={[styles.statInlineItem, { gap: currentTheme.spacing.sm }]}>
+                    <Ionicons name="mic-outline" size={20} color={currentTheme.colors.icon} />
+                    <Text style={[styles.statInlineValue, { color: currentTheme.colors.text, fontSize: 18 }]}>{stats?.voicePinCount || 0}</Text>
                   </View>
                 </View>
 
-                <TouchableOpacity
-                  style={styles.followButton}
-                  onPress={() => router.push('/(tabs)/profile/settings')}
-                >
-                  <Text style={styles.followButtonText}>Follow +</Text>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.followButton, { backgroundColor: currentTheme.colors.primary + '15', borderRadius: currentTheme.radius.full }]}
+                    onPress={() => router.push('/(tabs)/profile/edit-profile')}
+                  >
+                    <Text style={[styles.followButtonText, { color: currentTheme.colors.primary, fontSize: 13 }]}>Edit Profile</Text>
+                  </TouchableOpacity>
               </View>
             </Animated.View>
           </LinearGradient>
         </View>
 
+        {/* Public Voice Pins Feed */}
+        <View style={styles.feedSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: currentTheme.colors.text, fontSize: currentTheme.typography.fontSizes.lg }]}>Ký ức công khai</Text>
+            <Text style={[styles.sectionCount, { color: currentTheme.colors.primary, backgroundColor: currentTheme.colors.primary + '15' }]}>
+              {publicPins.length}
+            </Text>
+          </View>
+
+          {publicPins.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
+            >
+              {publicPins.map((pin) => (
+                <MemoryCard
+                  key={pin.id}
+                  pin={pin}
+                  onPress={() => router.push({ pathname: '/(tabs)/home/voiceDetail', params: { id: pin.id } })}
+                  customWidth={width * 0.7}
+                  customMarginRight={15}
+                  currentTheme={currentTheme}
+                />
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.emptyFeed}>
+              <Ionicons name="musical-notes-outline" size={48} color={currentTheme.colors.icon + '40'} />
+              <Text style={[styles.emptyText, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.sm }]}>Chưa có ký ức công khai nào</Text>
+            </View>
+          )}
+        </View>
+
         {/* Extra Information Below Hero */}
-        <View style={styles.extraSection}>
-          <View style={styles.extraStatsRow}>
+        <View style={[styles.extraSection, { paddingHorizontal: currentTheme.spacing.lg }]}>
+          <View style={[styles.extraStatsRow, { backgroundColor: currentTheme.colors.icon + '08', borderRadius: currentTheme.radius.xl }]}>
             <View style={styles.extraStatBox}>
-              <Text style={styles.extraStatValue}>{stats?.totalListens || 0}</Text>
-              <Text style={styles.extraStatLabel}>Lượt nghe</Text>
+              <Text style={[styles.extraStatValue, { color: currentTheme.colors.text, fontSize: 22 }]}>{stats?.totalListens || 0}</Text>
+              <Text style={[styles.extraStatLabel, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.xs }]}>Lượt nghe</Text>
             </View>
-            <View style={[styles.extraStatBox, { borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#f1f5f9' }]}>
-              <Text style={styles.extraStatValue}>{stats?.achievementCount || 0}</Text>
-              <Text style={styles.extraStatLabel}>Thành tựu</Text>
+            <View style={[styles.extraStatBox, { borderLeftWidth: 1, borderRightWidth: 1, borderColor: currentTheme.colors.icon + '10' }]}>
+              <Text style={[styles.extraStatValue, { color: currentTheme.colors.text, fontSize: 22 }]}>{stats?.achievementCount || 0}</Text>
+              <Text style={[styles.extraStatLabel, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.xs }]}>Thành tựu</Text>
             </View>
             <View style={styles.extraStatBox}>
-              <Text style={styles.extraStatValue}>{profile?.xp || userContext?.xp || 0}</Text>
-              <Text style={styles.extraStatLabel}>XP</Text>
+              <Text style={[styles.extraStatValue, { color: currentTheme.colors.text, fontSize: 22 }]}>{profile?.xp || userContext?.xp || 0}</Text>
+              <Text style={[styles.extraStatLabel, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.xs }]}>XP</Text>
             </View>
           </View>
 
           <TouchableOpacity
-            style={styles.editProfileFull}
-            onPress={() => router.push('/(tabs)/profile/settings')}
+            style={[styles.editProfileFull, { backgroundColor: currentTheme.colors.text, borderRadius: currentTheme.radius.lg }]}
+            onPress={() => router.push('/(tabs)/profile/edit-profile')}
           >
-            <Text style={styles.editProfileFullText}>Chỉnh sửa hồ sơ công khai</Text>
+            <Text style={[styles.editProfileFullText, { color: currentTheme.colors.background, fontSize: 15 }]}>Chỉnh sửa hồ sơ công khai</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -190,27 +233,11 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  heroContainer: {
-    width: width,
-    height: height * 0.72,
-    backgroundColor: '#f1f5f9',
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-  },
+  container: { flex: 1 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  scrollContent: { paddingBottom: 40 },
+  heroContainer: { width: width, height: height * 0.7 },
+  heroImage: { width: '100%', height: '100%' },
   topIconsRow: {
     position: 'absolute',
     top: 50,
@@ -219,6 +246,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    zIndex: 10,
   },
   settingsButton: {
     width: 44,
@@ -229,18 +257,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   levelBadge: {
-    backgroundColor: 'rgba(139, 92, 246, 0.9)',
     paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 20,
     borderWidth: 2,
     borderColor: '#fff',
   },
-  levelText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '800',
-  },
+  levelText: { color: '#fff', fontSize: 13, fontWeight: '800' },
   gradientOverlay: {
     position: 'absolute',
     bottom: 0,
@@ -251,112 +273,54 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     paddingHorizontal: 30,
   },
-  infoContent: {
-    width: '100%',
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  nameText: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#1e293b',
-    marginRight: 10,
-  },
+  infoContent: { width: '100%' },
+  nameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  nameText: { fontWeight: '800', marginRight: 10 },
   verifiedBadge: {
-    backgroundColor: '#10b981',
     width: 24,
     height: 24,
-    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  bioText: {
-    fontSize: 17,
-    color: '#475569',
-    lineHeight: 26,
-    marginBottom: 25,
-  },
-  cardBottomRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  statsInline: {
-    flexDirection: 'row',
-    gap: 20,
-  },
-  statInlineItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  statInlineValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1e293b',
-  },
+  bioText: { lineHeight: 22, marginBottom: 25 },
+  cardBottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  statsInline: { flexDirection: 'row', gap: 20 },
+  statInlineItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  statInlineValue: { fontWeight: '700' },
   followButton: {
-    backgroundColor: '#f1f5f9',
     paddingHorizontal: 24,
     paddingVertical: 14,
-    borderRadius: 25,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
   },
-  followButtonText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1e293b',
+  followButtonText: { fontWeight: '800' },
+  feedSection: { marginTop: 20 },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 25,
+    marginBottom: 15
   },
-  extraSection: {
-    paddingHorizontal: 20,
-    marginTop: -20,
+  sectionTitle: { fontWeight: '800' },
+  sectionCount: {
+    fontWeight: '700',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12
   },
+  emptyFeed: { padding: 40, alignItems: 'center', justifyContent: 'center' },
+  emptyText: { marginTop: 10, fontWeight: '500' },
+  extraSection: { marginTop: 10 },
   extraStatsRow: {
     flexDirection: 'row',
-    backgroundColor: '#f8fafc',
-    borderRadius: 28,
     paddingVertical: 25,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    elevation: 2,
   },
-  extraStatBox: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  extraStatValue: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#1e293b',
-    marginBottom: 5,
-  },
-  extraStatLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#94a3b8',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
+  extraStatBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  extraStatValue: { fontWeight: '800', marginBottom: 5 },
+  extraStatLabel: { fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 },
   editProfileFull: {
     marginTop: 20,
-    backgroundColor: '#1e293b',
     paddingVertical: 18,
-    borderRadius: 20,
     alignItems: 'center',
   },
-  editProfileFullText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  editProfileFullText: { fontWeight: '700' },
 });

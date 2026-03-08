@@ -1,38 +1,34 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useContext, useState, useEffect } from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View, Alert, useColorScheme } from "react-native";
 
 import MapContainer from "@/components/home/MapContainer";
-import VisibilityFilter from "@/components/home/VisibilityFilter";
 import VoiceButton from "@/components/home/VoiceButton";
 import VoiceCameraCapture from "@/components/home/VoiceCameraCapture";
 import VoiceUploadSheet from "@/components/home/VoiceUploadSheet";
 import FriendsModal from "@/components/FriendsModal";
-import { MyDispatchContext } from "@/configs/Context";
+import { MyDispatchContext, MyUserContext } from "@/configs/Context";
 import { useLocation } from "@/hooks/useLocation";
 import { useRecorder } from "@/hooks/useRecorder";
 import { useVisibility } from "@/hooks/useVisibility";
 import { useVoicePins } from "@/hooks/useVoicePins";
 import { Ionicons } from "@expo/vector-icons";
 import { useDiscovery } from "@/hooks/useDiscovery";
-import ScanButton from "@/components/discovery/ScanButton";
 import VoicePinMiniCard from "@/components/discovery/VoicePinMiniCard";
-import { Alert } from "react-native";
+import { theme } from "@/constants/Theme";
+import StatsBento from "@/components/home/StatsBento";
+import FilterToggle from "@/components/home/Filter";
+import QuickActions from "@/components/home/QuickActions";
 
-/**
- * Flow:
- *   1. Press VoiceButton → recording starts
- *   2. Press again → stop recording
- *   3. Camera opens (capture only, no album)
- *   4. Snap photo (or skip) → VoiceUploadSheet opens
- *   5. Choose visibility → Publish → pin saved to DB → appears on map
- */
 export default function HomeScreen() {
+  const colorScheme = useColorScheme() || "light";
+  const currentTheme = theme[colorScheme];
   const { location } = useLocation();
   const { visibility, setVisibility } = useVisibility("PUBLIC");
   const { pins, refetch } = useVoicePins(visibility);
   const dispatch = useContext(MyDispatchContext);
+  const user = useContext(MyUserContext);
   const router = useRouter();
 
   // Step state
@@ -107,33 +103,48 @@ export default function HomeScreen() {
         onPress={isRecording ? stop : record}
       />
 
-      <TouchableOpacity style={styles.logoutButton} onPress={logout}>
+      <TouchableOpacity
+        style={[styles.logoutButton, { backgroundColor: currentTheme.colors.background }]}
+        onPress={logout}
+      >
         <Ionicons name="log-out-outline" size={22} color="#ef4444" />
       </TouchableOpacity>
 
-      {/* Friends button */}
-      <TouchableOpacity style={styles.friendsButton} onPress={() => setFriendsVisible(true)}>
-        <Ionicons name="people-outline" size={22} color="#8b5cf6" />
-      </TouchableOpacity>
+
+      {/* Login button — chỉ hiện khi chưa đăng nhập */}
+      {!user && (
+        <TouchableOpacity
+          style={[styles.loginButton, { backgroundColor: currentTheme.colors.primary }]}
+          onPress={() => router.push("/(auth)/login")}
+        >
+          <Ionicons name="log-in-outline" size={22} color="#ffffff" />
+        </TouchableOpacity>
+      )}
 
       {/* Notification button */}
-      <TouchableOpacity style={styles.notifButton} onPress={() => router.push("/(tabs)/notification")}>
+      <TouchableOpacity
+        style={[styles.notifButton, { backgroundColor: currentTheme.colors.background }]}
+        onPress={() => router.push("/(tabs)/notification")}
+      >
         <Ionicons name="notifications-outline" size={22} color="#f59e0b" />
       </TouchableOpacity>
 
-      <VisibilityFilter value={visibility} onChange={setVisibility} />
-
-      <ScanButton
-        isScanning={isScanning}
-        onPress={() => {
+      <FilterToggle value={visibility} onChange={setVisibility} />
+      <StatsBento voicePins={pins} />
+      <QuickActions
+        onExplore={() => {
           if (location) {
             triggerScan(location.coords.latitude, location.coords.longitude);
           } else {
-            Alert.alert("Vị trí", "Đang lấy vị trí của bạn, vui lòng đợi trong giây lát.");
+            Alert.alert("Vị trí", "Đang lấy vị trí của bạn...");
           }
         }}
+        onFriends={() => setFriendsVisible(true)}
+        onTrending={() => {
+            Alert.alert("Trending", "Tính năng đang được phát triển");
+        }}
+        isScanning={isScanning}
       />
-
       {isMiniCardOpen && discoveredPin && (
         <VoicePinMiniCard
           pin={discoveredPin}
@@ -176,43 +187,37 @@ const styles = StyleSheet.create({
   logoutButton: {
     position: "absolute",
     top: 60,
-    right: 20,
-    backgroundColor: "white",
-    padding: 10,
-    borderRadius: 25,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    left: 25,
+    padding: theme.light.spacing.sm + 2,
+    borderRadius: theme.light.radius.full,
+    ...theme.light.shadows.md,
     zIndex: 1000,
   },
   friendsButton: {
     position: "absolute" as const,
     top: 60,
     right: 76,
-    backgroundColor: "white",
-    padding: 10,
-    borderRadius: 25,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    padding: theme.light.spacing.sm + 2,
+    borderRadius: theme.light.radius.full,
+    ...theme.light.shadows.md,
     zIndex: 1000,
   },
   notifButton: {
     position: "absolute" as const,
+    top: 120,
+    left: 25,
+    padding: theme.light.spacing.sm + 2,
+    borderRadius: theme.light.radius.full,
+    ...theme.light.shadows.md,
+    zIndex: 1000,
+  },
+  loginButton: {
+    position: "absolute" as const,
     top: 60,
-    left: 20,
-    backgroundColor: "white",
-    padding: 10,
-    borderRadius: 25,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    right: 25,
+    padding: theme.light.spacing.sm + 2,
+    borderRadius: theme.light.radius.full,
+    ...theme.light.shadows.md,
     zIndex: 1000,
   },
 });

@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Dimensions, useColorScheme, StatusBar } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useMyPins } from '@/hooks/useMyPins';
 import { VoicePin } from '@/types';
 import VoicePinTurntable from '@/components/home/VoicePinCard';
+import { theme } from '@/constants/Theme';
 
 // Import from index
 import { MemoryCard } from './index';
@@ -16,6 +17,8 @@ const GRID_SPACING = 12;
 const CARD_WIDTH = (width - GRID_PADDING * 2 - GRID_SPACING) / 2;
 
 export default function MemoryGridScreen() {
+    const colorScheme = useColorScheme() || 'light';
+    const currentTheme = theme[colorScheme];
     const router = useRouter();
     const { title, sectionKey, filter, query } = useLocalSearchParams();
     const { pins } = useMyPins();
@@ -68,7 +71,7 @@ export default function MemoryGridScreen() {
             return list.filter(p => {
                 const d = new Date(p.createdAt);
                 return d.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' }) === tLabel;
-            }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            }).sort((a, b) => new Date(b[1][0].createdAt).getTime() - new Date(a[1][0].createdAt).getTime());
         }
 
         return list;
@@ -84,12 +87,13 @@ export default function MemoryGridScreen() {
     }
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: currentTheme.colors.background }]}>
+            <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color="#1f2937" />
+                <TouchableOpacity onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: currentTheme.colors.icon + '10' }]}>
+                    <Ionicons name="arrow-back" size={24} color={currentTheme.colors.text} />
                 </TouchableOpacity>
-                <Text style={styles.title}>{title || 'Tất cả ký ức'}</Text>
+                <Text style={[styles.title, { color: currentTheme.colors.text, fontSize: currentTheme.typography.fontSizes.md }]}>{title || 'Tất cả ký ức'}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -106,6 +110,7 @@ export default function MemoryGridScreen() {
                         onPress={() => setSelectedPin(item)}
                         customWidth={CARD_WIDTH}
                         customMarginRight={0}
+                        currentTheme={currentTheme}
                     />
                 )}
             />
@@ -116,7 +121,6 @@ export default function MemoryGridScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fafbfd',
     },
     header: {
         flexDirection: 'row',
@@ -125,25 +129,20 @@ const styles = StyleSheet.create({
         paddingTop: 60,
         paddingBottom: 16,
         paddingHorizontal: 20,
-        backgroundColor: '#fafbfd',
     },
     backBtn: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#fff',
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#000',
+        elevation: 2,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 6,
-        elevation: 2,
     },
     title: {
-        fontSize: 18,
         fontWeight: '700',
-        color: '#1f2937',
     },
     listContent: {
         padding: GRID_PADDING,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Audio } from 'expo-av';
@@ -7,6 +7,7 @@ import Animated, { FadeInUp, FadeOutDown } from 'react-native-reanimated';
 import { VoicePin } from '@/types';
 import { Colors } from '@/constants/Colors';
 import { useRouter } from 'expo-router';
+import { theme } from '@/constants/Theme';
 
 type Props = {
     pin: VoicePin;
@@ -15,6 +16,8 @@ type Props = {
 };
 
 export default function VoicePinMiniCard({ pin, onClose, onRandomAgain }: Props) {
+    const colorScheme = useColorScheme() || 'light';
+    const currentTheme = theme[colorScheme];
     const router = useRouter();
     const [isPlaying, setIsPlaying] = useState(false);
     const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -66,61 +69,68 @@ export default function VoicePinMiniCard({ pin, onClose, onRandomAgain }: Props)
         <Animated.View
             entering={FadeInUp}
             exiting={FadeOutDown}
-            className="absolute bottom-10 left-5 right-5 z-[60]"
+            style={styles.container}
         >
-            <BlurView intensity={80} tint="light" className="rounded-3xl overflow-hidden border border-white/40 shadow-xl">
-                <View className="p-5">
+            <BlurView intensity={80} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={[styles.blurView, { borderRadius: currentTheme.radius.xl + 4 }]}>
+                <View style={[styles.content, { padding: currentTheme.spacing.lg }]}>
                     {/* Header */}
-                    <View className="flex-row justify-between items-start mb-4">
-                        <TouchableOpacity onPress={navigateToProfile} className="flex-1 mr-4">
-                            <Text className="text-violet-600 font-bold text-xs mb-1">
+                    <View style={styles.header}>
+                        <TouchableOpacity onPress={navigateToProfile} style={styles.headerInfo}>
+                            <Text style={[styles.category, { color: currentTheme.colors.primary }]}>
                                 {pin.isAnonymous ? "ẨN DANH" : (pin.user?.displayName || pin.user?.username || "NGƯỜI DÙNG")} • KHÁM PHÁ
                             </Text>
-                            <Text className="text-gray-800 text-lg font-bold leading-6" numberOfLines={2}>
+                            <Text style={[styles.pinContent, { color: currentTheme.colors.text }]} numberOfLines={2}>
                                 {pin.content || "Một ký ức thầm lặng..."}
                             </Text>
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={onClose} className="bg-gray-200/50 p-1 rounded-full">
-                            <Ionicons name="close" size={20} color="#4b5563" />
+                        <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: currentTheme.colors.icon + '20' }]}>
+                            <Ionicons name="close" size={20} color={currentTheme.colors.icon} />
                         </TouchableOpacity>
                     </View>
 
                     {/* Info */}
-                    <View className="flex-row items-center gap-4 mb-5">
-                        <View className="flex-row items-center gap-1.5">
-                            <Ionicons name="location" size={14} color="#9ca3af" />
-                            <Text className="text-gray-400 text-xs">Gần bạn</Text>
+                    <View style={[styles.infoRow, { gap: currentTheme.spacing.md }]}>
+                        <View style={styles.infoItem}>
+                            <Ionicons name="location" size={14} color={currentTheme.colors.icon} />
+                            <Text style={[styles.infoText, { color: currentTheme.colors.icon }]}>Gần bạn</Text>
                         </View>
-                        <View className="flex-row items-center gap-1.5">
-                            <Ionicons name="time" size={14} color="#9ca3af" />
-                            <Text className="text-gray-400 text-xs">
+                        <View style={styles.infoItem}>
+                            <Ionicons name="time" size={14} color={currentTheme.colors.icon} />
+                            <Text style={[styles.infoText, { color: currentTheme.colors.icon }]}>
                                 {new Date(pin.createdAt).toLocaleDateString('vi-VN')}
                             </Text>
                         </View>
                     </View>
 
                     {/* Controls */}
-                    <View className="flex-row items-center justify-between">
-                        <View className="flex-row gap-2">
+                    <View style={styles.controlsRow}>
+                        <View style={[styles.actionsGroup, { gap: currentTheme.spacing.sm }]}>
                             <TouchableOpacity
                                 onPress={handleSkip}
-                                className="px-4 py-2.5 rounded-2xl bg-gray-100 flex-row items-center gap-2"
+                                style={[styles.actionBtn, { backgroundColor: currentTheme.colors.icon + '10', borderRadius: currentTheme.radius.lg }]}
                             >
-                                <Text className="text-gray-600 font-semibold text-sm">Bỏ qua</Text>
+                                <Text style={[styles.actionBtnText, { color: currentTheme.colors.icon }]}>Bỏ qua</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
                                 onPress={onRandomAgain}
-                                className="px-4 py-2.5 rounded-2xl bg-violet-50 flex-row items-center gap-2"
+                                style={[styles.actionBtn, { backgroundColor: currentTheme.colors.primary + '10', borderRadius: currentTheme.radius.lg }]}
                             >
-                                <Ionicons name="refresh" size={16} color="#8b5cf6" />
-                                <Text className="text-violet-600 font-semibold text-sm">Tìm tiếp</Text>
+                                <Ionicons name="refresh" size={16} color={currentTheme.colors.primary} />
+                                <Text style={[styles.actionBtnText, { color: currentTheme.colors.primary }]}>Tìm tiếp</Text>
                             </TouchableOpacity>
                         </View>
 
                         <TouchableOpacity
                             onPress={togglePlayback}
-                            className="w-14 h-14 rounded-full bg-violet-600 justify-center items-center shadow-lg shadow-violet-300"
+                            style={[
+                                styles.playBtn,
+                                {
+                                    backgroundColor: currentTheme.colors.primary,
+                                    borderRadius: currentTheme.radius.full,
+                                    shadowColor: currentTheme.colors.primary
+                                }
+                            ]}
                         >
                             <Ionicons
                                 name={isPlaying ? "pause" : "play"}
@@ -135,3 +145,83 @@ export default function VoicePinMiniCard({ pin, onClose, onRandomAgain }: Props)
         </Animated.View>
     );
 }
+
+const styles = StyleSheet.create({
+    container: {
+        position: 'absolute',
+        bottom: 40,
+        left: 20,
+        right: 20,
+        zIndex: 60,
+    },
+    blurView: {
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.2)',
+    },
+    content: {
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 16,
+    },
+    headerInfo: {
+        flex: 1,
+        marginRight: 16,
+    },
+    category: {
+        fontSize: 12,
+        fontWeight: '700',
+        marginBottom: 4,
+    },
+    pinContent: {
+        fontSize: 18,
+        fontWeight: '700',
+        lineHeight: 24,
+    },
+    closeBtn: {
+        padding: 4,
+        borderRadius: 20,
+    },
+    infoRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    infoItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    infoText: {
+        fontSize: 12,
+    },
+    controlsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    actionsGroup: {
+        flexDirection: 'row',
+    },
+    actionBtn: {
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    actionBtnText: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    playBtn: {
+        width: 56,
+        height: 56,
+        justifyContent: 'center',
+        alignItems: 'center',
+        ...theme.light.shadows.md,
+    },
+});

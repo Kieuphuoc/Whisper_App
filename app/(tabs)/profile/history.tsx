@@ -3,17 +3,53 @@ import { ViewHistory } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
     ActivityIndicator,
-    FlatList,
     RefreshControl,
     Text,
     TouchableOpacity,
     View,
     Image,
+    ScrollView,
 } from 'react-native';
-import Animated, { FadeInRight } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+
+// ── Helper functions to replace date-fns ──
+const isSameDay = (d1: Date, d2: Date) =>
+    d1.getFullYear() === d2.getFullYear() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getDate() === d2.getDate();
+
+const isToday = (date: Date) => isSameDay(date, new Date());
+
+const isYesterday = (date: Date) => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return isSameDay(date, yesterday);
+};
+
+const isThisWeek = (date: Date) => {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    return date >= startOfWeek && date <= now;
+};
+
+const formatTime = (date: Date) => {
+    const h = date.getHours().toString().padStart(2, '0');
+    const m = date.getMinutes().toString().padStart(2, '0');
+    return `${h}:${m}`;
+};
+
+const MONTH_NAMES_VI = [
+    'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+    'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12',
+];
+
+const formatMonthYear = (date: Date) =>
+    `${MONTH_NAMES_VI[date.getMonth()]}, ${date.getFullYear()}`;
 
 export default function HistoryScreen() {
     const router = useRouter();
@@ -43,55 +79,89 @@ export default function HistoryScreen() {
         fetchHistory();
     }, []);
 
-    const renderHistoryItem = ({ item, index }: { item: ViewHistory; index: number }) => {
-        const { voicePin } = item;
-        const timeAgo = new Date(item.viewedAt).toLocaleDateString('vi-VN', {
-            hour: '2-digit',
-            minute: '2-digit',
-            day: '2-digit',
-            month: '2-digit',
+    const groupedHistory = useMemo(() => {
+        const groups: { [key: string]: ViewHistory[] } = {};
+        
+        history.forEach(item => {
+            const date = new Date(item.viewedAt);
+            let title = '';
+            
+            if (isToday(date)) title = 'Hôm nay';
+            else if (isYesterday(date)) title = 'Hôm qua';
+            else if (isThisWeek(date)) title = 'Tuần này';
+            else title = formatMonthYear(date);
+
+            if (!groups[title]) groups[title] = [];
+            groups[title].push(item);
         });
 
+        return Object.keys(groups).map(title => ({
+            title,
+            data: groups[title]
+        }));
+    }, [history]);
+
+    const renderHistoryItem = (item: ViewHistory, index: number) => {
+        const { voicePin } = item;
+        const timeValue = formatTime(new Date(item.viewedAt));
+
         return (
-            <Animated.View entering={FadeInRight.delay(index * 100).duration(400)}>
+            <Animated.View 
+                entering={FadeInDown.delay(index * 50).duration(400)}
+                key={item.id}
+                className="mb-4"
+            >
                 <TouchableOpacity
                     onPress={() => router.push({ pathname: '/(tabs)/home', params: { voicePinId: voicePin.id } })}
-                    className="flex-row items-center bg-white p-4 mb-3 rounded-3xl border border-gray-100 shadow-sm shadow-gray-200"
+                    className="flex-row items-center bg-white dark:bg-gray-900 p-3 rounded-2xl shadow-sm border border-gray-50 dark:border-gray-800"
                 >
-                    <View className="w-12 h-12 bg-primary-100 rounded-full items-center justify-center mr-4">
-                        <Ionicons name="mic" size={24} color="#7ea000" />
+                    <View className="w-16 h-16 rounded-xl overflow-hidden mr-4 bg-gray-100 dark:bg-gray-800 items-center justify-center relative">
+                        {voicePin.imageUrl ? (
+                            <Image 
+                                source={{ uri: voicePin.imageUrl.startsWith('http') ? voicePin.imageUrl : `http://10.5.1.149:5000${voicePin.imageUrl}` }} 
+                                className="w-full h-full"
+                                resizeMode="cover"
+                            />
+                        ) : (
+                            <Ionicons name="mic" size={28} color="#7ea000" />
+                        )}
+                        <View className="absolute bottom-1 right-1 bg-black/50 px-1 rounded">
+                            <Text className="text-[10px] text-white font-bold">{timeValue}</Text>
+                        </View>
                     </View>
+                    
                     <View className="flex-1">
-                        <Text className="text-lg font-bold text-[#1e293b]" numberOfLines={1}>
+                        <Text className="text-base font-bold text-gray-900 dark:text-white mb-1" numberOfLines={1}>
                             {voicePin.content || "Tin nhắn thoại"}
                         </Text>
-                        <View className="flex-row items-center mt-1">
-                            <Ionicons name="time-outline" size={14} color="#94a3b8" />
-                            <Text className="text-gray-400 text-sm ml-1">{timeAgo}</Text>
+                        <View className="flex-row items-center">
+                            <Ionicons name="person-outline" size={12} color="#9ca3af" />
+                            <Text className="text-gray-400 text-xs ml-1" numberOfLines={1}>
+                                {voicePin.user?.displayName || "Ẩn danh"}
+                            </Text>
                         </View>
                         {voicePin.address && (
                             <View className="flex-row items-center mt-1">
-                                <Ionicons name="location-outline" size={14} color="#94a3b8" />
-                                <Text className="text-gray-400 text-xs ml-1" numberOfLines={1}>
+                                <Ionicons name="location-outline" size={12} color="#9ca3af" />
+                                <Text className="text-gray-400 text-[10px] ml-1" numberOfLines={1}>
                                     {voicePin.address}
                                 </Text>
                             </View>
                         )}
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
                 </TouchableOpacity>
             </Animated.View>
         );
     };
 
     return (
-        <View className="flex-1 bg-[#f8fafc]">
+        <View className="flex-1 bg-gray-50 dark:bg-gray-950">
             {/* Header */}
-            <View className="pt-14 pb-4 px-6 flex-row items-center bg-white border-b border-gray-100">
-                <TouchableOpacity onPress={() => router.back()} className="mr-4">
-                    <Ionicons name="arrow-back" size={24} color="#1e293b" />
+            <View className="pt-14 pb-4 px-6 flex-row items-center bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
+                <TouchableOpacity onPress={() => router.back()} className="mr-4 w-10 h-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+                    <Ionicons name="arrow-back" size={24} color="#111" />
                 </TouchableOpacity>
-                <Text className="text-2xl font-bold text-[#1e293b]">Lịch sử nghe</Text>
+                <Text className="text-2xl font-bold text-gray-900 dark:text-white">Lịch sử xem</Text>
             </View>
 
             {loading && !refreshing ? (
@@ -99,27 +169,37 @@ export default function HistoryScreen() {
                     <ActivityIndicator size="large" color="#7ea000" />
                 </View>
             ) : (
-                <FlatList
-                    data={history}
-                    keyExtractor={(item) => item.id.toString()}
-                    renderItem={renderHistoryItem}
-                    contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
+                <ScrollView 
+                    className="flex-1 px-4 pt-4"
                     refreshControl={
                         <RefreshControl refreshing={refreshing} onRefresh={() => fetchHistory(true)} tintColor="#7ea000" />
                     }
-                    ListEmptyComponent={
+                >
+                    {groupedHistory.map((group) => (
+                        <View key={group.title} className="mb-6">
+                            <Text className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-4 ml-1 uppercase tracking-wider">
+                                {group.title}
+                            </Text>
+                            {group.data.map((item, index) => renderHistoryItem(item, index))}
+                        </View>
+                    ))}
+
+                    {history.length === 0 && (
                         <View className="items-center justify-center pt-20">
-                            <Ionicons name="headset-outline" size={64} color="#e2e8f0" />
-                            <Text className="text-gray-400 mt-4 text-lg">Bạn chưa nghe tin nhắn nào</Text>
+                            <View className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full items-center justify-center mb-4">
+                                <Ionicons name="headset-outline" size={40} color="#d1d5db" />
+                            </View>
+                            <Text className="text-gray-500 dark:text-gray-400 text-lg font-medium">Bạn chưa xem tin nhắn nào</Text>
                             <TouchableOpacity
                                 onPress={() => router.push('/(tabs)/home')}
-                                className="mt-6 bg-[#1e293b] px-6 py-3 rounded-full"
+                                className="mt-6 bg-primary-500 px-8 py-3 rounded-full"
                             >
                                 <Text className="text-white font-bold">Khám phá ngay</Text>
                             </TouchableOpacity>
                         </View>
-                    }
-                />
+                    )}
+                    <View className="h-20" />
+                </ScrollView>
             )}
         </View>
     );

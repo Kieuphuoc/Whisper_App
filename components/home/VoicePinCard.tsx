@@ -6,13 +6,15 @@ import {
   Dimensions,
   Easing,
   Image,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  useColorScheme,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { theme } from "@/constants/Theme";
+import { Colors } from "@/constants/Colors";
 
 const { width } = Dimensions.get("window");
 
@@ -54,6 +56,8 @@ const EMOTION_COLOR: Record<string, string> = {
 };
 
 export default function VoicePinTurntable({ pin, onClose }: Props) {
+  const colorScheme = useColorScheme() || 'light';
+  const currentTheme = theme[colorScheme];
   const router = useRouter();
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -82,7 +86,7 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
   const spin = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
   const armRotate = armAnim.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "25deg"] });
 
-  const emotionColor = EMOTION_COLOR[pin.emotionLabel ?? ""] ?? "#8b5cf6";
+  const emotionColor = EMOTION_COLOR[pin.emotionLabel ?? ""] ?? Colors.primary;
   const authorLabel = pin.isAnonymous
     ? "Ẩn danh"
     : pin.user?.displayName ?? pin.user?.username ?? `Voice #${pin.id}`;
@@ -96,37 +100,37 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
 
   return (
     <View style={styles.overlay}>
-      <View style={styles.turntableBody}>
+      <View style={[styles.turntableBody, { backgroundColor: currentTheme.colors.surface, borderColor: currentTheme.colors.border }]}>
 
         {/* ── TOP BAR ─────────────────────────────────── */}
         <View style={styles.topBar}>
           <View style={styles.topLeft}>
-            <Ionicons name="disc-outline" size={18} color="#8b5cf6" />
-            <Text style={styles.topLabel}>Voice Pin</Text>
+            <Ionicons name="disc-outline" size={18} color={Colors.primary} />
+            <Text style={[styles.topLabel, { color: Colors.primary }]}>Voice Pin</Text>
           </View>
-          <TouchableOpacity onPress={onClose} hitSlop={15} style={styles.closeBtn}>
-            <Ionicons name="close" size={20} color="#fff" />
+          <TouchableOpacity onPress={onClose} hitSlop={15} style={[styles.closeBtn, { backgroundColor: currentTheme.colors.surfaceAlt }]}>
+            <Ionicons name="close" size={20} color={currentTheme.colors.text} />
           </TouchableOpacity>
         </View>
 
         {/* ── VINYL RECORD ─────────────────────────────── */}
         <View style={styles.playerContainer}>
-          <View style={styles.vinylShadow}>
-            <Animated.View style={[styles.vinylPlate, { transform: [{ rotate: spin }] }]}>
+          <View style={[styles.vinylShadow, { backgroundColor: '#000', borderColor: currentTheme.colors.border, shadowColor: Colors.primary }]}>
+            <Animated.View style={[styles.vinylPlate, { transform: [{ rotate: spin }], borderColor: currentTheme.colors.border }]}>
               <Image
                 source={{ uri: pin.images?.[0]?.imageUrl ?? pin.imageUrl ?? 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&q=80' }}
                 style={styles.recordImage}
                 resizeMode="cover"
               />
-              <View style={styles.recordCenter} />
+              <View style={[styles.recordCenter, { backgroundColor: currentTheme.colors.surface, borderColor: Colors.primary }]} />
             </Animated.View>
           </View>
 
           {/* Tonearm */}
           <Animated.View style={[styles.tonearmContainer, { transform: [{ rotate: armRotate }] }]}>
-            <View style={styles.tonearmBase} />
-            <View style={styles.tonearmStick} />
-            <View style={styles.tonearmHead} />
+            <View style={[styles.tonearmBase, { backgroundColor: '#333', borderColor: '#444' }]} />
+            <View style={[styles.tonearmStick, { backgroundColor: '#555' }]} />
+            <View style={[styles.tonearmHead, { backgroundColor: '#777' }]} />
           </Animated.View>
 
           {/* Emotion badge floats over the disc */}
@@ -144,84 +148,84 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
           <View style={styles.infoLeft}>
             {/* Author */}
             <TouchableOpacity onPress={navigateToProfile} style={styles.authorRow}>
-              <View style={styles.authorAvatar}>
+              <View style={[styles.authorAvatar, { backgroundColor: currentTheme.colors.surfaceAlt }]}>
                 {pin.user?.avatar ? (
                   <Image source={{ uri: pin.user.avatar }} style={styles.avatarImg} />
                 ) : (
-                  <Ionicons name="person-circle-outline" size={18} color="#6b7280" />
+                  <Ionicons name="person-circle-outline" size={18} color={currentTheme.colors.textMuted} />
                 )}
               </View>
-              <Text style={styles.authorText}>{authorLabel}</Text>
+              <Text style={[styles.authorText, { color: currentTheme.colors.textMuted }]}>{authorLabel}</Text>
               {pin.type === "HIDDEN_AR" && (
-                <View style={styles.arBadge}>
-                  <Text style={styles.arBadgeText}>AR</Text>
+                <View style={[styles.arBadge, { backgroundColor: Colors.primary + '33', borderColor: Colors.primary + '80' }]}>
+                  <Text style={[styles.arBadgeText, { color: Colors.primary }]}>AR</Text>
                 </View>
               )}
             </TouchableOpacity>
 
             {/* Title / content */}
-            <Text style={styles.title} numberOfLines={2}>
+            <Text style={[styles.title, { color: currentTheme.colors.text }]} numberOfLines={2}>
               {pin.content ?? (pin.isAnonymous ? "Ký ức thầm lặng" : `Bản ghi #${String(pin.id).slice(-4)}`)}
             </Text>
 
             {/* Location + time */}
             <View style={styles.metaRow}>
-              <Ionicons name="location-outline" size={12} color="#6b7280" />
-              <Text style={styles.metaText} numberOfLines={1}>
+              <Ionicons name="location-outline" size={12} color={currentTheme.colors.textMuted} />
+              <Text style={[styles.metaText, { color: currentTheme.colors.textMuted }]} numberOfLines={1}>
                 {pin.address ?? "Không rõ vị trí"}
               </Text>
             </View>
             <View style={styles.metaRow}>
-              <Ionicons name="time-outline" size={12} color="#6b7280" />
-              <Text style={styles.metaText}>{timeAgo(pin.createdAt)}</Text>
+              <Ionicons name="time-outline" size={12} color={currentTheme.colors.textMuted} />
+              <Text style={[styles.metaText, { color: currentTheme.colors.textMuted }]}>{timeAgo(pin.createdAt)}</Text>
             </View>
           </View>
 
           {/* Play button */}
           <TouchableOpacity
             onPress={() => setIsPlaying(!isPlaying)}
-            style={[styles.playBtn, isPlaying && styles.playBtnActive]}
+            style={[styles.playBtn, { backgroundColor: Colors.primary, shadowColor: Colors.primary }, isPlaying && styles.playBtnActive]}
           >
-            <Ionicons name={isPlaying ? "pause" : "play"} size={26} color={isPlaying ? "#000" : "#fff"} />
+            <Ionicons name={isPlaying ? "pause" : "play"} size={26} color={isPlaying ? Colors.primary : Colors.white} />
           </TouchableOpacity>
         </View>
 
         {/* ── STATS ROW ────────────────────────────────── */}
-        <View style={styles.statsRow}>
+        <View style={[styles.statsRow, { backgroundColor: currentTheme.colors.surfaceAlt, borderColor: currentTheme.colors.border }]}>
           <View style={styles.statItem}>
-            <Ionicons name="headset-outline" size={14} color="#9ca3af" />
-            <Text style={styles.statValue}>{pin.listensCount ?? 0}</Text>
-            <Text style={styles.statLabel}>nghe</Text>
+            <Ionicons name="headset-outline" size={14} color={currentTheme.colors.textMuted} />
+            <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>{pin.listensCount ?? 0}</Text>
+            <Text style={[styles.statLabel, { color: currentTheme.colors.textMuted }]}>nghe</Text>
           </View>
-          <View style={styles.statDivider} />
+          <View style={[styles.statDivider, { backgroundColor: currentTheme.colors.border }]} />
           <View style={styles.statItem}>
-            <Ionicons name="heart-outline" size={14} color="#f87171" />
-            <Text style={styles.statValue}>{pin.reactionsCount ?? 0}</Text>
-            <Text style={styles.statLabel}>thích</Text>
+            <Ionicons name="heart-outline" size={14} color={Colors.error} />
+            <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>{pin.reactionsCount ?? 0}</Text>
+            <Text style={[styles.statLabel, { color: currentTheme.colors.textMuted }]}>thích</Text>
           </View>
-          <View style={styles.statDivider} />
+          <View style={[styles.statDivider, { backgroundColor: currentTheme.colors.border }]} />
           <View style={styles.statItem}>
-            <Ionicons name="chatbubble-outline" size={14} color="#60a5fa" />
-            <Text style={styles.statValue}>{pin.commentsCount ?? 0}</Text>
-            <Text style={styles.statLabel}>lời nhắn</Text>
+            <Ionicons name="chatbubble-outline" size={14} color={currentTheme.colors.primary} />
+            <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>{pin.commentsCount ?? 0}</Text>
+            <Text style={[styles.statLabel, { color: currentTheme.colors.textMuted }]}>lời nhắn</Text>
           </View>
-          <View style={styles.statDivider} />
+          <View style={[styles.statDivider, { backgroundColor: currentTheme.colors.border }]} />
           <View style={styles.statItem}>
-            <Ionicons name="timer-outline" size={14} color="#9ca3af" />
-            <Text style={styles.statValue}>{formatDuration(pin.duration)}</Text>
-            <Text style={styles.statLabel}>thời lượng</Text>
+            <Ionicons name="timer-outline" size={14} color={currentTheme.colors.textMuted} />
+            <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>{formatDuration(pin.duration)}</Text>
+            <Text style={[styles.statLabel, { color: currentTheme.colors.textMuted }]}>thời lượng</Text>
           </View>
         </View>
 
         {/* ── FOOTER: visibility + date ─────────────────── */}
         <View style={styles.footer}>
           <View style={styles.footerLeft}>
-            <Ionicons name={VISIBILITY_ICON[pin.visibility] ?? "earth-outline"} size={13} color="#6b7280" />
-            <Text style={styles.visLabel}>
+            <Ionicons name={VISIBILITY_ICON[pin.visibility] ?? "earth-outline"} size={13} color={currentTheme.colors.textMuted} />
+            <Text style={[styles.visLabel, { color: currentTheme.colors.textMuted }]}>
               {pin.visibility === 'PUBLIC' ? 'Công khai' : pin.visibility === 'FRIENDS' ? 'Bạn bè' : 'Riêng tư'}
             </Text>
           </View>
-          <Text style={styles.dateText}>{new Date(pin.createdAt).toLocaleDateString()}</Text>
+          <Text style={[styles.dateText, { color: currentTheme.colors.textMuted }]}>{new Date(pin.createdAt).toLocaleDateString()}</Text>
         </View>
 
       </View>
@@ -239,19 +243,14 @@ const styles = StyleSheet.create({
   },
   turntableBody: {
     width: width * 0.90,
-    backgroundColor: "#111118",
     borderRadius: 36,
     padding: 22,
     borderWidth: 1,
-    borderColor: "#2a2a3a",
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 20 },
     shadowOpacity: 0.6,
     shadowRadius: 30,
     elevation: 24,
   },
-
-  // ── Top bar ────────────────────────────────────
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -264,7 +263,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   topLabel: {
-    color: "#8b5cf6",
     fontSize: 13,
     fontWeight: "700",
     letterSpacing: 0.5,
@@ -273,12 +271,9 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "rgba(255,255,255,0.08)",
     justifyContent: "center",
     alignItems: "center",
   },
-
-  // ── Vinyl ──────────────────────────────────────
   playerContainer: {
     height: 220,
     justifyContent: "center",
@@ -290,12 +285,9 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: "#000",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 8,
-    borderColor: "#1a1a1a",
-    shadowColor: "#8b5cf6",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 20,
@@ -307,7 +299,6 @@ const styles = StyleSheet.create({
     borderRadius: 90,
     overflow: "hidden",
     borderWidth: 2,
-    borderColor: "#2a2a2a",
   },
   recordImage: {
     width: "100%",
@@ -321,9 +312,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#111118",
     borderWidth: 3,
-    borderColor: "#8b5cf6",
   },
   emotionBadge: {
     position: "absolute",
@@ -339,8 +328,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.3,
   },
-
-  // ── Tonearm ────────────────────────────────────
   tonearmContainer: {
     position: "absolute",
     top: 10,
@@ -354,25 +341,19 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#333",
     borderWidth: 4,
-    borderColor: "#444",
   },
   tonearmStick: {
     width: 5,
     height: 110,
-    backgroundColor: "#555",
     marginTop: -4,
   },
   tonearmHead: {
     width: 13,
     height: 22,
-    backgroundColor: "#777",
     borderRadius: 3,
     marginTop: -4,
   },
-
-  // ── Info row ───────────────────────────────────
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -394,7 +375,6 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     overflow: "hidden",
-    backgroundColor: "#1f1f2e",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -403,28 +383,23 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   authorText: {
-    color: "#6b7280",
     fontSize: 11,
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   arBadge: {
-    backgroundColor: "rgba(139,92,246,0.2)",
-    borderColor: "rgba(139,92,246,0.5)",
     borderWidth: 1,
     borderRadius: 4,
     paddingHorizontal: 5,
     paddingVertical: 1,
   },
   arBadgeText: {
-    color: "#a78bfa",
     fontSize: 9,
     fontWeight: "800",
     letterSpacing: 0.5,
   },
   title: {
-    color: "#f9fafb",
     fontSize: 17,
     fontWeight: "700",
     lineHeight: 22,
@@ -435,20 +410,15 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   metaText: {
-    color: "#6b7280",
     fontSize: 11,
     flex: 1,
   },
-
-  // ── Play button ────────────────────────────────
   playBtn: {
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: "#8b5cf6",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#8b5cf6",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.5,
     shadowRadius: 12,
@@ -457,18 +427,14 @@ const styles = StyleSheet.create({
   playBtnActive: {
     backgroundColor: "#fff",
   },
-
-  // ── Stats row ──────────────────────────────────
   statsRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.04)",
     borderRadius: 16,
     paddingVertical: 12,
     paddingHorizontal: 8,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: "#1f1f2e",
   },
   statItem: {
     flex: 1,
@@ -476,12 +442,10 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   statValue: {
-    color: "#f3f4f6",
     fontSize: 15,
     fontWeight: "700",
   },
   statLabel: {
-    color: "#6b7280",
     fontSize: 10,
     fontWeight: "500",
     textTransform: "uppercase",
@@ -490,10 +454,7 @@ const styles = StyleSheet.create({
   statDivider: {
     width: 1,
     height: 30,
-    backgroundColor: "#2a2a3a",
   },
-
-  // ── Footer ─────────────────────────────────────
   footer: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -505,12 +466,10 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   visLabel: {
-    color: "#6b7280",
     fontSize: 12,
     fontWeight: "500",
   },
   dateText: {
-    color: "#4b5563",
     fontSize: 11,
   },
 });

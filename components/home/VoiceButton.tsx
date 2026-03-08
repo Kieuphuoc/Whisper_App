@@ -1,6 +1,8 @@
+import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Animated, Easing, StyleSheet, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { theme } from '@/constants/Theme';
 
 type VoiceButtonProps = {
     isRecording: boolean;
@@ -8,6 +10,8 @@ type VoiceButtonProps = {
 };
 
 export default function VoiceButton({ isRecording, onPress }: VoiceButtonProps) {
+    const colorScheme = useColorScheme() || 'light';
+    const currentTheme = theme[colorScheme];
     const pulseAnim = useRef(new Animated.Value(0)).current;
     const floatAnim = useRef(new Animated.Value(0)).current;
     const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -78,6 +82,7 @@ export default function VoiceButton({ isRecording, onPress }: VoiceButtonProps) 
                     style={[
                         styles.pulseRing,
                         {
+                            borderRadius: currentTheme.radius.full,
                             transform: [{
                                 scale: pulseAnim.interpolate({
                                     inputRange: [0, 1],
@@ -104,7 +109,11 @@ export default function VoiceButton({ isRecording, onPress }: VoiceButtonProps) 
             >
                 <TouchableOpacity
                     activeOpacity={0.9}
-                    style={[styles.button, isRecording && styles.recordingButton]}
+                    style={[
+                        styles.button,
+                        { borderRadius: currentTheme.radius.full },
+                        isRecording && styles.recordingButton
+                    ]}
                     onPress={onPress}
                 >
                     <Ionicons
@@ -120,9 +129,8 @@ export default function VoiceButton({ isRecording, onPress }: VoiceButtonProps) 
 
 const styles = StyleSheet.create({
     container: {
-        // Nổi tuyệt đối ở chính giữa bên dưới
         position: 'absolute',
-        bottom: 50,
+        bottom: 110,
         left: 0,
         right: 0,
         alignItems: 'center',
@@ -132,29 +140,21 @@ const styles = StyleSheet.create({
     button: {
         width: 75,
         height: 75,
-        borderRadius: 40,
-        backgroundColor: '#8b5cf6',
+        backgroundColor: Colors.primary,
         justifyContent: 'center',
         alignItems: 'center',
-        // Đổ bóng cho iOS
-        shadowColor: '#8b5cf6',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.4,
-        shadowRadius: 10,
-        // Đổ bóng cho Android
-        elevation: 12,
+        ...theme.light.shadows.lg,
         borderWidth: 4,
-        borderColor: '#ffffff',
+        borderColor: Colors.white,
     },
     recordingButton: {
-        backgroundColor: '#ef4444',
-        shadowColor: '#ef4444',
+        backgroundColor: Colors.error,
+        shadowColor: Colors.error,
     },
     pulseRing: {
         position: 'absolute',
         width: 75,
         height: 75,
-        borderRadius: 40,
-        backgroundColor: '#ef4444',
+        backgroundColor: Colors.error,
     },
 });

@@ -11,9 +11,12 @@ import {
     Text,
     TouchableOpacity,
     View,
+    useColorScheme,
 } from 'react-native';
 import { authApis, endpoints } from '../../configs/Apis';
 import { Visibility, VISIBILITY_LABEL, VISIBILITY_LIST } from '../../types';
+import { theme } from '@/constants/Theme';
+import { Colors } from '@/constants/Colors';
 
 const VISIBILITY_ICON: Record<Visibility, keyof typeof Ionicons.glyphMap> = {
     PUBLIC: 'earth-outline',
@@ -40,6 +43,8 @@ export default function VoiceUploadSheet({
     onClose,
     onUploadSuccess,
 }: Props) {
+    const colorScheme = useColorScheme() || 'light';
+    const currentTheme = theme[colorScheme];
     const [selectedVisibility, setSelectedVisibility] = useState<Visibility>(visibility);
     const [uploading, setUploading] = useState(false);
 
@@ -107,53 +112,57 @@ export default function VoiceUploadSheet({
     return (
         <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
             <View style={styles.overlay}>
-                <View style={styles.sheet}>
+                <View style={[styles.sheet, { backgroundColor: currentTheme.colors.background, borderTopLeftRadius: currentTheme.radius.xl + 4, borderTopRightRadius: currentTheme.radius.xl + 4 }]}>
                     {/* Handle */}
                     <View style={styles.handle} />
 
                     {/* Header */}
                     <View style={styles.header}>
                         <View style={styles.headerLeft}>
-                            <Ionicons name="mic" size={20} color="#8b5cf6" />
-                            <Text style={styles.title}>Đăng Giọng Nói</Text>
+                            <Ionicons name="mic" size={20} color={currentTheme.colors.primary} />
+                            <Text style={[styles.title, { color: currentTheme.colors.text }]}>Đăng Giọng Nói</Text>
                         </View>
                         <TouchableOpacity onPress={onClose} style={styles.closeBtn} disabled={uploading}>
-                            <Ionicons name="close" size={22} color="#6b7280" />
+                            <Ionicons name="close" size={22} color={currentTheme.colors.icon} />
                         </TouchableOpacity>
                     </View>
 
                     {/* Photo preview (if taken) */}
                     {photoUri && (
-                        <View style={styles.photoRow}>
-                            <Image source={{ uri: photoUri }} style={styles.photoThumb} />
+                        <View style={[styles.photoRow, { borderRadius: currentTheme.radius.md, backgroundColor: currentTheme.colors.surfaceAlt, borderColor: currentTheme.colors.success + '33' }]}>
+                            <Image source={{ uri: photoUri }} style={[styles.photoThumb, { borderRadius: currentTheme.radius.sm }]} />
                             <View style={styles.photoInfo}>
-                                <Ionicons name="image-outline" size={16} color="#10b981" />
-                                <Text style={styles.photoLabel}>Đã đính kèm ảnh kỷ niệm</Text>
+                                <Ionicons name="image-outline" size={16} color={currentTheme.colors.success} />
+                                <Text style={[styles.photoLabel, { color: currentTheme.colors.success }]}>Đã đính kèm ảnh kỷ niệm</Text>
                             </View>
                         </View>
                     )}
 
                     {/* Audio ready indicator */}
-                    <View style={styles.audioReady}>
-                        <Ionicons name="checkmark-circle" size={20} color="#10b981" />
-                        <Text style={styles.audioReadyText}>Bản ghi sẵn sàng để đăng</Text>
+                    <View style={[styles.audioReady, { borderRadius: currentTheme.radius.md, backgroundColor: currentTheme.colors.success + '15' }]}>
+                        <Ionicons name="checkmark-circle" size={20} color={currentTheme.colors.success} />
+                        <Text style={[styles.audioReadyText, { color: currentTheme.colors.success }]}>Bản ghi sẵn sàng để đăng</Text>
                     </View>
 
                     {/* Visibility picker */}
-                    <Text style={styles.label}>Ai có thể nghe?</Text>
+                    <Text style={[styles.label, { color: currentTheme.colors.icon }]}>Ai có thể nghe?</Text>
                     <View style={styles.visibilityRow}>
                         {VISIBILITY_LIST.map((v) => (
                             <TouchableOpacity
                                 key={v}
-                                style={[styles.visBtn, selectedVisibility === v && styles.visBtnActive]}
+                                style={[
+                                    styles.visBtn,
+                                    { borderRadius: currentTheme.radius.md, backgroundColor: currentTheme.colors.icon + '05', borderColor: currentTheme.colors.icon + '20' },
+                                    selectedVisibility === v && { backgroundColor: currentTheme.colors.primary, borderColor: currentTheme.colors.primary }
+                                ]}
                                 onPress={() => setSelectedVisibility(v)}
                             >
                                 <Ionicons
                                     name={VISIBILITY_ICON[v]}
                                     size={18}
-                                    color={selectedVisibility === v ? '#fff' : '#6b7280'}
+                                    color={selectedVisibility === v ? Colors.white : currentTheme.colors.icon}
                                 />
-                                <Text style={[styles.visBtnText, selectedVisibility === v && styles.visBtnTextActive]}>
+                                <Text style={[styles.visBtnText, { color: currentTheme.colors.icon }, selectedVisibility === v && { color: Colors.white }]}>
                                     {VISIBILITY_LABEL[v]}
                                 </Text>
                             </TouchableOpacity>
@@ -162,11 +171,19 @@ export default function VoiceUploadSheet({
 
                     {/* Actions */}
                     <View style={styles.actions}>
-                        <TouchableOpacity style={styles.discardBtn} onPress={onClose} disabled={uploading}>
-                            <Text style={styles.discardText}>Hủy</Text>
+                        <TouchableOpacity
+                            style={[styles.discardBtn, { borderRadius: currentTheme.radius.lg, borderColor: currentTheme.colors.icon + '20' }]}
+                            onPress={onClose}
+                            disabled={uploading}
+                        >
+                            <Text style={[styles.discardText, { color: currentTheme.colors.icon }]}>Hủy</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={[styles.uploadBtn, uploading && styles.uploadBtnDisabled]}
+                            style={[
+                                styles.uploadBtn,
+                                { borderRadius: currentTheme.radius.lg, backgroundColor: currentTheme.colors.primary, shadowColor: currentTheme.colors.primary },
+                                uploading && styles.uploadBtnDisabled
+                            ]}
                             onPress={handleUpload}
                             disabled={uploading}
                         >
@@ -193,17 +210,10 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.4)',
     },
     sheet: {
-        backgroundColor: '#ffffff',
-        borderTopLeftRadius: 28,
-        borderTopRightRadius: 28,
         paddingHorizontal: 24,
         paddingBottom: 44,
         paddingTop: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 20,
-        elevation: 20,
+        ...theme.light.shadows.lg,
     },
     handle: {
         width: 40,
@@ -227,28 +237,22 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 20,
         fontWeight: '700',
-        color: '#111827',
     },
     closeBtn: {
         padding: 4,
     },
-
-    // Photo preview
     photoRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
         marginBottom: 16,
         padding: 10,
-        backgroundColor: '#f0fdf4',
-        borderRadius: 14,
         borderWidth: 1,
         borderColor: '#bbf7d0',
     },
     photoThumb: {
         width: 56,
         height: 56,
-        borderRadius: 10,
         backgroundColor: '#d1d5db',
     },
     photoInfo: {
@@ -261,13 +265,9 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         fontSize: 13,
     },
-
-    // Audio ready
     audioReady: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(16, 185, 129, 0.08)',
-        borderRadius: 12,
         padding: 10,
         marginBottom: 24,
         gap: 8,
@@ -277,12 +277,9 @@ const styles = StyleSheet.create({
         color: '#10b981',
         fontWeight: '500',
     },
-
-    // Visibility
     label: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#6b7280',
         marginBottom: 10,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
@@ -296,28 +293,18 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingVertical: 12,
         paddingHorizontal: 6,
-        borderRadius: 14,
         borderWidth: 1.5,
-        borderColor: '#e5e7eb',
         alignItems: 'center',
         gap: 5,
-        backgroundColor: '#f9fafb',
-    },
-    visBtnActive: {
-        backgroundColor: '#8b5cf6',
-        borderColor: '#8b5cf6',
     },
     visBtnText: {
         fontSize: 11,
         fontWeight: '600',
-        color: '#6b7280',
         textAlign: 'center',
     },
     visBtnTextActive: {
         color: '#ffffff',
     },
-
-    // Actions
     actions: {
         flexDirection: 'row',
         gap: 12,
@@ -325,30 +312,20 @@ const styles = StyleSheet.create({
     discardBtn: {
         flex: 1,
         paddingVertical: 16,
-        borderRadius: 20,
         borderWidth: 1.5,
-        borderColor: '#e5e7eb',
         alignItems: 'center',
     },
     discardText: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#6b7280',
     },
     uploadBtn: {
         flex: 2,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#8b5cf6',
         paddingVertical: 16,
-        borderRadius: 20,
         gap: 8,
-        shadowColor: '#8b5cf6',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.35,
-        shadowRadius: 12,
-        elevation: 8,
     },
     uploadBtnDisabled: {
         opacity: 0.6,

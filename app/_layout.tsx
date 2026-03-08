@@ -4,12 +4,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect, useReducer, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
+import * as Font from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [user, dispatch] = useReducer(userReducer, null);
   const [isReady, setIsReady] = useState(false);
-  const segments = useSegments();
-  const router = useRouter();
+  const [fontsLoaded, setFontsLoaded] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -27,22 +30,32 @@ export default function RootLayout() {
       }
     };
 
+    const loadFonts = async () => {
+      try {
+        await Font.loadAsync({
+          'Poppins-Regular': require('../assets/fonts/Poppins-Regular.ttf'),
+          'SpaceMono-Regular': require('../assets/fonts/SpaceMono-Regular.ttf'),
+        });
+        setFontsLoaded(true);
+      } catch (e) {
+        console.warn("Font loading failed", e);
+        setFontsLoaded(true); // Proceed anyway
+      }
+    };
+
     loadUser();
+    loadFonts();
   }, []);
 
   useEffect(() => {
-    if (!isReady) return;
-
-    const inAuthGroup = segments[0] === "(auth)";
-
-    if (!user && !inAuthGroup) {
-      router.replace("/login");
-    } else if (user && (inAuthGroup || !segments[0])) {
-      router.replace("/home");
+    if (isReady && fontsLoaded) {
+      SplashScreen.hideAsync();
     }
-  }, [user, segments, isReady]);
+  }, [isReady, fontsLoaded]);
 
-  if (!isReady) {
+
+
+  if (!isReady || !fontsLoaded) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: '#f8fafc' }}>
         <ActivityIndicator size="large" color="#8b5cf6" />
@@ -53,12 +66,31 @@ export default function RootLayout() {
   return (
     <MyUserContext.Provider value={user}>
       <MyDispatchContext.Provider value={dispatch}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
-          <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-          <Stack.Screen name="index" options={{ animation: 'fade' }} />
-        </Stack>
+        <RootLayoutNav user={user} />
       </MyDispatchContext.Provider>
     </MyUserContext.Provider>
+  );
+}
+
+function RootLayoutNav({ user }: { user: any }) {
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    const inAuthGroup = segments[0] === "(auth)";
+
+    if (!user && !inAuthGroup) {
+      router.replace("/login");
+    } else if (user && (inAuthGroup || !segments[0])) {
+      router.replace("/home");
+    }
+  }, [user, segments]);
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
+      <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+      <Stack.Screen name="index" options={{ animation: 'fade' }} />
+    </Stack>
   );
 }
