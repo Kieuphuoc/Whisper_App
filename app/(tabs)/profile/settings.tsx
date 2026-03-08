@@ -1,4 +1,4 @@
-import { authApis, endpoints } from '@/configs/Apis';
+import { authApis, BASE_URL, endpoints } from '@/configs/Apis';
 import { MyDispatchContext, MyUserContext } from '@/configs/Context';
 import { User } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,11 +19,11 @@ import {
     useColorScheme,
 } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import Animated, { 
-    useAnimatedStyle, 
-    withSpring, 
-    withTiming, 
-    useSharedValue, 
+import Animated, {
+    useAnimatedStyle,
+    withSpring,
+    withTiming,
+    useSharedValue,
     interpolateColor,
     withDelay
 } from 'react-native-reanimated';
@@ -122,7 +122,7 @@ export default function SettingsScreen() {
     const getAvatarUri = (avatar?: string) => {
         if (!avatar) return 'https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg';
         if (avatar.startsWith('http')) return avatar;
-        return `http://10.5.1.149:5000${avatar.startsWith('/') ? '' : '/'}${avatar}`;
+        return `${BASE_URL}${avatar.startsWith('/') ? '' : '/'}${avatar}`;
     };
 
     const avatarUri = getAvatarUri(user?.avatar);
@@ -139,7 +139,7 @@ export default function SettingsScreen() {
                 damping: 15,
                 stiffness: 150
             });
-            
+
             // Liquid "Drop" effect: stretch thumb when moving
             thumbScaleX.value = withTiming(1.3, { duration: 100 }, () => {
                 thumbScaleX.value = withSpring(1);
@@ -158,15 +158,15 @@ export default function SettingsScreen() {
             <View className="flex-row items-center justify-between py-1">
                 <View className="flex-row items-center">
                     <View className="w-9 h-9 rounded-xl items-center justify-center mr-4 bg-gray-100 dark:bg-gray-800">
-                        <Ionicons 
-                            name={colorScheme === 'dark' ? "moon" : "sunny"} 
-                            size={20} 
-                            color={colorScheme === 'dark' ? '#f3f4f6' : '#374151'} 
+                        <Ionicons
+                            name={colorScheme === 'dark' ? "moon" : "sunny"}
+                            size={20}
+                            color={colorScheme === 'dark' ? '#f3f4f6' : '#374151'}
                         />
                     </View>
                     <Text className="text-[17px] font-semibold text-gray-900 dark:text-white">Giao diện tối</Text>
                 </View>
-                <TouchableOpacity 
+                <TouchableOpacity
                     onPress={() => setColorScheme(colorScheme === 'dark' ? 'light' : 'dark')}
                     activeOpacity={1}
                     style={{
@@ -178,7 +178,7 @@ export default function SettingsScreen() {
                         justifyContent: 'center'
                     }}
                 >
-                    <Animated.View 
+                    <Animated.View
                         style={[
                             {
                                 width: thumbSize,
@@ -191,7 +191,7 @@ export default function SettingsScreen() {
                                 elevation: 2,
                             },
                             animatedThumbStyle
-                        ]} 
+                        ]}
                     />
                 </TouchableOpacity>
             </View>
@@ -226,7 +226,7 @@ export default function SettingsScreen() {
                         pitchEnabled={false}
                         rotateEnabled={false}
                     >
-                        <Marker 
+                        <Marker
                             coordinate={{ latitude: FALLBACK_LAT, longitude: FALLBACK_LNG }}
                         >
                             <View className="w-8 h-8 rounded-full bg-primary-500 border-2 border-white items-center justify-center">
@@ -234,7 +234,7 @@ export default function SettingsScreen() {
                             </View>
                         </Marker>
                     </MapView>
-                    
+
                     {/* Animated Overlay for selection change feedback */}
                     <View className="absolute inset-0 bg-black/5 pointer-events-none" />
 
@@ -306,7 +306,7 @@ export default function SettingsScreen() {
                         </View>
 
                         <View className="px-1 border-b border-gray-100 dark:border-gray-800 py-4">
-                             <View className="flex-row items-center mb-4">
+                            <View className="flex-row items-center mb-4">
                                 <View className="w-9 h-9 rounded-xl items-center justify-center mr-4 bg-gray-100 dark:bg-gray-800">
                                     <Ionicons name="map-outline" size={20} color={colorScheme === 'dark' ? '#f3f4f6' : '#374151'} />
                                 </View>
@@ -318,6 +318,18 @@ export default function SettingsScreen() {
                         <SettingItem icon="language-outline" label="Ngôn ngữ" value="Tiếng Việt" />
                         <SettingItem icon="help-circle-outline" label="Hỗ trợ & Phản hồi" />
                         <SettingItem icon="information-circle-outline" label="Về chúng tôi" />
+                    </View>
+                </View>
+
+                {/* Activity Section */}
+                <View className="mb-6">
+                    <Text className="font-bold uppercase tracking-widest text-[12px] mb-3 ml-1 text-gray-500">HOẠT ĐỘNG</Text>
+                    <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden shadow-sm">
+                        <SettingItem 
+                            icon="time-outline" 
+                            label="Lịch sử xem" 
+                            onPress={() => router.push('/(tabs)/profile/history')} 
+                        />
                     </View>
                 </View>
 

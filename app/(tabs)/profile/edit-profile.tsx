@@ -1,4 +1,4 @@
-import { authApis, endpoints } from '@/configs/Apis';
+import { authApis, BASE_URL, endpoints } from '@/configs/Apis';
 import { MyDispatchContext, MyUserContext } from '@/configs/Context';
 import { User } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -68,7 +68,7 @@ export default function EditProfileScreen() {
                 formData.append('avatar', { uri: localUri, name: filename, type } as any);
             }
 
-            const res = await api.patch(endpoints.updateProfile, formData, {
+            const res = await api.patch(endpoints.userMe, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
 
@@ -76,7 +76,7 @@ export default function EditProfileScreen() {
                 // Update context
                 const updatedUser = res.data?.data ?? res.data;
                 if (dispatch) {
-                    dispatch({ type: 'login', payload: updatedUser });
+                    dispatch({ type: 'SET_USER', payload: updatedUser });
                 }
                 Alert.alert('Thành công', 'Hồ sơ đã được cập nhật');
                 router.back();
@@ -90,7 +90,7 @@ export default function EditProfileScreen() {
     };
 
     const avatarUri = avatar?.uri ||
-        (user?.avatar?.startsWith('http') ? user.avatar : `http://10.5.1.149:5000${user?.avatar?.startsWith('/') ? '' : '/'}${user?.avatar}`) ||
+        (user?.avatar?.startsWith('http') ? user.avatar : `${BASE_URL}${user?.avatar?.startsWith('/') ? '' : '/'}${user?.avatar}`) ||
         'https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg';
 
     return (
@@ -174,9 +174,9 @@ export default function EditProfileScreen() {
                                 <Text className="text-xs text-gray-500">{user?.xp || 0} XP</Text>
                             </View>
                             <View className="h-2 bg-white dark:bg-gray-800 rounded-full overflow-hidden shadow-inner">
-                                <View 
-                                    className="h-full bg-primary-500" 
-                                    style={{ width: `${Math.min(((user?.xp || 0) % 1000) / 10, 100)}%` }} 
+                                <View
+                                    className="h-full bg-primary-500"
+                                    style={{ width: `${Math.min(((user?.xp || 0) % 1000) / 10, 100)}%` }}
                                 />
                             </View>
                         </View>

@@ -1,5 +1,5 @@
-import { authApis, endpoints } from '@/configs/Apis';
-import { ViewHistory } from '@/types';
+import { authApis, BASE_URL, endpoints } from '@/configs/Apis';
+import { ViewHistory, VoicePin } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -12,10 +12,22 @@ import {
     View,
     Image,
     ScrollView,
+    Dimensions,
+    StyleSheet,
 } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useColorScheme } from "nativewind";
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+    FadeInDown,
+    useSharedValue,
+    useAnimatedStyle,
+    withSpring
+} from 'react-native-reanimated';
+import theme from '@/constants/Theme';
 
-// ── Helper functions to replace date-fns ──
+const { width } = Dimensions.get('window');
+
+// ── Helper functions ──
 const isSameDay = (d1: Date, d2: Date) =>
     d1.getFullYear() === d2.getFullYear() &&
     d1.getMonth() === d2.getMonth() &&
@@ -37,12 +49,6 @@ const isThisWeek = (date: Date) => {
     return date >= startOfWeek && date <= now;
 };
 
-const formatTime = (date: Date) => {
-    const h = date.getHours().toString().padStart(2, '0');
-    const m = date.getMinutes().toString().padStart(2, '0');
-    return `${h}:${m}`;
-};
-
 const MONTH_NAMES_VI = [
     'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
     'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12',
@@ -51,7 +57,91 @@ const MONTH_NAMES_VI = [
 const formatMonthYear = (date: Date) =>
     `${MONTH_NAMES_VI[date.getMonth()]}, ${date.getFullYear()}`;
 
+const getPinImage = (pin: VoicePin) => {
+    const imgUrl = pin.images?.[0]?.imageUrl || pin.imageUrl;
+    if (!imgUrl) return null;
+    return imgUrl.startsWith('http') ? imgUrl : `${BASE_URL}${imgUrl.startsWith('/') ? '' : '/'}${imgUrl}`;
+};
+
+// ── History Card Component ──
+const HistoryCard = ({ item, index, currentTheme, onPress }: { item: ViewHistory, index: number, currentTheme: any, onPress: (id: number) => void }) => {
+    const { voicePin } = item;
+    const scale = useSharedValue(1);
+    const imgUrl = getPinImage(voicePin);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value }]
+    }));
+
+    const onPressIn = () => {
+        scale.value = withSpring(0.96, { damping: 10, stiffness: 300 });
+    };
+
+    const onPressOut = () => {
+        scale.value = withSpring(1, { damping: 10, stiffness: 300 });
+    };
+
+    return (
+        <Animated.View
+            entering={FadeInDown.delay(index * 50).springify().damping(20)}
+            style={[animatedStyle, styles.cardContainer]}
+        >
+            <TouchableOpacity
+                onPressIn={onPressIn}
+                onPressOut={onPressOut}
+                activeOpacity={1}
+                onPress={() => onPress(voicePin.id)}
+                style={[styles.card, { backgroundColor: currentTheme.colors.surfaceAlt }]}
+            >
+                <View style={styles.imageWrapper}>
+                    {imgUrl ? (
+                        <Image source={{ uri: imgUrl }} style={styles.cardImage} resizeMode="cover" />
+                    ) : (
+                        <View style={styles.imagePlaceholder}>
+                            <Ionicons name="mic" size={32} color={currentTheme.colors.primary} style={{ opacity: 0.2 }} />
+                        </View>
+                    )}
+
+                    {/* View Count Overlay */}
+                    <LinearGradient
+                        colors={['transparent', 'rgba(0,0,0,0.6)']}
+                        style={styles.countOverlay}
+                    >
+                        <View style={styles.countRow}>
+                            <Ionicons name="play" size={12} color="white" />
+                            <Text style={[styles.countText, { fontFamily: currentTheme.typography.fonts.bold }]}>
+                                {(voicePin.listensCount || 0) > 1000 ? `${((voicePin.listensCount || 0) / 1000).toFixed(1)}K` : voicePin.listensCount || 0}
+                            </Text>
+                        </View>
+                    </LinearGradient>
+                </View>
+
+                <View style={styles.cardContent}>
+                    <Text
+                        style={[styles.cardTitle, { color: currentTheme.colors.text, fontFamily: currentTheme.typography.fonts.bold }]}
+                        numberOfLines={1}
+                    >
+                        {voicePin.content || "Chưa có nội dung"}
+                    </Text>
+                    <View style={styles.cardFooter}>
+                        <View style={styles.statItem}>
+                            <Ionicons name="heart" size={12} color="#ef4444" />
+                            <Text style={[styles.statText, { color: currentTheme.colors.textSecondary }]}>{voicePin.reactionsCount || 0}</Text>
+                        </View>
+                        <View style={[styles.statItem, { marginLeft: 10 }]}>
+                            <Ionicons name="chatbubble" size={11} color={currentTheme.colors.primary} />
+                            <Text style={[styles.statText, { color: currentTheme.colors.textSecondary }]}>{voicePin.commentsCount || 0}</Text>
+                        </View>
+                    </View>
+                </View>
+            </TouchableOpacity>
+        </Animated.View>
+    );
+};
+
 export default function HistoryScreen() {
+    const { colorScheme } = useColorScheme();
+    const currentTheme = theme[colorScheme || 'light'];
     const router = useRouter();
     const [history, setHistory] = useState<ViewHistory[]>([]);
     const [loading, setLoading] = useState(true);
@@ -81,11 +171,11 @@ export default function HistoryScreen() {
 
     const groupedHistory = useMemo(() => {
         const groups: { [key: string]: ViewHistory[] } = {};
-        
+
         history.forEach(item => {
             const date = new Date(item.viewedAt);
             let title = '';
-            
+
             if (isToday(date)) title = 'Hôm nay';
             else if (isYesterday(date)) title = 'Hôm qua';
             else if (isThisWeek(date)) title = 'Tuần này';
@@ -101,106 +191,173 @@ export default function HistoryScreen() {
         }));
     }, [history]);
 
-    const renderHistoryItem = (item: ViewHistory, index: number) => {
-        const { voicePin } = item;
-        const timeValue = formatTime(new Date(item.viewedAt));
-
-        return (
-            <Animated.View 
-                entering={FadeInDown.delay(index * 50).duration(400)}
-                key={item.id}
-                className="mb-4"
-            >
-                <TouchableOpacity
-                    onPress={() => router.push({ pathname: '/(tabs)/home', params: { voicePinId: voicePin.id } })}
-                    className="flex-row items-center bg-white dark:bg-gray-900 p-3 rounded-2xl shadow-sm border border-gray-50 dark:border-gray-800"
-                >
-                    <View className="w-16 h-16 rounded-xl overflow-hidden mr-4 bg-gray-100 dark:bg-gray-800 items-center justify-center relative">
-                        {voicePin.imageUrl ? (
-                            <Image 
-                                source={{ uri: voicePin.imageUrl.startsWith('http') ? voicePin.imageUrl : `http://10.5.1.149:5000${voicePin.imageUrl}` }} 
-                                className="w-full h-full"
-                                resizeMode="cover"
-                            />
-                        ) : (
-                            <Ionicons name="mic" size={28} color="#7ea000" />
-                        )}
-                        <View className="absolute bottom-1 right-1 bg-black/50 px-1 rounded">
-                            <Text className="text-[10px] text-white font-bold">{timeValue}</Text>
-                        </View>
-                    </View>
-                    
-                    <View className="flex-1">
-                        <Text className="text-base font-bold text-gray-900 dark:text-white mb-1" numberOfLines={1}>
-                            {voicePin.content || "Tin nhắn thoại"}
-                        </Text>
-                        <View className="flex-row items-center">
-                            <Ionicons name="person-outline" size={12} color="#9ca3af" />
-                            <Text className="text-gray-400 text-xs ml-1" numberOfLines={1}>
-                                {voicePin.user?.displayName || "Ẩn danh"}
-                            </Text>
-                        </View>
-                        {voicePin.address && (
-                            <View className="flex-row items-center mt-1">
-                                <Ionicons name="location-outline" size={12} color="#9ca3af" />
-                                <Text className="text-gray-400 text-[10px] ml-1" numberOfLines={1}>
-                                    {voicePin.address}
-                                </Text>
-                            </View>
-                        )}
-                    </View>
-                </TouchableOpacity>
-            </Animated.View>
-        );
-    };
-
     return (
-        <View className="flex-1 bg-gray-50 dark:bg-gray-950">
+        <View className="flex-1" style={{ backgroundColor: currentTheme.colors.background }}>
             {/* Header */}
-            <View className="pt-14 pb-4 px-6 flex-row items-center bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
-                <TouchableOpacity onPress={() => router.back()} className="mr-4 w-10 h-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-                    <Ionicons name="arrow-back" size={24} color="#111" />
-                </TouchableOpacity>
-                <Text className="text-2xl font-bold text-gray-900 dark:text-white">Lịch sử xem</Text>
+            <View className="pt-14 pb-4 px-6 flex-row items-center justify-between border-b" style={{ backgroundColor: currentTheme.colors.background, borderColor: currentTheme.colors.border }}>
+                <View className="flex-row items-center">
+                    <TouchableOpacity onPress={() => router.back()} className="mr-4">
+                        <Ionicons name="chevron-back" size={28} color={currentTheme.colors.text} />
+                    </TouchableOpacity>
+                    <Text
+                        style={{ fontFamily: currentTheme.typography.fonts.bold, fontSize: currentTheme.typography.fontSizes.xl }}
+                        className="text-gray-900 dark:text-white"
+                    >Lịch sử xem</Text>
+                </View>
+                <View className="flex-row items-center">
+                    <TouchableOpacity className="p-2">
+                        <Ionicons name="search-outline" size={24} color={currentTheme.colors.text} />
+                    </TouchableOpacity>
+                    <TouchableOpacity className="p-2">
+                        <Ionicons name="ellipsis-horizontal" size={24} color={currentTheme.colors.text} />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             {loading && !refreshing ? (
                 <View className="flex-1 justify-center items-center">
-                    <ActivityIndicator size="large" color="#7ea000" />
+                    <ActivityIndicator size="large" color={currentTheme.colors.primary} />
                 </View>
             ) : (
-                <ScrollView 
-                    className="flex-1 px-4 pt-4"
-                    refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={() => fetchHistory(true)} tintColor="#7ea000" />
-                    }
-                >
-                    {groupedHistory.map((group) => (
-                        <View key={group.title} className="mb-6">
-                            <Text className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-4 ml-1 uppercase tracking-wider">
-                                {group.title}
-                            </Text>
-                            {group.data.map((item, index) => renderHistoryItem(item, index))}
-                        </View>
-                    ))}
-
-                    {history.length === 0 && (
-                        <View className="items-center justify-center pt-20">
-                            <View className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full items-center justify-center mb-4">
-                                <Ionicons name="headset-outline" size={40} color="#d1d5db" />
-                            </View>
-                            <Text className="text-gray-500 dark:text-gray-400 text-lg font-medium">Bạn chưa xem tin nhắn nào</Text>
+                <View className="flex-1">
+                    <ScrollView
+                        className="flex-1"
+                        refreshControl={
+                            <RefreshControl refreshing={refreshing} onRefresh={() => fetchHistory(true)} tintColor={currentTheme.colors.primary} />
+                        }
+                    >
+                        <View className="px-6 py-4">
                             <TouchableOpacity
-                                onPress={() => router.push('/(tabs)/home')}
-                                className="mt-6 bg-primary-500 px-8 py-3 rounded-full"
+                                style={{ backgroundColor: currentTheme.colors.surfaceAlt }}
+                                className="self-start px-4 py-2 rounded-xl flex-row items-center shadow-sm"
                             >
-                                <Text className="text-white font-bold">Khám phá ngay</Text>
+                                <Text style={{ fontFamily: currentTheme.typography.fonts.medium, color: currentTheme.colors.textSecondary }} className="text-sm">Tất cả thời gian</Text>
+                                <Ionicons name="chevron-down" size={14} color={currentTheme.colors.textMuted} className="ml-2" />
                             </TouchableOpacity>
                         </View>
-                    )}
-                    <View className="h-20" />
-                </ScrollView>
+
+                        {groupedHistory.map((group) => (
+                            <View key={group.title} className="mb-6">
+                                <Text
+                                    style={{ fontFamily: currentTheme.typography.fonts.bold, color: currentTheme.colors.text, fontSize: currentTheme.typography.fontSizes.lg }}
+                                    className="mb-4 px-6"
+                                >
+                                    {group.title}
+                                </Text>
+                                <View style={styles.grid}>
+                                    {group.data.map((item, index) => (
+                                        <HistoryCard
+                                            key={item.id}
+                                            item={item}
+                                            index={index}
+                                            currentTheme={currentTheme}
+                                            onPress={(pinId) => router.push({ pathname: '/(tabs)/home', params: { voicePinId: pinId } })}
+                                        />
+                                    ))}
+                                </View>
+                            </View>
+                        ))}
+
+                        {history.length === 0 && (
+                            <View className="items-center justify-center pt-24 px-10">
+                                <View className="w-24 h-24 rounded-full items-center justify-center mb-6" style={{ backgroundColor: currentTheme.colors.surfaceAlt }}>
+                                    <Ionicons name="headset-outline" size={48} color={currentTheme.colors.textMuted} />
+                                </View>
+                                <Text
+                                    style={{ fontFamily: currentTheme.typography.fonts.bold, color: currentTheme.colors.text }}
+                                    className="text-xl text-center mb-2"
+                                >Trống quá...</Text>
+                                <Text
+                                    style={{ fontFamily: currentTheme.typography.fonts.regular, color: currentTheme.colors.textSecondary }}
+                                    className="text-center"
+                                >Bạn chưa xem tin nhắn thoại nào. Hãy khám phá ngay!</Text>
+
+                                <TouchableOpacity
+                                    onPress={() => router.push('/(tabs)/home')}
+                                    style={{ backgroundColor: currentTheme.colors.primary }}
+                                    className="mt-10 px-10 py-4 rounded-full shadow-lg shadow-primary"
+                                >
+                                    <Text style={{ fontFamily: currentTheme.typography.fonts.bold }} className="text-white text-lg">Khám phá</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                        <View className="h-24" />
+                    </ScrollView>
+                </View>
             )}
         </View>
     );
 }
+
+const styles = StyleSheet.create({
+    grid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        paddingHorizontal: 16,
+        justifyContent: 'space-between'
+    },
+    cardContainer: {
+        width: (width - 48) / 2,
+        marginBottom: 16,
+    },
+    card: {
+        borderRadius: 20,
+        overflow: 'hidden',
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+    },
+    imageWrapper: {
+        width: '100%',
+        height: (width - 48) / 2 * 1.2,
+        backgroundColor: 'rgba(0,0,0,0.05)',
+    },
+    cardImage: {
+        width: '100%',
+        height: '100%',
+    },
+    imagePlaceholder: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    countOverlay: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 40,
+        justifyContent: 'flex-end',
+        padding: 10,
+    },
+    countRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    countText: {
+        color: 'white',
+        fontSize: 11,
+        marginLeft: 4,
+    },
+    cardContent: {
+        padding: 12,
+    },
+    cardTitle: {
+        fontSize: 14,
+        marginBottom: 6,
+    },
+    cardFooter: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    statItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    statText: {
+        fontSize: 11,
+        marginLeft: 4,
+    }
+});

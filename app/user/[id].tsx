@@ -1,4 +1,4 @@
-import { authApis, endpoints } from '@/configs/Apis';
+import { authApis, BASE_URL, endpoints } from '@/configs/Apis';
 import { theme } from '@/constants/Theme';
 import { User, VoicePin } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -112,7 +112,7 @@ export default function UserProfileScreen() {
     const getAvatarUri = (avatar?: string) => {
         if (!avatar) return 'https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg';
         if (avatar.startsWith('http')) return avatar;
-        return `http://10.5.1.149:5000${avatar.startsWith('/') ? '' : '/'}${avatar}`;
+        return `${BASE_URL}${avatar.startsWith('/') ? '' : '/'}${avatar}`;
     };
 
     if (loading && !refreshing) {

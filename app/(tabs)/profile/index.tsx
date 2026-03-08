@@ -1,4 +1,4 @@
-import { authApis, endpoints } from '@/configs/Apis';
+import { authApis, BASE_URL, endpoints } from '@/configs/Apis';
 import { MyUserContext } from '@/configs/Context';
 import { User, VoicePin } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -69,7 +69,7 @@ export default function ProfileScreen() {
   const getAvatarUri = (avatar?: string) => {
     if (!avatar) return 'https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg';
     if (avatar.startsWith('http')) return avatar;
-    return `http://10.5.1.149:5000${avatar.startsWith('/') ? '' : '/'}${avatar}`;
+    return `${BASE_URL}${avatar.startsWith('/') ? '' : '/'}${avatar}`;
   };
 
   const currentAvatar = profile?.avatar || userContext?.avatar;
@@ -158,12 +158,12 @@ export default function ProfileScreen() {
                   </View>
                 </View>
 
-                  <TouchableOpacity
-                    style={[styles.followButton, { backgroundColor: currentTheme.colors.primary + '15', borderRadius: currentTheme.radius.full }]}
-                    onPress={() => router.push('/(tabs)/profile/edit-profile')}
-                  >
-                    <Text style={[styles.followButtonText, { color: currentTheme.colors.primary, fontSize: 13 }]}>Edit Profile</Text>
-                  </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.followButton, { backgroundColor: currentTheme.colors.primary + '15', borderRadius: currentTheme.radius.full }]}
+                  onPress={() => router.push('/(tabs)/profile/edit-profile')}
+                >
+                  <Text style={[styles.followButtonText, { color: currentTheme.colors.primary, fontSize: 13 }]}>Edit Profile</Text>
+                </TouchableOpacity>
               </View>
             </Animated.View>
           </LinearGradient>
