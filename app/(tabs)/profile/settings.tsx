@@ -56,7 +56,7 @@ const SettingItem = ({
                         color={textColor === '#ef4444' ? '#ef4444' : (colorScheme === 'dark' ? '#f3f4f6' : '#374151')}
                     />
                 </View>
-                <Text className={`text-md font-semibold ${textColor ? '' : 'text-gray-900 dark:text-gray-100'}`} style={textColor ? { color: textColor } : {}}>{label}</Text>
+                <Text className={`text-[17px] font-semibold ${textColor ? '' : 'text-gray-900 dark:text-gray-100'}`} style={textColor ? { color: textColor } : {}}>{label}</Text>
             </View>
             <View className="flex-row items-center">
                 {value && <Text className="text-gray-500 dark:text-gray-400 text-sm mr-2">{value}</Text>}
@@ -250,7 +250,7 @@ export default function SettingsScreen() {
                                 <View className="w-9 h-9 rounded-xl items-center justify-center mr-4 bg-gray-100 dark:bg-gray-800">
                                     <Ionicons name="map-outline" size={20} color={colorScheme === 'dark' ? '#f3f4f6' : '#374151'} />
                                 </View>
-                                <Text className="text-md font-semibold text-gray-900 dark:text-white">Loại bản đồ</Text>
+                                <Text className="text-[17px] font-semibold text-gray-900 dark:text-white">Loại bản đồ</Text>
                             </View>
                             {renderMapTypePicker()}
                         </View>

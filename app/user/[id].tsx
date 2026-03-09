@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     scrollContent: { paddingBottom: 40 },
-    heroContainer: { width, height: height * 0.7 },
+    heroContainer: { width, height: height * 0.9 },
     heroImage: { width: '100%', height: '100%' },
     topIconsRow: {
         position: 'absolute',
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        height: 300,
+        height: 500,
         justifyContent: 'flex-end',
         paddingBottom: 40,
         paddingHorizontal: 30,
