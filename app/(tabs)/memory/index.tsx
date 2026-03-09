@@ -1,5 +1,6 @@
 import VoicePinTurntable from '@/components/home/VoicePinCard';
 import { theme } from '@/constants/Theme';
+import HistoryCalendar from '@/components/memory/HistoryCalendar';
 import { useMyPins } from '@/hooks/useMyPins';
 import { VoicePin } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -61,9 +62,10 @@ export function getPinImage(pin: VoicePin): string | undefined {
 }
 
 // ─── Filter chips ─────────────────────────────────────────
-type FilterType = 'mood' | 'time' | 'visibility' | 'location';
+type FilterType = 'mood' | 'time' | 'visibility' | 'location' | 'diary';
 const FILTERS: { key: FilterType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'mood', label: 'Tâm trạng', icon: 'happy-outline' },
+  { key: 'diary', label: 'Nhật ký', icon: 'journal-outline' },
   { key: 'time', label: 'Thời gian', icon: 'time-outline' },
   { key: 'visibility', label: 'Quyền riêng tư', icon: 'lock-closed-outline' },
   { key: 'location', label: 'Địa điểm', icon: 'location-outline' },
@@ -665,7 +667,7 @@ export default function MemoryScreen() {
         )}
 
         {/* Sections */}
-        {!loading && sections.map(s => (
+        {!loading && activeFilter !== 'diary' && sections.map(s => (
           <Section
             key={s.key}
             title={s.title}
@@ -682,6 +684,15 @@ export default function MemoryScreen() {
             }}
           />
         ))}
+
+        {/* Diary (Calendar) View */}
+        {!loading && activeFilter === 'diary' && (
+          <HistoryCalendar
+            pins={filtered}
+            currentTheme={currentTheme}
+            onSelectPin={(p) => setSelectedPin(p)}
+          />
+        )}
 
         <View style={{ height: 60 }} />
       </ScrollView>

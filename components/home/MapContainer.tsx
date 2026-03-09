@@ -11,7 +11,6 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import RadarOverlay from "../discovery/RadarOverlay";
 import SpawnedVoicePin from "../discovery/SpawnedVoicePin";
-import QuickAction from "../QuickAction";
 
 const DEFAULT_DELTA = 0.01;
 const FALLBACK_LAT = 10.7769;

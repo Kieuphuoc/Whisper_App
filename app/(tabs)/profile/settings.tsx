@@ -1,4 +1,4 @@
-import { authApis, BASE_URL, endpoints } from '@/configs/Apis';
+import { authApis, endpoints } from '@/configs/Apis';
 import { MyDispatchContext, MyUserContext } from '@/configs/Context';
 import { User } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,16 +17,9 @@ import {
     TouchableOpacity,
     View,
     useColorScheme,
+    Switch,
 } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import Animated, {
-    useAnimatedStyle,
-    withSpring,
-    withTiming,
-    useSharedValue,
-    interpolateColor,
-    withDelay
-} from 'react-native-reanimated';
 
 interface SettingItemProps {
     icon: keyof typeof Ionicons.glyphMap;
@@ -63,7 +56,7 @@ const SettingItem = ({
                         color={textColor === '#ef4444' ? '#ef4444' : (colorScheme === 'dark' ? '#f3f4f6' : '#374151')}
                     />
                 </View>
-                <Text className={`text-[17px] font-semibold ${textColor ? '' : 'text-gray-900 dark:text-gray-100'}`} style={textColor ? { color: textColor } : {}}>{label}</Text>
+                <Text className={`text-md font-semibold ${textColor ? '' : 'text-gray-900 dark:text-gray-100'}`} style={textColor ? { color: textColor } : {}}>{label}</Text>
             </View>
             <View className="flex-row items-center">
                 {value && <Text className="text-gray-500 dark:text-gray-400 text-sm mr-2">{value}</Text>}
@@ -82,6 +75,7 @@ export default function SettingsScreen() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [mapType, setMapType] = useState('standard');
+    const [notifications, setNotifications] = useState(true);
 
     useEffect(() => {
         const loadSettings = async () => {
@@ -122,81 +116,11 @@ export default function SettingsScreen() {
     const getAvatarUri = (avatar?: string) => {
         if (!avatar) return 'https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg';
         if (avatar.startsWith('http')) return avatar;
-        return `${BASE_URL}${avatar.startsWith('/') ? '' : '/'}${avatar}`;
+        return `http://10.5.1.149:5000${avatar.startsWith('/') ? '' : '/'}${avatar}`;
     };
 
     const avatarUri = getAvatarUri(user?.avatar);
     const displayName = user?.displayName || user?.username || 'Người dùng';
-
-    const renderThemeToggle = () => {
-        const switchWidth = 56;
-        const thumbSize = 24;
-        const translateX = useSharedValue(colorScheme === 'dark' ? switchWidth - thumbSize - 8 : 0);
-        const thumbScaleX = useSharedValue(1);
-
-        useEffect(() => {
-            translateX.value = withSpring(colorScheme === 'dark' ? switchWidth - thumbSize - 8 : 0, {
-                damping: 15,
-                stiffness: 150
-            });
-
-            // Liquid "Drop" effect: stretch thumb when moving
-            thumbScaleX.value = withTiming(1.3, { duration: 100 }, () => {
-                thumbScaleX.value = withSpring(1);
-            });
-        }, [colorScheme]);
-
-        const animatedThumbStyle = useAnimatedStyle(() => ({
-            transform: [
-                { translateX: translateX.value },
-                { scaleX: thumbScaleX.value }
-            ],
-            backgroundColor: '#ffffff'
-        }));
-
-        return (
-            <View className="flex-row items-center justify-between py-1">
-                <View className="flex-row items-center">
-                    <View className="w-9 h-9 rounded-xl items-center justify-center mr-4 bg-gray-100 dark:bg-gray-800">
-                        <Ionicons
-                            name={colorScheme === 'dark' ? "moon" : "sunny"}
-                            size={20}
-                            color={colorScheme === 'dark' ? '#f3f4f6' : '#374151'}
-                        />
-                    </View>
-                    <Text className="text-[17px] font-semibold text-gray-900 dark:text-white">Giao diện tối</Text>
-                </View>
-                <TouchableOpacity
-                    onPress={() => setColorScheme(colorScheme === 'dark' ? 'light' : 'dark')}
-                    activeOpacity={1}
-                    style={{
-                        width: switchWidth,
-                        height: 32,
-                        borderRadius: 16,
-                        padding: 4,
-                        backgroundColor: colorScheme === 'dark' ? '#3cd3bf' : '#e5e7eb',
-                        justifyContent: 'center'
-                    }}
-                >
-                    <Animated.View
-                        style={[
-                            {
-                                width: thumbSize,
-                                height: thumbSize,
-                                borderRadius: thumbSize / 2,
-                                shadowColor: "#000",
-                                shadowOffset: { width: 0, height: 2 },
-                                shadowOpacity: 0.1,
-                                shadowRadius: 2,
-                                elevation: 2,
-                            },
-                            animatedThumbStyle
-                        ]}
-                    />
-                </TouchableOpacity>
-            </View>
-        );
-    };
 
     const renderMapTypePicker = () => {
         const FALLBACK_LAT = 10.7769;
@@ -292,7 +216,14 @@ export default function SettingsScreen() {
                     <Text className="font-bold uppercase tracking-widest text-[12px] mb-3 ml-1 text-gray-500">TÀI KHOẢN</Text>
                     <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden">
                         <SettingItem icon="person-outline" label="Thông tin cá nhân" onPress={() => router.push('/(tabs)/profile/edit-profile')} />
-                        <SettingItem icon="notifications-outline" label="Thông báo" />
+                        <SettingItem icon="notifications-outline" label="Push Notifications" showArrow={false}>
+                            <Switch
+                                value={notifications}
+                                onValueChange={setNotifications}
+                                trackColor={{ false: '#e2e8f0', true: '#1e293b' }}
+                                thumbColor="#fff"
+                            />
+                        </SettingItem>
                         <SettingItem icon="lock-closed-outline" label="Quyền riêng tư" />
                     </View>
                 </View>
@@ -301,16 +232,25 @@ export default function SettingsScreen() {
                 <View className="mb-6">
                     <Text className="font-bold uppercase tracking-widest text-[12px] mb-3 ml-1 text-gray-500">ỨNG DỤNG</Text>
                     <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden">
-                        <View className="px-1 border-b border-gray-100 dark:border-gray-800 py-4">
-                            {renderThemeToggle()}
-                        </View>
+                        <SettingItem
+                            icon={colorScheme === 'dark' ? 'moon' : 'sunny'}
+                            label="Giao diện tối"
+                            showArrow={false}
+                        >
+                            <Switch
+                                value={colorScheme === 'dark'}
+                                onValueChange={(val) => setColorScheme(val ? 'dark' : 'light')}
+                                trackColor={{ false: '#e2e8f0', true: '#1e293b' }}
+                                thumbColor="#fff"
+                            />
+                        </SettingItem>
 
                         <View className="px-1 border-b border-gray-100 dark:border-gray-800 py-4">
                             <View className="flex-row items-center mb-4">
                                 <View className="w-9 h-9 rounded-xl items-center justify-center mr-4 bg-gray-100 dark:bg-gray-800">
                                     <Ionicons name="map-outline" size={20} color={colorScheme === 'dark' ? '#f3f4f6' : '#374151'} />
                                 </View>
-                                <Text className="text-[17px] font-semibold text-gray-900 dark:text-white">Loại bản đồ</Text>
+                                <Text className="text-md font-semibold text-gray-900 dark:text-white">Loại bản đồ</Text>
                             </View>
                             {renderMapTypePicker()}
                         </View>
@@ -318,18 +258,6 @@ export default function SettingsScreen() {
                         <SettingItem icon="language-outline" label="Ngôn ngữ" value="Tiếng Việt" />
                         <SettingItem icon="help-circle-outline" label="Hỗ trợ & Phản hồi" />
                         <SettingItem icon="information-circle-outline" label="Về chúng tôi" />
-                    </View>
-                </View>
-
-                {/* Activity Section */}
-                <View className="mb-6">
-                    <Text className="font-bold uppercase tracking-widest text-[12px] mb-3 ml-1 text-gray-500">HOẠT ĐỘNG</Text>
-                    <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden shadow-sm">
-                        <SettingItem 
-                            icon="time-outline" 
-                            label="Lịch sử xem" 
-                            onPress={() => router.push('/(tabs)/profile/history')} 
-                        />
                     </View>
                 </View>
 
