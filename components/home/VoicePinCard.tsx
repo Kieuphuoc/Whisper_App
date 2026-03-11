@@ -19,6 +19,7 @@ import { Colors } from "@/constants/Colors";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { authApis, endpoints } from "@/configs/Apis";
 import { BlurView } from "expo-blur";
+import { View as MotiView } from "moti";
 
 const { width } = Dimensions.get("window");
 
@@ -93,6 +94,76 @@ function FloatingEmoji({ emoji, onComplete }: { emoji: string; onComplete: () =>
   );
 }
 
+function WavyRipple({ isPlaying, color }: { isPlaying: boolean; color: string }) {
+  if (!isPlaying) return null;
+
+  // Use a fallback color if color is invalid
+  const rippleColor = color && color.startsWith('#') ? color : '#fb7185';
+
+  return (
+    <View style={styles.rippleContainer} pointerEvents="none">
+      {[0, 1, 2].map((i) => (
+        <MotiView
+          key={i}
+          from={{ scale: 1, opacity: 0.8, rotate: "0deg", skewX: "0deg" }}
+          animate={{
+            scale: 2.5,
+            opacity: 0,
+            rotate: i % 2 === 0 ? "20deg" : "-20deg",
+            skewX: i % 2 === 0 ? "10deg" : "-10deg",
+          }}
+          transition={{
+            type: "timing",
+            duration: 3500,
+            loop: true,
+            delay: i * 1000,
+            repeatReverse: false,
+            rotate: {
+              type: "timing",
+              duration: 1000,
+              loop: true,
+              repeatReverse: true,
+            },
+            skewX: {
+              type: "timing",
+              duration: 1200,
+              loop: true,
+              repeatReverse: true,
+            }
+          }}
+          style={[styles.rippleRing, { borderColor: rippleColor }]}
+        />
+      ))}
+      {/* Extra wavy detail */}
+      {[0, 1].map((i) => (
+        <MotiView
+          key={`detail-${i}`}
+          from={{ scale: 1.2, opacity: 0.5, rotate: "0deg" }}
+          animate={{
+            scale: 2.2,
+            opacity: 0,
+            rotate: i % 2 === 0 ? "-30deg" : "30deg",
+          }}
+          transition={{
+            type: "timing",
+            duration: 4000,
+            loop: true,
+            delay: i * 1500 + 500,
+            repeatReverse: false,
+            rotate: {
+              type: "timing",
+              duration: 2000,
+              loop: true,
+              repeatReverse: true,
+            }
+          }}
+          style={[styles.rippleRing, { borderColor: rippleColor, borderWidth: 1, borderStyle: 'dotted' }]}
+        />
+      ))}
+    </View>
+  );
+}
+
 export default function VoicePinTurntable({ pin, onClose }: Props) {
   const colorScheme = useColorScheme() || 'light';
   const currentTheme = theme[colorScheme];
@@ -108,7 +179,8 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
 
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const armAnim = useRef(new Animated.Value(0)).current;
-  const loopRef = useRef<Animated.CompositeAnimation | null>(null);
+  const rotationProgress = useRef(0);
+  const isPlayingRef = useRef(false);
 
   const toggleReactions = () => {
     if (showReactions) {
@@ -125,19 +197,32 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
   };
 
   useEffect(() => {
+    isPlayingRef.current = isPlaying;
+    
+    const startRotation = (startValue: number) => {
+      if (!isPlayingRef.current) return;
+      
+      const duration = 3000 * (1 - startValue);
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: duration,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished && isPlayingRef.current) {
+          rotateAnim.setValue(0);
+          startRotation(0);
+        }
+      });
+    };
+
     if (isPlaying) {
       Animated.timing(armAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
-      loopRef.current = Animated.loop(
-        Animated.timing(rotateAnim, {
-          toValue: 1,
-          duration: 3000,
-          easing: Easing.linear,
-          useNativeDriver: true,
-        })
-      );
-      loopRef.current.start();
+      startRotation(rotationProgress.current);
     } else {
-      loopRef.current?.stop();
+      rotateAnim.stopAnimation((v) => {
+        rotationProgress.current = v;
+      });
       Animated.timing(armAnim, { toValue: 0, duration: 500, useNativeDriver: true }).start();
     }
   }, [isPlaying]);
@@ -191,7 +276,7 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
   };
 
   const spin = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
-  const armRotate = armAnim.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "25deg"] });
+  const armRotate = armAnim.interpolate({ inputRange: [0, 1], outputRange: ["-10deg", "5deg"] });
 
   const emotionColor = EMOTION_COLOR[pin.emotionLabel ?? ""] ?? Colors.primary;
   const authorLabel = pin.isAnonymous
@@ -226,9 +311,9 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
         </View>
 
         {/* ── VINYL RECORD ─────────────────────────────── */}
-        <View style={styles.playerContainer}>
-          <TouchableOpacity activeOpacity={0.9} onPress={() => setIsPlaying(!isPlaying)}>
-            {/* <View style={[styles.vinylShadow, { backgroundColor: '#000', borderColor: currentTheme.colors.border, shadowColor: Colors.primary }]}> */}
+        <View style={[styles.playerContainer, { backgroundColor: currentTheme.colors.surfaceAlt, borderRadius: currentTheme.borderRadius.xl, overflow: 'visible' }]}>
+          <WavyRipple isPlaying={isPlaying} color={emotionColor} />
+          <TouchableOpacity activeOpacity={0.9} onPress={() => setIsPlaying(!isPlaying)} style={{ zIndex: 1 }}>
             <Animated.View style={[styles.vinylPlate, { transform: [{ rotate: spin }], borderColor: currentTheme.colors.border }]}>
               <Image
                 source={{ uri: pin.images?.[0]?.imageUrl ?? pin.imageUrl ?? 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&q=80' }}
@@ -245,7 +330,10 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
           </TouchableOpacity>
 
           {/* Tonearm */}
-          <Animated.View style={[styles.tonearmContainer, { transform: [{ rotate: armRotate }] }]}>
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.tonearmContainer, { transform: [{ rotate: armRotate }] }]}
+          >
             <Image
               source={require("../../assets/images/3d_tonearm.png")}
               style={styles.tonearmImage}
@@ -445,8 +533,8 @@ const styles = StyleSheet.create({
     elevation: 24,
   },
   vinylPlate: {
-    width: 270,
-    height: 270,
+    width: 260,
+    height: 260,
     borderRadius: 135,
     overflow: "hidden",
     borderWidth: 3,
@@ -497,13 +585,13 @@ const styles = StyleSheet.create({
   },
   tonearmContainer: {
     position: "absolute",
-    top: -7,
+    top: -20,
     right: 7,
-    height: 255,
-    width: 120,
+    height: 305,
+    width: 170,
     alignItems: "center",
     zIndex: 5,
-    transformOrigin: "top center",
+    transformOrigin: ["50%", "0%", 0],
   },
   tonearmImage: {
     width: "100%",
@@ -652,5 +740,19 @@ const styles = StyleSheet.create({
   floatingEmoji: {
     position: "absolute",
     fontSize: 28,
+  },
+  rippleContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 0,
+    overflow: "visible", // Ensure ripples can go outside
+  },
+  rippleRing: {
+    position: "absolute",
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    borderWidth: 3,
   },
 });
