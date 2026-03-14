@@ -1,7 +1,7 @@
 import { VoicePin, VoiceType } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, forwardRef } from "react";
 import { StyleSheet, Text, TouchableOpacity, View, useColorScheme } from "react-native";
 import MapView, { Callout, Marker, Region, MapType } from "react-native-maps";
 import MapViewClustering from "react-native-map-clustering";
@@ -11,6 +11,8 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import RadarOverlay from "../discovery/RadarOverlay";
 import SpawnedVoicePin from "../discovery/SpawnedVoicePin";
+import { darkMapStyle } from "@/constants/MapStyles";
+
 
 const DEFAULT_DELTA = 0.01;
 const FALLBACK_LAT = 10.7769;
@@ -22,10 +24,31 @@ type Props = {
   isScanning?: boolean;
   discoveredPin?: VoicePin | null;
   onPressDiscoveredPin?: () => void;
+  externalSelectedPin?: VoicePin | null;
+  onSelectPin?: (pin: VoicePin | null) => void;
+  autoPlayPin?: boolean;
 };
 
-export default function MapSection({ location, pins, isScanning = false, discoveredPin, onPressDiscoveredPin }: Props) {
-  const [selectedPin, setSelectedPin] = useState<VoicePin | null>(null);
+const MapSection = forwardRef<MapView, Props>(({ 
+    location, 
+    pins, 
+    isScanning = false, 
+    discoveredPin, 
+    onPressDiscoveredPin,
+    externalSelectedPin,
+    onSelectPin,
+    autoPlayPin = false
+}, ref) => {
+  const [internalSelectedPin, setInternalSelectedPin] = useState<VoicePin | null>(null);
+  
+  const selectedPin = externalSelectedPin !== undefined ? externalSelectedPin : internalSelectedPin;
+  const setSelectedPin = (pin: VoicePin | null) => {
+    if (onSelectPin) {
+      onSelectPin(pin);
+    } else {
+      setInternalSelectedPin(pin);
+    }
+  };
   const [mapType, setMapType] = useState<MapType>('standard');
   const colorScheme = useColorScheme();
 
@@ -66,11 +89,13 @@ export default function MapSection({ location, pins, isScanning = false, discove
     <View style={styles.map}>
       {/* MapViewClustering is a drop-in replacement for MapView that adds cluster support */}
       <MapViewClustering
+        ref={ref}
         style={styles.map}
         initialRegion={initialRegion}
         showsUserLocation
         showsMyLocationButton={false}
         mapType={mapType}
+        customMapStyle={mapType === 'standard' ? darkMapStyle : undefined}
         // Clustering config
         radius={60}           // pixel radius of each cluster
         minPoints={3}         // min pins before forming a cluster
@@ -172,11 +197,17 @@ export default function MapSection({ location, pins, isScanning = false, discove
 
       {/* Full-screen overlay when pin selected */}
       {selectedPin && (
-        <VoicePinCard pin={selectedPin} onClose={() => setSelectedPin(null)} />
+        <VoicePinCard 
+          pin={selectedPin} 
+          onClose={() => setSelectedPin(null)} 
+          autoPlay={autoPlayPin && selectedPin.id === discoveredPin?.id}
+        />
       )}
     </View>
   );
-}
+});
+
+export default MapSection;
 
 const styles = StyleSheet.create({
   map: { flex: 1 },

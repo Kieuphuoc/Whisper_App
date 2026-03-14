@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, useColorScheme } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, useColorScheme, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
-import Animated, { FadeInUp, FadeOutDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, FadeInUp, FadeOutDown } from 'react-native-reanimated';
 import { VoicePin } from '@/types';
 import { Colors } from '@/constants/Colors';
 import { useRouter } from 'expo-router';
@@ -13,21 +13,31 @@ type Props = {
     pin: VoicePin;
     onClose: () => void;
     onRandomAgain: () => void;
+    onPlayVoice?: (pin: VoicePin) => void;
 };
 
-export default function VoicePinMiniCard({ pin, onClose, onRandomAgain }: Props) {
+export default function VoicePinMiniCard({ pin, onClose, onRandomAgain, onPlayVoice }: Props) {
     const colorScheme = useColorScheme() || 'light';
     const currentTheme = theme[colorScheme];
     const router = useRouter();
     
     const player = useAudioPlayer(pin.audioUrl);
-    const { playing } = useAudioPlayerStatus(player);
+    const { playing, isBuffering, isLoaded } = useAudioPlayerStatus(player);
+
+    useEffect(() => {
+        // Auto-play when loaded if we want, but user asked specifically for play button
+        player.loop = false;
+    }, [player]);
 
     const togglePlayback = () => {
-        if (playing) {
-            player.pause();
+        if (onPlayVoice) {
+            onPlayVoice(pin);
         } else {
-            player.play();
+            if (playing) {
+                player.pause();
+            } else {
+                player.play();
+            }
         }
     };
 
@@ -44,11 +54,21 @@ export default function VoicePinMiniCard({ pin, onClose, onRandomAgain }: Props)
 
     return (
         <Animated.View
-            entering={FadeInUp}
-            exiting={FadeOutDown}
+            entering={FadeIn}
+            exiting={FadeOut}
             style={styles.container}
         >
-            <BlurView intensity={80} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={[styles.blurView, { borderRadius: currentTheme.radius.xl + 4 }]}>
+            <TouchableOpacity 
+                style={StyleSheet.absoluteFill} 
+                activeOpacity={1} 
+                onPress={onClose} 
+            />
+            <Animated.View
+                entering={FadeInUp.springify().damping(15)}
+                exiting={FadeOutDown}
+                style={{ width: '100%' }}
+            >
+                <BlurView intensity={80} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={[styles.blurView, { borderRadius: currentTheme.radius.xl + 4 }]}>
                 <View style={[styles.content, { padding: currentTheme.spacing.lg }]}>
                     {/* Header */}
                     <View style={styles.header}>
@@ -100,25 +120,32 @@ export default function VoicePinMiniCard({ pin, onClose, onRandomAgain }: Props)
 
                         <TouchableOpacity
                             onPress={togglePlayback}
+                            disabled={!isLoaded && !isBuffering}
                             style={[
                                 styles.playBtn,
                                 {
                                     backgroundColor: currentTheme.colors.primary,
                                     borderRadius: currentTheme.radius.full,
-                                    shadowColor: currentTheme.colors.primary
+                                    shadowColor: currentTheme.colors.primary,
+                                    opacity: (isLoaded || isBuffering) ? 1 : 0.6
                                 }
                             ]}
                         >
-                            <Ionicons
-                                name={playing ? "pause" : "play"}
-                                size={28}
-                                color="white"
-                                style={{ marginLeft: playing ? 0 : 4 }}
-                            />
+                            {isBuffering ? (
+                                <ActivityIndicator size="small" color="white" />
+                            ) : (
+                                <Ionicons
+                                    name={playing ? "pause" : "play"}
+                                    size={28}
+                                    color="white"
+                                    style={{ marginLeft: playing ? 0 : 4 }}
+                                />
+                            )}
                         </TouchableOpacity>
                     </View>
                 </View>
             </BlurView>
+            </Animated.View>
         </Animated.View>
     );
 }
@@ -126,10 +153,14 @@ export default function VoicePinMiniCard({ pin, onClose, onRandomAgain }: Props)
 const styles = StyleSheet.create({
     container: {
         position: 'absolute',
-        bottom: 40,
-        left: 20,
-        right: 20,
-        zIndex: 60,
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        paddingHorizontal: 20,
+        zIndex: 2000,
     },
     blurView: {
         overflow: 'hidden',

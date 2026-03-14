@@ -20,6 +20,8 @@ import {
     Switch,
 } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import { darkMapStyle } from '@/constants/MapStyles';
+
 
 interface SettingItemProps {
     icon: keyof typeof Ionicons.glyphMap;
@@ -145,6 +147,7 @@ export default function SettingsScreen() {
                             longitudeDelta: 0.05,
                         }}
                         mapType={mapType as any}
+                        customMapStyle={mapType === 'standard' ? darkMapStyle : undefined}
                         scrollEnabled={false}
                         zoomEnabled={false}
                         pitchEnabled={false}
@@ -165,7 +168,7 @@ export default function SettingsScreen() {
                     {/* Map Type Controls */}
                     <View className="absolute bottom-4 left-4 right-4 bg-white/95 dark:bg-gray-900/95 p-1.5 rounded-2xl flex-row shadow-lg">
                         {['standard', 'terrain', 'satellite'].map((type) => {
-                            const labels: Record<string, string> = { standard: 'Đường', terrain: 'Tự động', satellite: 'Bản đồ vệ tinh' };
+                            const labels: Record<string, string> = { standard: 'Tối', terrain: 'Sáng', satellite: 'Bản đồ vệ tinh' };
                             const isActive = mapType === type;
                             return (
                                 <TouchableOpacity

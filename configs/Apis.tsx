@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 
-export const BASE_URL = "http://172.20.10.4:5000";
+export const BASE_URL = "http://192.168.68.202:5000";
 
 export const endpoints = {
   // Auth
@@ -25,6 +25,7 @@ export const endpoints = {
   voicePublicByUser: (id: string | number) => `/voice/user/${id}/public/`,
   voiceFriends: "/voice/friends/",
   voiceRandom: "/voice/random",
+  voiceDiscover: (id: string | number) => `/voice/${id}/discover`,
   voiceReactions: (id: string | number): string => `/voice/${id}/reactions/`,
   voiceComments: (id: string | number): string => `/voice/${id}/comments/`,
   commentReplies: (commentId: string | number): string => `/comments/${commentId}/replies/`,

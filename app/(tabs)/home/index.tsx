@@ -1,7 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { useContext, useState, useEffect } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { StyleSheet, TouchableOpacity, View, Alert, useColorScheme } from "react-native";
+import MapView from "react-native-maps";
 
 import MapContainer from "@/components/home/MapContainer";
 import VoiceButton from "@/components/home/VoiceButton";
@@ -16,6 +17,7 @@ import { useVoicePins } from "@/hooks/useVoicePins";
 import { Ionicons } from "@expo/vector-icons";
 import { useDiscovery } from "@/hooks/useDiscovery";
 import VoicePinMiniCard from "@/components/discovery/VoicePinMiniCard";
+import { VoicePin } from "@/types";
 import { theme } from "@/constants/Theme";
 import StatsBento from "@/components/home/StatsBento";
 import FilterToggle from "@/components/home/Filter";
@@ -41,6 +43,9 @@ export default function HomeScreen() {
   // Discovery
   const { isScanning, discoveredPin, error, triggerScan, resetDiscovery } = useDiscovery();
   const [isMiniCardOpen, setIsMiniCardOpen] = useState(false);
+  const [externalSelectedPin, setExternalSelectedPin] = useState<VoicePin | null>(null);
+  const [autoPlayPin, setAutoPlayPin] = useState(false);
+  const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
     if (error) {
@@ -88,6 +93,19 @@ export default function HomeScreen() {
     }
   };
 
+  const recenterMap = () => {
+    if (location && mapRef.current) {
+      mapRef.current.animateToRegion({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      }, 1000);
+    } else if (!location) {
+      Alert.alert("Vị trí", "Đang lấy vị trí của bạn...");
+    }
+  };
+
   return (
     <View style={styles.container}>
       <MapContainer
@@ -96,19 +114,33 @@ export default function HomeScreen() {
         isScanning={isScanning}
         discoveredPin={discoveredPin}
         onPressDiscoveredPin={() => setIsMiniCardOpen(true)}
+        externalSelectedPin={externalSelectedPin}
+        onSelectPin={(pin) => {
+          setExternalSelectedPin(pin);
+          if (!pin) setAutoPlayPin(false);
+        }}
+        autoPlayPin={autoPlayPin}
+        ref={mapRef}
       />
 
       <VoiceButton
         isRecording={isRecording}
         onPress={isRecording ? stop : record}
       />
+      <TouchableOpacity 
+        style={[styles.recenterButton, { backgroundColor: currentTheme.colors.background }]}
+        onPress={recenterMap}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="navigate" size={24} color={currentTheme.colors.primary} />
+      </TouchableOpacity>
 
-      <TouchableOpacity
+      {/* <TouchableOpacity
         style={[styles.logoutButton, { backgroundColor: currentTheme.colors.background }]}
         onPress={logout}
       >
         <Ionicons name="log-out-outline" size={22} color="#ef4444" />
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
 
       {/* Login button — chỉ hiện khi chưa đăng nhập */}
@@ -122,12 +154,12 @@ export default function HomeScreen() {
       )}
 
       {/* Notification button */}
-      <TouchableOpacity
+      {/* <TouchableOpacity
         style={[styles.notifButton, { backgroundColor: currentTheme.colors.background }]}
         onPress={() => router.push("/(tabs)/notification")}
       >
         <Ionicons name="notifications-outline" size={22} color="#f59e0b" />
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
       <FilterToggle value={visibility} onChange={setVisibility} />
       <StatsBento voicePins={pins} />
@@ -149,6 +181,11 @@ export default function HomeScreen() {
         <VoicePinMiniCard
           pin={discoveredPin}
           onClose={() => setIsMiniCardOpen(false)}
+          onPlayVoice={(pin) => {
+            setIsMiniCardOpen(false);
+            setExternalSelectedPin(pin);
+            setAutoPlayPin(true);
+          }}
           onRandomAgain={() => {
             if (location) {
               setIsMiniCardOpen(false);
@@ -219,5 +256,21 @@ const styles = StyleSheet.create({
     borderRadius: theme.light.radius.full,
     ...theme.light.shadows.md,
     zIndex: 1000,
+  },
+  recenterButton: {
+    position: "absolute",
+    bottom: 122, // Vertically centered with VoiceButton (110 + 75/2 - 50/2)
+    left: "50%",
+    marginLeft: 60, // Positioned to the right of VoiceButton
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: "center",
+    alignItems: "center",
+    ...theme.light.shadows.lg,
+    elevation: 8,
+    zIndex: 2000,
+    borderWidth: 1.5,
+    borderColor: "rgba(0,0,0,0.05)",
   },
 });

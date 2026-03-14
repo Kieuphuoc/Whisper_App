@@ -19,7 +19,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
     const currentTheme = theme[colorScheme];
 
     return (
-        <View style={[styles.quickActionsBento, { 
+        <View style={[styles.quickActionsBento, {
             backgroundColor: currentTheme.colors.background + 'F2',
             borderColor: currentTheme.colors.primary + '1A',
         }]}>
@@ -41,12 +41,12 @@ const QuickActions: React.FC<QuickActionsProps> = ({
                 <Text style={[styles.quickActionText, { color: currentTheme.colors.textSecondary }]}>Bạn bè</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.quickActionButton} onPress={onTrending}>
-                <View style={styles.quickActionIcon}>
-                    <Ionicons name="trending-up" size={20} color="#8b5cf6" />
-                </View>
-                <Text style={[styles.quickActionText, { color: currentTheme.colors.textSecondary }]}>Xu hướng</Text>
-            </TouchableOpacity>
+{/* <TouchableOpacity style={styles.quickActionButton} onPress={onTrending}>
+    <View style={styles.quickActionIcon}>
+        <Ionicons name="trending-up" size={20} color="#8b5cf6" />
+    </View>
+    <Text style={[styles.quickActionText, { color: currentTheme.colors.textSecondary }]}>Xu hướng</Text>
+</TouchableOpacity> */}
         </View>
     );
 };
@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
         top: 140,
         left: 16,
         borderRadius: 20,
-        padding: 16,
+        padding: 6,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.15,

@@ -163,23 +163,13 @@ export default function ProfileScreen() {
                         onPress={handleAvatarPress}
                         style={styles.heroImageContainer}
                     >
-                        <MotiView
-                            from={{ scale: 1 }}
-                            animate={{ scale: 1.02 }}
-                            transition={{
-                                type: 'timing',
-                                duration: 2000,
-                                loop: true,
-                                repeatReverse: true,
-                            }}
-                            style={{ width: '100%', height: '100%' }}
-                        >
+                        <View style={{ width: '100%', height: '100%' }}>
                             <Image
                                 source={{ uri: avatarUri }}
                                 style={styles.heroImage}
                                 resizeMode="cover"
                             />
-                        </MotiView>
+                        </View>
 
                         {showSurprise && (
                             <Animated.View style={[styles.surpriseOverlay, surpriseStyle]}>
@@ -237,10 +227,10 @@ export default function ProfileScreen() {
                                 </View>
 
                                 <TouchableOpacity
-                                    style={[styles.followButton, { backgroundColor: currentTheme.colors.primary + '15', borderRadius: currentTheme.radius.full }]}
+                                    style={[styles.followButton, { backgroundColor: currentTheme.colors.primary, borderRadius: currentTheme.radius.full }]}
                                     onPress={() => router.push('/(tabs)/profile/edit-profile')}
                                 >
-                                    <Text style={[styles.followButtonText, { color: currentTheme.colors.primary, fontSize: 17 }]}>Chỉnh sửa</Text>
+                                    <Text style={[styles.followButtonText, { color: '#fff', fontSize: 17 }]}>Chỉnh sửa</Text>
                                 </TouchableOpacity>
                             </View>
                         </Animated.View>
@@ -314,7 +304,7 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     scrollContent: { paddingBottom: 40 },
-    heroContainer: { width: width, height: height * 0.7 },
+    heroContainer: { width: width, height: height * 0.9 },
     heroImageContainer: { width: '100%', height: '100%' },
     heroImage: { width: '100%', height: '100%' },
     topIconsRow: {
@@ -347,7 +337,7 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        height: 300,
+        height: 500,
         justifyContent: 'flex-end',
         paddingBottom: 40,
         paddingHorizontal: 30,
@@ -367,8 +357,11 @@ const styles = StyleSheet.create({
     statInlineItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     statInlineValue: { fontWeight: '700' },
     followButton: {
-        paddingHorizontal: 24,
-        paddingVertical: 14,
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        minWidth: 100,
     },
     followButtonText: { fontWeight: '800' },
     feedSection: { marginTop: 20 },

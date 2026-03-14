@@ -28,6 +28,7 @@ const { width } = Dimensions.get("window");
 type Props = {
   pin: VoicePin;
   onClose: () => void;
+  autoPlay?: boolean;
 };
 
 // ─── helpers ──────────────────────────────────────────────
@@ -128,7 +129,6 @@ function WavyRipple({ isPlaying, color }: { isPlaying: boolean; color: string })
           style={[styles.rippleRing, { borderColor: rippleColor }]}
         />
       ))}
-      {/* Extra wavy detail */}
       {[0, 1].map((i) => (
         <MotiView
           key={`detail-${i}`}
@@ -158,7 +158,7 @@ function WavyRipple({ isPlaying, color }: { isPlaying: boolean; color: string })
   );
 }
 
-export default function VoicePinTurntable({ pin, onClose }: Props) {
+export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: Props) {
   const colorScheme = useColorScheme() || 'light';
   const currentTheme = theme[colorScheme];
   const router = useRouter();
@@ -222,6 +222,33 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
       Animated.timing(armAnim, { toValue: 0, duration: 500, useNativeDriver: true }).start();
     }
   }, [playing]);
+
+  useEffect(() => {
+    if (autoPlay && player) {
+      player.play();
+    }
+  }, [autoPlay, player]);
+
+  useEffect(() => {
+    const triggerDiscovery = async () => {
+      if (pin.type === 'HIDDEN_AR' || pin.type?.toString() === 'HIDDEN_AR') {
+        try {
+          const token = await AsyncStorage.getItem("token");
+          if (token) {
+            const api = authApis(token);
+            await api.post(endpoints.voiceDiscover(pin.id));
+            console.log("Pin discovered internally via Turntable");
+          }
+        } catch (e) {
+          // It might already be discovered, which is fine
+          console.log("Internal discovery attempt:", e);
+        }
+      }
+    };
+    if (autoPlay) {
+      triggerDiscovery();
+    }
+  }, [autoPlay, pin.id, pin.type]);
 
   useEffect(() => {
     const fetchReaction = async () => {
@@ -300,7 +327,8 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
                   {pin.emotionLabel}
                 </Text>
               </View>
-            )}          </View>
+            )}
+          </View>
           <TouchableOpacity onPress={onClose} hitSlop={15} style={[styles.closeBtn, { backgroundColor: currentTheme.colors.surfaceAlt }]}>
             <Ionicons name="close" size={20} color={currentTheme.colors.text} />
           </TouchableOpacity>
@@ -308,7 +336,7 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
 
         {/* ── VINYL RECORD ─────────────────────────────── */}
         <View style={[styles.playerContainer, { backgroundColor: currentTheme.colors.surfaceAlt, borderRadius: currentTheme.borderRadius.xl, overflow: 'visible' }]}>
-          <WavyRipple isPlaying={playing} color={emotionColor} />
+          {/* <WavyRipple isPlaying={!!playing} color={emotionColor} /> */}
           <TouchableOpacity activeOpacity={0.9} onPress={() => playing ? player.pause() : player.play()} style={{ zIndex: 1 }}>
             <View style={{
               shadowColor: emotionColor,

@@ -11,7 +11,7 @@ const StatsBento: React.FC<StatsBentoProps> = ({ voicePins }) => {
     const currentTheme = theme[colorScheme];
 
     return (
-        <View style={[styles.statsBento, { 
+        <View style={[styles.statsBento, {
             backgroundColor: currentTheme.colors.background + 'F2',
             borderColor: currentTheme.colors.primary + '1A',
         }]}>
@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
         shadowRadius: 16,
         elevation: 8,
         borderWidth: 1,
-        flexDirection: "row",
+        flexDirection: "column",
         alignItems: "center",
         gap: 12,
     },
