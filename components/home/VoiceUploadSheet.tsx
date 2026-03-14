@@ -94,10 +94,16 @@ export default function VoiceUploadSheet({
                 formData.append('address', addressStr);
             }
 
+            if (photoUri) {
+                formData.append('images', {
+                    uri: photoUri,
+                    name: `photo_${Date.now()}.jpg`,
+                    type: 'image/jpeg',
+                } as any);
+            }
+
             const api = authApis(token);
-            await api.post(endpoints.createVoicePin, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-            });
+            await api.post(endpoints.createVoicePin, formData);
 
             onUploadSuccess();
             Alert.alert('Đã đăng!', 'Giọng nói của bạn đã lên bản đồ.');
@@ -128,7 +134,7 @@ export default function VoiceUploadSheet({
                     </View>
 
                     {/* Photo preview (if taken) */}
-                    {photoUri && (
+                    {!!photoUri && (
                         <View style={[styles.photoRow, { borderRadius: currentTheme.radius.md, backgroundColor: currentTheme.colors.surfaceAlt, borderColor: currentTheme.colors.success + '33' }]}>
                             <Image source={{ uri: photoUri }} style={[styles.photoThumb, { borderRadius: currentTheme.radius.sm }]} />
                             <View style={styles.photoInfo}>
@@ -235,7 +241,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     title: {
-        fontSize: 20,
+        fontSize: 24,
         fontWeight: '700',
     },
     closeBtn: {
@@ -263,7 +269,7 @@ const styles = StyleSheet.create({
     photoLabel: {
         color: '#10b981',
         fontWeight: '600',
-        fontSize: 13,
+        fontSize: 14,
     },
     audioReady: {
         flexDirection: 'row',
@@ -278,7 +284,7 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     label: {
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: '600',
         marginBottom: 10,
         textTransform: 'uppercase',
@@ -298,7 +304,7 @@ const styles = StyleSheet.create({
         gap: 5,
     },
     visBtnText: {
-        fontSize: 11,
+        fontSize: 14,
         fontWeight: '600',
         textAlign: 'center',
     },
@@ -316,7 +322,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     discardText: {
-        fontSize: 15,
+        fontSize: 17,
         fontWeight: '600',
     },
     uploadBtn: {
@@ -331,7 +337,7 @@ const styles = StyleSheet.create({
         opacity: 0.6,
     },
     uploadText: {
-        fontSize: 15,
+        fontSize: 17,
         fontWeight: '700',
         color: '#ffffff',
     },

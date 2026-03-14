@@ -8,7 +8,7 @@ export default function VoiceDetailScreen() {
 
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Voice Detail: {voicePinId}</Text>
+      <Text>Chi tiết giọng nói: {voicePinId}</Text>
     </View>
   );
 }

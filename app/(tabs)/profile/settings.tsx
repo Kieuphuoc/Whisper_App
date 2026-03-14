@@ -59,7 +59,7 @@ const SettingItem = ({
                 <Text className={`text-[17px] font-semibold ${textColor ? '' : 'text-gray-900 dark:text-gray-100'}`} style={textColor ? { color: textColor } : {}}>{label}</Text>
             </View>
             <View className="flex-row items-center">
-                {value && <Text className="text-gray-500 dark:text-gray-400 text-sm mr-2">{value}</Text>}
+                {!!value && <Text className="text-gray-500 dark:text-gray-400 text-sm mr-2">{value}</Text>}
                 {children}
                 {showArrow && !children && <Ionicons name="chevron-forward" size={20} color="#9ca3af" />}
             </View>

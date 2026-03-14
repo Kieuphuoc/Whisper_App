@@ -17,14 +17,14 @@ const StatsBento: React.FC<StatsBentoProps> = ({ voicePins }) => {
         }]}>
             <View style={styles.statItem}>
                 <Text style={styles.statNumber}>{voicePins.length}</Text>
-                <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>Voices</Text>
+                <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>Giọng nói</Text>
             </View>
 
             <View style={styles.statDivider} />
 
             <View style={styles.statItem}>
                 <Text style={styles.statNumber}>1.2km</Text>
-                <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>Radius</Text>
+                <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>Bán kính</Text>
             </View>
         </View>
     );
@@ -55,14 +55,14 @@ const styles = StyleSheet.create({
     },
 
     statNumber: {
-        fontSize: 18,
+        fontSize: 17,
         fontWeight: "700",
         color: "#8b5cf6",
         marginBottom: 2,
     },
 
     statLabel: {
-        fontSize: 10,
+        fontSize: 14,
         color: "#6b7280",
         fontWeight: "500",
     },

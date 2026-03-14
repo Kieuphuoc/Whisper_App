@@ -30,47 +30,67 @@ export function useRandomVoice(allVoices: VoicePin[]) {
   const playRandomVoice = useCallback(async () => {
     setLoading(true);
 
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      setLoading(false);
-      return;
-    }
-
-    const location = await Location.getCurrentPositionAsync({});
-    const { latitude, longitude } = location.coords;
-
-    if (!allVoices || !Array.isArray(allVoices)) {
-      setCurrentVoice(null);
-      setLoading(false);
-      return;
-    }
-
-    const validVoices = allVoices.filter((voice) => {
-      if (voice.visibility !== 'PUBLIC') return false;
-
-      const distance = getDistanceInMeters(
-        latitude,
-        longitude,
-        voice.latitude,
-        voice.longitude
-      );
-
-      if (voice.unlockRadius > 0) {
-        return distance <= voice.unlockRadius;
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLoading(false);
+        return;
       }
 
-      return distance <= 1000;
-    });
+      let location: Location.LocationObject | null = null;
+      try {
+        location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+      } catch (e) {
+        console.warn('Could not get current location, trying last known position', e);
+        location = await Location.getLastKnownPositionAsync({});
+      }
 
-    if (validVoices.length === 0) {
-      setCurrentVoice(null);
+      if (!location) {
+        console.error('Could not obtain any location');
+        setLoading(false);
+        return;
+      }
+
+      const { latitude, longitude } = location.coords;
+
+      if (!allVoices || !Array.isArray(allVoices)) {
+        setCurrentVoice(null);
+        setLoading(false);
+        return;
+      }
+
+      const validVoices = allVoices.filter((voice) => {
+        if (voice.visibility !== 'PUBLIC') return false;
+
+        const distance = getDistanceInMeters(
+          latitude,
+          longitude,
+          voice.latitude,
+          voice.longitude
+        );
+
+        if (voice.unlockRadius > 0) {
+          return distance <= voice.unlockRadius;
+        }
+
+        return distance <= 1000;
+      });
+
+      if (validVoices.length === 0) {
+        setCurrentVoice(null);
+        setLoading(false);
+        return;
+      }
+
+      const randomIndex = Math.floor(Math.random() * validVoices.length);
+      setCurrentVoice(validVoices[randomIndex]);
+    } catch (error) {
+      console.error('Error in playRandomVoice:', error);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const randomIndex = Math.floor(Math.random() * validVoices.length);
-    setCurrentVoice(validVoices[randomIndex]);
-    setLoading(false);
   }, [allVoices]);
 
   return {

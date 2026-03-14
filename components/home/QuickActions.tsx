@@ -31,21 +31,21 @@ const QuickActions: React.FC<QuickActionsProps> = ({
                         <Ionicons name="compass" size={20} color="#8b5cf6" />
                     )}
                 </View>
-                <Text style={[styles.quickActionText, { color: currentTheme.colors.textSecondary }]}>{isScanning ? "Scanning..." : "Explore"}</Text>
+                <Text style={[styles.quickActionText, { color: currentTheme.colors.textSecondary }]}>{isScanning ? "Đang quét..." : "Khám phá"}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.quickActionButton} onPress={onFriends}>
                 <View style={styles.quickActionIcon}>
                     <Ionicons name="people" size={20} color="#8b5cf6" />
                 </View>
-                <Text style={[styles.quickActionText, { color: currentTheme.colors.textSecondary }]}>Friends</Text>
+                <Text style={[styles.quickActionText, { color: currentTheme.colors.textSecondary }]}>Bạn bè</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.quickActionButton} onPress={onTrending}>
                 <View style={styles.quickActionIcon}>
                     <Ionicons name="trending-up" size={20} color="#8b5cf6" />
                 </View>
-                <Text style={[styles.quickActionText, { color: currentTheme.colors.textSecondary }]}>Trending</Text>
+                <Text style={[styles.quickActionText, { color: currentTheme.colors.textSecondary }]}>Xu hướng</Text>
             </TouchableOpacity>
         </View>
     );
@@ -86,8 +86,8 @@ const styles = StyleSheet.create({
     },
 
     quickActionText: {
-        fontSize: 10,
+        fontSize: 14,
         color: "#6b7280",
-        fontWeight: "500",
+        fontWeight: "600",
     },
 });

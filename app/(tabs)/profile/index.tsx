@@ -27,6 +27,7 @@ import Animated, {
     withRepeat,
     withSequence,
     withTiming,
+    withDelay,
 } from 'react-native-reanimated';
 import { theme } from '@/constants/Theme';
 import { MemoryCard } from '../memory/index';
@@ -211,7 +212,7 @@ export default function ProfileScreen() {
               style={styles.infoContent}
             >
                             <View style={styles.nameRow}>
-                                <Text style={[styles.nameText, { color: currentTheme.colors.text, fontSize: currentTheme.typography.fontSizes.h1 }]} numberOfLines={1}>
+                                <Text style={[styles.nameText, { color: currentTheme.colors.text, fontSize: 28 }]} numberOfLines={1}>
                                     {displayName}
                                 </Text>
                                 <View style={[styles.verifiedBadge, { backgroundColor: '#10b981', borderRadius: currentTheme.radius.full }]}>
@@ -219,7 +220,7 @@ export default function ProfileScreen() {
                                 </View>
                             </View>
 
-              <Text style={[styles.bioText, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.sm }]}>
+              <Text style={[styles.bioText, { color: currentTheme.colors.icon, fontSize: 14 }]}>
                 {bio}
               </Text>
 
@@ -227,11 +228,11 @@ export default function ProfileScreen() {
                                 <View style={[styles.statsInline, { gap: currentTheme.spacing.lg }]}>
                                     <View style={[styles.statInlineItem, { gap: currentTheme.spacing.sm }]}>
                                         <Ionicons name="person-outline" size={20} color={currentTheme.colors.icon} />
-                                        <Text style={[styles.statInlineValue, { color: currentTheme.colors.text, fontSize: 18 }]}>{stats?.friendCount || 0}</Text>
+                                        <Text style={[styles.statInlineValue, { color: currentTheme.colors.text, fontSize: 20 }]}>{stats?.friendCount || 0}</Text>
                                     </View>
                                     <View style={[styles.statInlineItem, { gap: currentTheme.spacing.sm }]}>
                                         <Ionicons name="mic-outline" size={20} color={currentTheme.colors.icon} />
-                                        <Text style={[styles.statInlineValue, { color: currentTheme.colors.text, fontSize: 18 }]}>{stats?.voicePinCount || 0}</Text>
+                                        <Text style={[styles.statInlineValue, { color: currentTheme.colors.text, fontSize: 20 }]}>{stats?.voicePinCount || 0}</Text>
                                     </View>
                                 </View>
 
@@ -239,7 +240,7 @@ export default function ProfileScreen() {
                                     style={[styles.followButton, { backgroundColor: currentTheme.colors.primary + '15', borderRadius: currentTheme.radius.full }]}
                                     onPress={() => router.push('/(tabs)/profile/edit-profile')}
                                 >
-                                    <Text style={[styles.followButtonText, { color: currentTheme.colors.primary, fontSize: 13 }]}>Chỉnh sửa</Text>
+                                    <Text style={[styles.followButtonText, { color: currentTheme.colors.primary, fontSize: 17 }]}>Chỉnh sửa</Text>
                                 </TouchableOpacity>
                             </View>
                         </Animated.View>
@@ -249,7 +250,7 @@ export default function ProfileScreen() {
         {/* Public Voice Pins Feed */}
         <View style={styles.feedSection}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: currentTheme.colors.text, fontSize: currentTheme.typography.fontSizes.lg }]}>Ký ức công khai</Text>
+            <Text style={[styles.sectionTitle, { color: currentTheme.colors.text, fontSize: 24 }]}>Ký ức công khai</Text>
             <Text style={[styles.sectionCount, { color: currentTheme.colors.primary, backgroundColor: currentTheme.colors.primary + '15' }]}>
               {publicPins.length}
             </Text>
@@ -275,7 +276,7 @@ export default function ProfileScreen() {
           ) : (
             <View style={styles.emptyFeed}>
               <Ionicons name="musical-notes-outline" size={48} color={currentTheme.colors.icon + '40'} />
-              <Text style={[styles.emptyText, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.sm }]}>Chưa có ký ức công khai nào</Text>
+              <Text style={[styles.emptyText, { color: currentTheme.colors.icon, fontSize: 14 }]}>Chưa có ký ức công khai nào</Text>
             </View>
           )}
         </View>
@@ -284,16 +285,16 @@ export default function ProfileScreen() {
         <View style={[styles.extraSection, { paddingHorizontal: currentTheme.spacing.lg }]}>
           <View style={[styles.extraStatsRow, { backgroundColor: currentTheme.colors.icon + '08', borderRadius: currentTheme.radius.xl }]}>
             <View style={styles.extraStatBox}>
-              <Text style={[styles.extraStatValue, { color: currentTheme.colors.text, fontSize: 22 }]}>{stats?.totalListens || 0}</Text>
-              <Text style={[styles.extraStatLabel, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.xs }]}>Lượt nghe</Text>
+              <Text style={[styles.extraStatValue, { color: currentTheme.colors.text, fontSize: 24 }]}>{stats?.totalListens || 0}</Text>
+              <Text style={[styles.extraStatLabel, { color: currentTheme.colors.icon, fontSize: 14 }]}>Lượt nghe</Text>
             </View>
             <View style={[styles.extraStatBox, { borderLeftWidth: 1, borderRightWidth: 1, borderColor: currentTheme.colors.icon + '10' }]}>
-              <Text style={[styles.extraStatValue, { color: currentTheme.colors.text, fontSize: 22 }]}>{stats?.achievementCount || 0}</Text>
-              <Text style={[styles.extraStatLabel, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.xs }]}>Thành tựu</Text>
+              <Text style={[styles.extraStatValue, { color: currentTheme.colors.text, fontSize: 24 }]}>{stats?.achievementCount || 0}</Text>
+              <Text style={[styles.extraStatLabel, { color: currentTheme.colors.icon, fontSize: 14 }]}>Thành tựu</Text>
             </View>
                         <View style={styles.extraStatBox}>
-                            <Text style={[styles.extraStatValue, { color: currentTheme.colors.text, fontSize: 22 }]}>{profile?.xp || userContext?.xp || 0}</Text>
-                            <Text style={[styles.extraStatLabel, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.xs }]}>XP</Text>
+                            <Text style={[styles.extraStatValue, { color: currentTheme.colors.text, fontSize: 24 }]}>{profile?.xp || userContext?.xp || 0}</Text>
+                            <Text style={[styles.extraStatLabel, { color: currentTheme.colors.icon, fontSize: 14 }]}>XP</Text>
                         </View>
                     </View>
 
@@ -301,7 +302,7 @@ export default function ProfileScreen() {
             style={[styles.editProfileFull, { backgroundColor: currentTheme.colors.text, borderRadius: currentTheme.radius.lg }]}
             onPress={() => router.push('/(tabs)/profile/edit-profile')}
           >
-            <Text style={[styles.editProfileFullText, { color: currentTheme.colors.background, fontSize: 15 }]}>Chỉnh sửa hồ sơ công khai</Text>
+            <Text style={[styles.editProfileFullText, { color: currentTheme.colors.background, fontSize: 17 }]}>Chỉnh sửa hồ sơ công khai</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

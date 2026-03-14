@@ -51,13 +51,9 @@ export enum VoiceType {
     HIDDEN_AR = 'HIDDEN_AR',
 }
 
-export type Emotion =
-    | 'Happy'
-    | 'Sad'
-    | 'Calm'
-    | 'Nostalgic'
-    | 'Romantic'
-    | 'Curious';
+import { EmotionType } from '../constants/Emotions';
+
+export type Emotion = EmotionType;
 
 
 export interface VoicePin {

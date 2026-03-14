@@ -71,7 +71,7 @@ export default function MemoryGridScreen() {
             return list.filter(p => {
                 const d = new Date(p.createdAt);
                 return d.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' }) === tLabel;
-            }).sort((a, b) => new Date(b[1][0].createdAt).getTime() - new Date(a[1][0].createdAt).getTime());
+            }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         }
 
         return list;
@@ -93,7 +93,7 @@ export default function MemoryGridScreen() {
                 <TouchableOpacity onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: currentTheme.colors.icon + '10' }]}>
                     <Ionicons name="arrow-back" size={24} color={currentTheme.colors.text} />
                 </TouchableOpacity>
-                <Text style={[styles.title, { color: currentTheme.colors.text, fontSize: currentTheme.typography.fontSizes.md }]}>{title || 'Tất cả ký ức'}</Text>
+                <Text style={[styles.title, { color: currentTheme.colors.text, fontSize: 24, fontWeight: 'bold' }]}>{title || 'Tất cả ký ức'}</Text>
                 <View style={{ width: 40 }} />
             </View>
 

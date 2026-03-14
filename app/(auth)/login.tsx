@@ -154,7 +154,7 @@ export default function LoginScreen() {
           ))}
 
           {/* Error Message Inline */}
-          {msg && (
+          {!!msg && (
             <View className="flex-row items-center bg-red-50 rounded-xl p-3 mb-4 border border-red-200">
               <Ionicons name="alert-circle-outline" size={16} color="#ef4444" />
               <Text className="ml-2 text-sm text-red-500 font-medium">{msg}</Text>

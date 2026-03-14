@@ -93,12 +93,12 @@ const styles = StyleSheet.create({
 
     filterText: {
         fontSize: 14,
-        fontWeight: "500",
+        fontWeight: "600",
         color: "#6b7280",
     },
 
     activeFilterText: {
         color: "#ffffff",
-        fontWeight: "600",
+        fontWeight: "700",
     },
 });

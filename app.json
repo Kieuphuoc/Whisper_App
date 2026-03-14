@@ -34,6 +34,14 @@
         }
       ],
       [
+        "expo-location",
+        {
+          "locationAlwaysPermission": "Allow Whispery to use your location at all times.",
+          "locationWhenInUsePermission": "Allow Whispery to use your location when the app is in use.",
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",

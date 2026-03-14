@@ -245,7 +245,7 @@ export function MemoryCard({ pin, onPress, customWidth, customMarginRight, index
         {/* Info */}
         <View style={memCard.info}>
           <Text
-            style={[memCard.content, { color: currentTheme.colors.text, fontSize: currentTheme.typography.fontSizes.sm }]}
+            style={[memCard.content, { color: currentTheme.colors.text, fontSize: 17, fontWeight: '600' }]}
             numberOfLines={2}
           >
             {pin.content ?? 'Ký ức giọng nói'}
@@ -254,7 +254,7 @@ export function MemoryCard({ pin, onPress, customWidth, customMarginRight, index
           <View style={memCard.metaRow}>
             <Ionicons name="location-outline" size={11} color={currentTheme.colors.icon} />
             <Text
-              style={[memCard.metaText, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.xs }]}
+              style={[memCard.metaText, { color: currentTheme.colors.icon, fontSize: 14 }]}
               numberOfLines={1}
             >
               {pin.address ?? 'Không rõ vị trí'}
@@ -264,12 +264,12 @@ export function MemoryCard({ pin, onPress, customWidth, customMarginRight, index
           <Waveform color={meta.color} />
 
           <View style={memCard.bottomRow}>
-            <Text style={[memCard.dateText, { fontSize: currentTheme.typography.fontSizes.xs }]}>{dateStr}</Text>
+            <Text style={[memCard.dateText, { fontSize: 14 }]}>{dateStr}</Text>
             <View style={memCard.statsRow}>
               <Ionicons name="headset-outline" size={10} color={currentTheme.colors.icon} />
-              <Text style={[memCard.statNum, { fontSize: currentTheme.typography.fontSizes.xs }]}>{pin.listensCount ?? 0}</Text>
+              <Text style={[memCard.statNum, { fontSize: 14 }]}>{pin.listensCount ?? 0}</Text>
               <Ionicons name="heart" size={10} color={currentTheme.colors.primary} style={{ marginLeft: 6 }} />
-              <Text style={[memCard.statNum, { fontSize: currentTheme.typography.fontSizes.xs }]}>{pin.reactionsCount ?? 0}</Text>
+              <Text style={[memCard.statNum, { fontSize: 14 }]}>{pin.reactionsCount ?? 0}</Text>
             </View>
           </View>
         </View>
@@ -379,7 +379,7 @@ function Section({
           <View style={[section.iconDot, { backgroundColor: iconColor + '18' }]}>
             <Ionicons name={icon} size={14} color={iconColor} />
           </View>
-          <Text style={[section.title, { color: currentTheme.colors.text, fontSize: currentTheme.typography.fontSizes.md }]}>{title}</Text>
+          <Text style={[section.title, { color: currentTheme.colors.text, fontSize: 17, fontWeight: '600' }]}>{title}</Text>
         </View>
         {pins.length > 10 && onSeeAll && (
           <TouchableOpacity onPress={onSeeAll} style={section.seeAllBtn}>
@@ -595,8 +595,8 @@ export default function MemoryScreen() {
       >
         {/* Header */}
         <View style={main.header}>
-          <Text style={[main.title, { color: currentTheme.colors.text, fontSize: currentTheme.typography.fontSizes.h2 }]}>Ký ức của tôi</Text>
-          <Text style={[main.subtitle, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.sm }]}>
+          <Text style={[main.title, { color: currentTheme.colors.text, fontSize: 24, fontWeight: 'bold' }]}>Ký ức của tôi</Text>
+          <Text style={[main.subtitle, { color: currentTheme.colors.icon, fontSize: 14 }]}>
             {pins.length > 0 ? `${pins.length} khoảnh khắc` : 'Bắt đầu ghi lại kỷ niệm'}
           </Text>
         </View>

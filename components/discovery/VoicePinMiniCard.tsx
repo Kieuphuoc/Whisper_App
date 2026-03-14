@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { Audio } from 'expo-av';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import Animated, { FadeInUp, FadeOutDown } from 'react-native-reanimated';
 import { VoicePin } from '@/types';
 import { Colors } from '@/constants/Colors';
@@ -19,38 +19,15 @@ export default function VoicePinMiniCard({ pin, onClose, onRandomAgain }: Props)
     const colorScheme = useColorScheme() || 'light';
     const currentTheme = theme[colorScheme];
     const router = useRouter();
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [sound, setSound] = useState<Audio.Sound | null>(null);
+    
+    const player = useAudioPlayer(pin.audioUrl);
+    const { playing } = useAudioPlayerStatus(player);
 
-    useEffect(() => {
-        return () => {
-            if (sound) {
-                sound.unloadAsync();
-            }
-        };
-    }, [sound]);
-
-    const togglePlayback = async () => {
-        if (!sound) {
-            const { sound: newSound } = await Audio.Sound.createAsync(
-                { uri: pin.audioUrl },
-                { shouldPlay: true }
-            );
-            setSound(newSound);
-            setIsPlaying(true);
-            newSound.setOnPlaybackStatusUpdate((status) => {
-                if (status.isLoaded && status.didJustFinish) {
-                    setIsPlaying(false);
-                }
-            });
+    const togglePlayback = () => {
+        if (playing) {
+            player.pause();
         } else {
-            if (isPlaying) {
-                await sound.pauseAsync();
-                setIsPlaying(false);
-            } else {
-                await sound.playAsync();
-                setIsPlaying(true);
-            }
+            player.play();
         }
     };
 
@@ -133,10 +110,10 @@ export default function VoicePinMiniCard({ pin, onClose, onRandomAgain }: Props)
                             ]}
                         >
                             <Ionicons
-                                name={isPlaying ? "pause" : "play"}
+                                name={playing ? "pause" : "play"}
                                 size={28}
                                 color="white"
-                                style={{ marginLeft: isPlaying ? 0 : 4 }}
+                                style={{ marginLeft: playing ? 0 : 4 }}
                             />
                         </TouchableOpacity>
                     </View>
@@ -172,12 +149,12 @@ const styles = StyleSheet.create({
         marginRight: 16,
     },
     category: {
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: '700',
         marginBottom: 4,
     },
     pinContent: {
-        fontSize: 18,
+        fontSize: 17,
         fontWeight: '700',
         lineHeight: 24,
     },
@@ -196,7 +173,7 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     infoText: {
-        fontSize: 12,
+        fontSize: 14,
     },
     controlsRow: {
         flexDirection: 'row',

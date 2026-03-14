@@ -246,7 +246,7 @@ export default function UserProfileScreen() {
                     >
                         <Animated.View entering={FadeInDown.duration(600).springify()} style={styles.infoContent}>
                             <View style={styles.nameRow}>
-                                <Text style={[styles.nameText, { color: currentTheme.colors.text, fontSize: currentTheme.typography.fontSizes.h1 }]} numberOfLines={1}>
+                                <Text style={[styles.nameText, { color: currentTheme.colors.text, fontSize: 28 }]} numberOfLines={1}>
                                     {displayName}
                                 </Text>
                                 <View style={[styles.verifiedBadge, { backgroundColor: '#10b981', borderRadius: currentTheme.radius.full }]}>
@@ -254,20 +254,20 @@ export default function UserProfileScreen() {
                                 </View>
                             </View>
 
-                            <Text style={[styles.bioText, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.sm }]}>
-                                {bio}
-                            </Text>
+                             <Text style={[styles.bioText, { color: currentTheme.colors.icon, fontSize: 14 }]}>
+                                 {bio}
+                             </Text>
 
                             <View style={styles.cardBottomRow}>
                                 <View style={styles.statsInline}>
-                                    <View style={styles.statInlineItem}>
-                                        <Ionicons name="person-outline" size={20} color={currentTheme.colors.icon} />
-                                        <Text style={[styles.statInlineValue, { color: currentTheme.colors.text }]}>{stats?.friendCount || 0}</Text>
-                                    </View>
-                                    <View style={styles.statInlineItem}>
-                                        <Ionicons name="mic-outline" size={20} color={currentTheme.colors.icon} />
-                                        <Text style={[styles.statInlineValue, { color: currentTheme.colors.text }]}>{stats?.voicePinCount || 0}</Text>
-                                    </View>
+                                     <View style={styles.statInlineItem}>
+                                         <Ionicons name="person-outline" size={20} color={currentTheme.colors.icon} />
+                                         <Text style={[styles.statInlineValue, { color: currentTheme.colors.text, fontSize: 20 }]}>{stats?.friendCount || 0}</Text>
+                                     </View>
+                                     <View style={styles.statInlineItem}>
+                                         <Ionicons name="mic-outline" size={20} color={currentTheme.colors.icon} />
+                                         <Text style={[styles.statInlineValue, { color: currentTheme.colors.text, fontSize: 20 }]}>{stats?.voicePinCount || 0}</Text>
+                                     </View>
                                 </View>
 
                                 {renderFriendButton()}
@@ -279,7 +279,7 @@ export default function UserProfileScreen() {
                 {/* Public Voice Pins Feed */}
                 <View style={styles.feedSection}>
                     <View style={styles.sectionHeader}>
-                        <Text style={[styles.sectionTitle, { color: currentTheme.colors.text, fontSize: currentTheme.typography.fontSizes.lg }]}>Ký ức công khai</Text>
+                         <Text style={[styles.sectionTitle, { color: currentTheme.colors.text, fontSize: 24 }]}>Ký ức công khai</Text>
                         <Text style={[styles.sectionCount, { color: currentTheme.colors.primary, backgroundColor: currentTheme.colors.primary + '15' }]}>
                             {publicPins.length}
                         </Text>
@@ -305,7 +305,7 @@ export default function UserProfileScreen() {
                     ) : (
                         <View style={styles.emptyFeed}>
                             <Ionicons name="musical-notes-outline" size={48} color={currentTheme.colors.icon + '40'} />
-                            <Text style={[styles.emptyText, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.sm }]}>Chưa có ký ức công khai nào</Text>
+                             <Text style={[styles.emptyText, { color: currentTheme.colors.icon, fontSize: 14 }]}>Chưa có ký ức công khai nào</Text>
                         </View>
                     )}
                 </View>
@@ -313,16 +313,16 @@ export default function UserProfileScreen() {
                 <View style={[styles.extraSection, { paddingHorizontal: currentTheme.spacing.lg, marginTop: 10 }]}>
                     <View style={[styles.extraStatsRow, { backgroundColor: currentTheme.colors.icon + '08', borderRadius: currentTheme.radius.xl }]}>
                         <View style={styles.extraStatBox}>
-                            <Text style={[styles.extraStatValue, { color: currentTheme.colors.text, fontSize: 22 }]}>{stats?.totalListens || 0}</Text>
-                            <Text style={[styles.extraStatLabel, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.xs }]}>Lượt nghe</Text>
+                             <Text style={[styles.extraStatValue, { color: currentTheme.colors.text, fontSize: 24 }]}>{stats?.totalListens || 0}</Text>
+                             <Text style={[styles.extraStatLabel, { color: currentTheme.colors.icon, fontSize: 14 }]}>Lượt nghe</Text>
                         </View>
                         <View style={[styles.extraStatBox, { borderLeftWidth: 1, borderRightWidth: 1, borderColor: currentTheme.colors.icon + '10' }]}>
-                            <Text style={[styles.extraStatValue, { color: currentTheme.colors.text, fontSize: 22 }]}>{stats?.achievementCount || 0}</Text>
-                            <Text style={[styles.extraStatLabel, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.xs }]}>Thành tựu</Text>
+                             <Text style={[styles.extraStatValue, { color: currentTheme.colors.text, fontSize: 24 }]}>{stats?.achievementCount || 0}</Text>
+                             <Text style={[styles.extraStatLabel, { color: currentTheme.colors.icon, fontSize: 14 }]}>Thành tựu</Text>
                         </View>
                         <View style={styles.extraStatBox}>
-                            <Text style={[styles.extraStatValue, { color: currentTheme.colors.text, fontSize: 22 }]}>{stats?.discoveredVoicesCount || 0}</Text>
-                            <Text style={[styles.extraStatLabel, { color: currentTheme.colors.icon, fontSize: currentTheme.typography.fontSizes.xs }]}>Khám phá</Text>
+                             <Text style={[styles.extraStatValue, { color: currentTheme.colors.text, fontSize: 24 }]}>{stats?.discoveredVoicesCount || 0}</Text>
+                             <Text style={[styles.extraStatLabel, { color: currentTheme.colors.icon, fontSize: 14 }]}>Khám phá</Text>
                         </View>
                     </View>
                 </View>
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         minWidth: 100,
     },
-    followButtonText: { fontSize: 13, fontWeight: '800' },
+     followButtonText: { fontSize: 17, fontWeight: '800' },
     feedSection: { marginTop: 20 },
     sectionHeader: {
         flexDirection: 'row',

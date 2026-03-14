@@ -20,6 +20,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { authApis, endpoints } from "@/configs/Apis";
 import { BlurView } from "expo-blur";
 import { View as MotiView } from "moti";
+import { EMOTION_COLORS, EmotionType } from "@/constants/Emotions";
+import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 
 const { width } = Dimensions.get("window");
 
@@ -50,15 +52,7 @@ const VISIBILITY_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
   PRIVATE: "lock-closed-outline",
 };
 
-const EMOTION_COLOR: Record<string, string> = {
-  Happy: "#facc15",
-  Sad: "#60a5fa",
-  Calm: "#34d399",
-  Nostalgic: "#f472b6",
-  Romantic: "#fb7185",
-  Curious: "#a78bfa",
-  Angry: "#f87171",
-};
+const EMOTION_COLOR = EMOTION_COLORS;
 
 const REACTION_TYPES = [
   { type: "LIKE", emoji: "👍" },
@@ -168,7 +162,9 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
   const colorScheme = useColorScheme() || 'light';
   const currentTheme = theme[colorScheme];
   const router = useRouter();
-  const [isPlaying, setIsPlaying] = useState(false);
+  
+  const player = useAudioPlayer(pin.audioUrl);
+  const { playing } = useAudioPlayerStatus(player);
 
   const [reactionCount, setReactionCount] = useState(pin.reactionsCount ?? 0);
   const [userReaction, setUserReaction] = useState<string | null>(null);
@@ -197,12 +193,12 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
   };
 
   useEffect(() => {
-    isPlayingRef.current = isPlaying;
-    
+    isPlayingRef.current = playing;
+
     const startRotation = (startValue: number) => {
       if (!isPlayingRef.current) return;
-      
-      const duration = 3000 * (1 - startValue);
+
+      const duration = 6000 * (1 - startValue);
       Animated.timing(rotateAnim, {
         toValue: 1,
         duration: duration,
@@ -216,7 +212,7 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
       });
     };
 
-    if (isPlaying) {
+    if (playing) {
       Animated.timing(armAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
       startRotation(rotationProgress.current);
     } else {
@@ -225,7 +221,7 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
       });
       Animated.timing(armAnim, { toValue: 0, duration: 500, useNativeDriver: true }).start();
     }
-  }, [isPlaying]);
+  }, [playing]);
 
   useEffect(() => {
     const fetchReaction = async () => {
@@ -278,7 +274,7 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
   const spin = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
   const armRotate = armAnim.interpolate({ inputRange: [0, 1], outputRange: ["-10deg", "5deg"] });
 
-  const emotionColor = EMOTION_COLOR[pin.emotionLabel ?? ""] ?? Colors.primary;
+  const emotionColor = EMOTION_COLOR[pin.emotionLabel as EmotionType ?? ""] ?? Colors.primary;
   const authorLabel = pin.isAnonymous
     ? "Ẩn danh"
     : pin.user?.displayName ?? pin.user?.username ?? `Voice #${pin.id}`;
@@ -298,7 +294,7 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
         <View style={styles.topBar}>
           <View style={styles.topLeft}>
             {/* Emotion badge floats over the disc */}
-            {pin.emotionLabel && (
+            {!!pin.emotionLabel && (
               <View style={[styles.emotionBadge, { backgroundColor: emotionColor + "33", borderColor: emotionColor + "88" }]}>
                 <Text style={[styles.emotionBadgeText, { color: emotionColor }]}>
                   {pin.emotionLabel}
@@ -312,21 +308,28 @@ export default function VoicePinTurntable({ pin, onClose }: Props) {
 
         {/* ── VINYL RECORD ─────────────────────────────── */}
         <View style={[styles.playerContainer, { backgroundColor: currentTheme.colors.surfaceAlt, borderRadius: currentTheme.borderRadius.xl, overflow: 'visible' }]}>
-          <WavyRipple isPlaying={isPlaying} color={emotionColor} />
-          <TouchableOpacity activeOpacity={0.9} onPress={() => setIsPlaying(!isPlaying)} style={{ zIndex: 1 }}>
-            <Animated.View style={[styles.vinylPlate, { transform: [{ rotate: spin }], borderColor: currentTheme.colors.border }]}>
-              <Image
-                source={{ uri: pin.images?.[0]?.imageUrl ?? pin.imageUrl ?? 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&q=80' }}
-                style={styles.recordImage}
-                resizeMode="cover"
-              />
-              <View style={styles.vinylCenterContainer}>
-                <View style={styles.vinylCenterRing2} />
-                <View style={styles.vinylCenterRing3} />
-                <View style={[styles.vinylCenterHole, { backgroundColor: currentTheme.colors.background }]} />
-              </View>
-            </Animated.View>
-            {/* </View> */}
+          <WavyRipple isPlaying={playing} color={emotionColor} />
+          <TouchableOpacity activeOpacity={0.9} onPress={() => playing ? player.pause() : player.play()} style={{ zIndex: 1 }}>
+            <View style={{
+              shadowColor: emotionColor,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.8,
+              shadowRadius: 20,
+              elevation: 15,
+            }}>
+              <Animated.View style={[styles.vinylPlate, { transform: [{ rotate: spin }], borderColor: currentTheme.colors.border }]}>
+                <Image
+                  source={{ uri: pin.images?.[0]?.imageUrl ?? pin.imageUrl ?? 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&q=80' }}
+                  style={styles.recordImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.vinylCenterContainer}>
+                  <View style={styles.vinylCenterRing2} />
+                  <View style={styles.vinylCenterRing3} />
+                  <View style={[styles.vinylCenterHole, { backgroundColor: currentTheme.colors.background }]} />
+                </View>
+              </Animated.View>
+            </View>
           </TouchableOpacity>
 
           {/* Tonearm */}

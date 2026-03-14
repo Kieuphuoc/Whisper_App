@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 
-export const BASE_URL = "http://10.5.1.144:5000";
+export const BASE_URL = "http://172.20.10.4:5000";
 
 export const endpoints = {
   // Auth
@@ -57,6 +57,7 @@ export const authApis = (token: string): AxiosInstance => {
     baseURL: BASE_URL,
     headers: {
       Authorization: `Bearer ${token}`,
+      // Content-Type header is removed to allow automatic boundary generation for FormData
     },
   });
 };

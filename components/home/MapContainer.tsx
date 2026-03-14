@@ -134,7 +134,7 @@ export default function MapSection({ location, pins, isScanning = false, discove
                       color={isAR ? "#8b5cf6" : "#ef4444"}
                     />
                     <Text style={styles.calloutTitle} numberOfLines={1}>
-                      {isAR ? "AR Hidden Voice" : pin.content ?? "Voice Pin"}
+                      {isAR ? "Giọng nói AR ẩn" : pin.content ?? "Ghim giọng nói"}
                     </Text>
                   </View>
                   {!!pin.address && (
