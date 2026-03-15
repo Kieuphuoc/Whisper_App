@@ -80,12 +80,6 @@ export default function TabLayout() {
           href: null,
         }}
       />
-
-      <Tabs.Screen name="admin/index"
-        options={{
-          href: null,
-        }}
-      />
     </Tabs>
   );
 }

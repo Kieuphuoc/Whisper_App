@@ -61,6 +61,7 @@ export interface VoicePin {
     id: number;
     audioUrl: string;
     content?: string;
+    transcription?: string;
     imageUrl?: string;
 
     // --- Location & Context ---

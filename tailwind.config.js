@@ -53,6 +53,15 @@ module.exports = {
                 '4xl': [fontSize['4xl'], { lineHeight: '40px' }],
             },
 
+            // 🔤 Font Family
+            fontFamily: {
+                quicksand: ["Quicksand_400Regular"],
+                "quicksand-light": ["Quicksand_300Light"],
+                "quicksand-medium": ["Quicksand_500Medium"],
+                "quicksand-semibold": ["Quicksand_600SemiBold"],
+                "quicksand-bold": ["Quicksand_700Bold"],
+            },
+
             // 🔲 Border Radius
             borderRadius: {
                 'none': borderRadius.none,

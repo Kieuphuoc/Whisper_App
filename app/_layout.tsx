@@ -3,16 +3,34 @@ import { MyDispatchContext, MyUserContext, userReducer } from "@/configs/Context
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect, useReducer, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, View, Text } from "react-native";
 import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
+import { 
+  useFonts, 
+  Quicksand_300Light,
+  Quicksand_400Regular, 
+  Quicksand_500Medium,
+  Quicksand_600SemiBold,
+  Quicksand_700Bold 
+} from '@expo-google-fonts/quicksand';
+import { setCustomText, setCustomTextInput } from 'react-native-global-props';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [user, dispatch] = useReducer(userReducer, null);
   const [isReady, setIsReady] = useState(false);
-  const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  const [fontsLoaded] = useFonts({
+    Quicksand_300Light,
+    Quicksand_400Regular,
+    Quicksand_500Medium,
+    Quicksand_600SemiBold,
+    Quicksand_700Bold,
+    'Poppins-Regular': require('../assets/fonts/Poppins-Regular.ttf'),
+    'SpaceMono-Regular': require('../assets/fonts/SpaceMono-Regular.ttf'),
+  });
 
   useEffect(() => {
     const loadUser = async () => {
@@ -30,30 +48,25 @@ export default function RootLayout() {
       }
     };
 
-    const loadFonts = async () => {
-      try {
-        await Font.loadAsync({
-          'Poppins-Regular': require('../assets/fonts/Poppins-Regular.ttf'),
-          'SpaceMono-Regular': require('../assets/fonts/SpaceMono-Regular.ttf'),
-        });
-        setFontsLoaded(true);
-      } catch (e) {
-        console.warn("Font loading failed", e);
-        setFontsLoaded(true); // Proceed anyway
-      }
-    };
-
     loadUser();
-    loadFonts();
   }, []);
 
   useEffect(() => {
     if (isReady && fontsLoaded) {
+      // Apply global font once loaded
+      setCustomText({
+        style: {
+          fontFamily: 'Quicksand_400Regular',
+        }
+      });
+      setCustomTextInput({
+        style: {
+          fontFamily: 'Quicksand_400Regular',
+        }
+      });
       SplashScreen.hideAsync();
     }
   }, [isReady, fontsLoaded]);
-
-
 
   if (!isReady || !fontsLoaded) {
     return (

@@ -13,6 +13,7 @@ import {
   useColorScheme,
   Alert,
 } from "react-native";
+import { Easing as ReanimatedEasing } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { theme } from "@/constants/Theme";
 import { Colors } from "@/constants/Colors";
@@ -24,12 +25,6 @@ import { EMOTION_COLORS, EmotionType } from "@/constants/Emotions";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 
 const { width } = Dimensions.get("window");
-
-type Props = {
-  pin: VoicePin;
-  onClose: () => void;
-  autoPlay?: boolean;
-};
 
 // ─── helpers ──────────────────────────────────────────────
 function formatDuration(secs?: number): string {
@@ -92,7 +87,6 @@ function FloatingEmoji({ emoji, onComplete }: { emoji: string; onComplete: () =>
 function WavyRipple({ isPlaying, color }: { isPlaying: boolean; color: string }) {
   if (!isPlaying) return null;
 
-  // Use a fallback color if color is invalid
   const rippleColor = color && color.startsWith('#') ? color : '#fb7185';
 
   return (
@@ -158,11 +152,11 @@ function WavyRipple({ isPlaying, color }: { isPlaying: boolean; color: string })
   );
 }
 
-export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: Props) {
+export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: { pin: VoicePin; onClose: () => void; autoPlay?: boolean }) {
   const colorScheme = useColorScheme() || 'light';
   const currentTheme = theme[colorScheme];
   const router = useRouter();
-  
+
   const player = useAudioPlayer(pin.audioUrl);
   const { playing } = useAudioPlayerStatus(player);
 
@@ -177,6 +171,10 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: Pr
   const armAnim = useRef(new Animated.Value(0)).current;
   const rotationProgress = useRef(0);
   const isPlayingRef = useRef(false);
+
+  const [isThinking, setIsThinking] = useState(false);
+  const [transcription, setTranscription] = useState(pin.transcription);
+  const [showTranscription, setShowTranscription] = useState(false);
 
   const toggleReactions = () => {
     if (showReactions) {
@@ -240,7 +238,6 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: Pr
             console.log("Pin discovered internally via Turntable");
           }
         } catch (e) {
-          // It might already be discovered, which is fine
           console.log("Internal discovery attempt:", e);
         }
       }
@@ -278,7 +275,6 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: Pr
     const api = authApis(token);
     try {
       if (type === null || (userReaction === type && type === "LIKE")) {
-        // Toggle off
         setUserReaction(null);
         setReactionCount((prev) => Math.max(0, prev - 1));
         await api.delete(endpoints.reactionDelete(pin.id));
@@ -313,6 +309,33 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: Pr
     }
   };
 
+  const handleToggleTranscription = async () => {
+    if (!showTranscription) {
+      if (!transcription) {
+        setIsThinking(true);
+        try {
+          const token = await AsyncStorage.getItem("token");
+          if (token) {
+            const api = authApis(token);
+            const res = await api.get(endpoints.voiceDetail(pin.id));
+            if (res.data?.data?.transcription) {
+              setTranscription(res.data.data.transcription);
+            }
+          }
+        } catch (err) {
+          console.log("Error fetching transcription", err);
+        } finally {
+          setIsThinking(false);
+          setShowTranscription(true);
+        }
+      } else {
+        setShowTranscription(true);
+      }
+    } else {
+      setShowTranscription(false);
+    }
+  };
+
   return (
     <BlurView intensity={colorScheme === 'dark' ? 50 : 30} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={styles.overlay}>
       <View style={[styles.turntableBody, { backgroundColor: currentTheme.colors.surface, borderColor: currentTheme.colors.border }]}>
@@ -320,7 +343,6 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: Pr
         {/* ── TOP BAR ─────────────────────────────────── */}
         <View style={styles.topBar}>
           <View style={styles.topLeft}>
-            {/* Emotion badge floats over the disc */}
             {!!pin.emotionLabel && (
               <View style={[styles.emotionBadge, { backgroundColor: emotionColor + "33", borderColor: emotionColor + "88" }]}>
                 <Text style={[styles.emotionBadgeText, { color: emotionColor }]}>
@@ -336,7 +358,6 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: Pr
 
         {/* ── VINYL RECORD ─────────────────────────────── */}
         <View style={[styles.playerContainer, { backgroundColor: currentTheme.colors.surfaceAlt, borderRadius: currentTheme.borderRadius.xl, overflow: 'visible' }]}>
-          {/* <WavyRipple isPlaying={!!playing} color={emotionColor} /> */}
           <TouchableOpacity activeOpacity={0.9} onPress={() => playing ? player.pause() : player.play()} style={{ zIndex: 1 }}>
             <View style={{
               shadowColor: emotionColor,
@@ -360,7 +381,6 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: Pr
             </View>
           </TouchableOpacity>
 
-          {/* Tonearm */}
           <Animated.View
             pointerEvents="none"
             style={[styles.tonearmContainer, { transform: [{ rotate: armRotate }] }]}
@@ -370,14 +390,11 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: Pr
               style={styles.tonearmImage}
             />
           </Animated.View>
-
-
         </View>
 
         {/* ── INFO + PLAY BUTTON ───────────────────────── */}
         <View style={styles.infoRow}>
           <View style={styles.infoLeft}>
-            {/* Author */}
             <TouchableOpacity onPress={navigateToProfile} style={styles.authorRow}>
               <View style={[styles.authorAvatar, { backgroundColor: currentTheme.colors.surfaceAlt }]}>
                 {pin.user?.avatar ? (
@@ -394,12 +411,58 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: Pr
               )}
             </TouchableOpacity>
 
-            {/* Title / content */}
             <Text style={[styles.title, { color: currentTheme.colors.text }]} numberOfLines={2}>
               {pin.content ?? (pin.isAnonymous ? "Ký ức thầm lặng" : `Bản ghi #${String(pin.id).slice(-4)}`)}
             </Text>
 
-            {/* Location + time */}
+            {/* Transcription Button & Display */}
+            <View style={styles.transcriptionContainer}>
+              <TouchableOpacity
+                onPress={handleToggleTranscription}
+                style={[styles.transcriptionBtn, { backgroundColor: currentTheme.colors.surfaceAlt }]}
+                activeOpacity={0.7}
+              >
+                {isThinking ? (
+                  <MotiView
+                    from={{ rotate: '0deg' }}
+                    animate={{ rotate: '360deg' }}
+                    transition={{ loop: true, duration: 1000, type: 'timing', easing: ReanimatedEasing.linear }}
+                  >
+                    <Ionicons name="sparkles" size={16} color={Colors.primary} />
+                  </MotiView>
+                ) : (
+                  <Ionicons name={showTranscription ? "eye-off-outline" : "language-outline"} size={16} color={currentTheme.colors.primary} />
+                )}
+                <Text style={[styles.transcriptionBtnText, { color: currentTheme.colors.primary }]}>
+                  {isThinking ? "Đang suy nghĩ..." : showTranscription ? "Ẩn phiên âm" : "Xem phiên âm"}
+                </Text>
+              </TouchableOpacity>
+
+              {showTranscription && transcription && (
+                <MotiView
+                  from={{ opacity: 0, translateY: 10 }}
+                  animate={{ opacity: 1, translateY: 0 }}
+                  style={[styles.transcriptionBox, { backgroundColor: currentTheme.colors.surfaceAlt, borderColor: currentTheme.colors.primary + '44' }]}
+                >
+                  <Text style={[styles.transcriptionText, { color: currentTheme.colors.text }]}>
+                    {transcription}
+                  </Text>
+                </MotiView>
+              )}
+
+              {showTranscription && !transcription && (
+                <MotiView
+                  from={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  style={styles.noTranscriptionBox}
+                >
+                  <Text style={[styles.noTranscriptionText, { color: currentTheme.colors.textMuted }]}>
+                    Chưa có bản phiên âm cho âm thanh này.
+                  </Text>
+                </MotiView>
+              )}
+            </View>
+
             <View style={styles.metaRow}>
               <Ionicons name="location-outline" size={12} color={currentTheme.colors.textMuted} />
               <Text style={[styles.metaText, { color: currentTheme.colors.textMuted }]} numberOfLines={1}>
@@ -412,56 +475,6 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: Pr
             </View>
           </View>
         </View>
-
-        {/* ── STATS ROW ────────────────────────────────── */}
-        {/* <View style={[styles.statsRow, { backgroundColor: currentTheme.colors.surfaceAlt, borderColor: currentTheme.colors.border }]}>
-          <View style={styles.statItem}>
-            <Ionicons name="headset-outline" size={14} color={currentTheme.colors.textMuted} />
-            <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>{pin.listensCount ?? 0}</Text>
-            <Text style={[styles.statLabel, { color: currentTheme.colors.textMuted }]}>nghe</Text>
-          </View>
-          <View style={[styles.statDivider, { backgroundColor: currentTheme.colors.border }]} />
-          <TouchableOpacity
-            style={styles.statItem}
-            onPress={() => {
-              if (showReactions) toggleReactions();
-              handleReaction(userReaction ? null : 'LIKE');
-            }}
-            onLongPress={toggleReactions}
-            delayLongPress={200}
-            activeOpacity={0.7}
-          >
-            {userReaction ? (
-              <Text style={{ fontSize: 13, lineHeight: 15 }}>{REACTION_TYPES.find(r => r.type === userReaction)?.emoji || '❤️'}</Text>
-            ) : (
-              <Ionicons name="heart-outline" size={14} color={Colors.error} />
-            )}
-            <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>{reactionCount}</Text>
-            <Text style={[styles.statLabel, { color: currentTheme.colors.textMuted }]}>thích</Text>
-
-            <View style={styles.floatingOrigin} pointerEvents="none">
-              {floatingEmojis.map((item) => (
-                <FloatingEmoji
-                  key={item.id}
-                  emoji={item.emoji}
-                  onComplete={() => setFloatingEmojis(prev => prev.filter(e => e.id !== item.id))}
-                />
-              ))}
-            </View>
-          </TouchableOpacity>
-          <View style={[styles.statDivider, { backgroundColor: currentTheme.colors.border }]} />
-          <View style={styles.statItem}>
-            <Ionicons name="chatbubble-outline" size={14} color={currentTheme.colors.primary} />
-            <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>{pin.commentsCount ?? 0}</Text>
-            <Text style={[styles.statLabel, { color: currentTheme.colors.textMuted }]}>lời nhắn</Text>
-          </View>
-          <View style={[styles.statDivider, { backgroundColor: currentTheme.colors.border }]} />
-          <View style={styles.statItem}>
-            <Ionicons name="timer-outline" size={14} color={currentTheme.colors.textMuted} />
-            <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>{formatDuration(pin.duration)}</Text>
-            <Text style={[styles.statLabel, { color: currentTheme.colors.textMuted }]}>thời lượng</Text>
-          </View>
-        </View> */}
 
         {/* ── FOOTER: visibility + date ─────────────────── */}
         <View style={styles.footer}>
@@ -497,7 +510,6 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: Pr
             ))}
           </Animated.View>
         )}
-
       </View>
     </BlurView>
   );
@@ -585,14 +597,14 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#111111", // đen mỏng như viền
+    backgroundColor: "#111111",
   },
   vinylCenterRing3: {
     position: "absolute",
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#555555", // xám đậm trong cùng
+    backgroundColor: "#555555",
   },
   vinylCenterHole: {
     position: "absolute",
@@ -777,7 +789,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     zIndex: 0,
-    overflow: "visible", // Ensure ripples can go outside
+    overflow: "visible",
   },
   rippleRing: {
     position: "absolute",
@@ -785,5 +797,42 @@ const styles = StyleSheet.create({
     height: 260,
     borderRadius: 130,
     borderWidth: 3,
+  },
+  transcriptionContainer: {
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  transcriptionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
+  },
+  transcriptionBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  transcriptionBox: {
+    marginTop: 8,
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  transcriptionText: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontStyle: 'italic',
+  },
+  noTranscriptionBox: {
+    marginTop: 8,
+    paddingHorizontal: 12,
+  },
+  noTranscriptionText: {
+    fontSize: 12,
+    fontStyle: 'italic',
   },
 });
