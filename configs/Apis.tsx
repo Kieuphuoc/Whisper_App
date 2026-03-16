@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 
-export const BASE_URL = "http://172.20.10.6:5000";
+export const BASE_URL = "http://10.5.1.148:5000";
 
 export const endpoints = {
   // Auth
@@ -42,6 +42,11 @@ export const endpoints = {
   notificationRead: (id: string | number) => `/notification/${id}/read`,
   notificationsReadAll: "/notification/read-all",
   notificationsClear: "/notification/clear",
+
+  // Reports
+  submitReport: '/report/',
+  myReports: '/report/my',
+  reportDetail: (id: string | number) => `/report/${id}`,
 
   // Friends
   friendList: (userId: string | number) => `/friend/list/${userId}`,

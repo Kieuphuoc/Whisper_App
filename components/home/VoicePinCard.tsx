@@ -6,6 +6,8 @@ import {
   Dimensions,
   Easing,
   Image,
+  Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -176,6 +178,43 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: { 
   const [transcription, setTranscription] = useState(pin.transcription);
   const [showTranscription, setShowTranscription] = useState(false);
 
+  // ── Report state ───────────────────────────────────
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [hasReported, setHasReported] = useState(false);
+
+  const REPORT_REASONS = [
+    { key: 'SPAM',          label: 'Spam',                  icon: 'mail-unread-outline' as const },
+    { key: 'HARASSMENT',   label: 'Quấy rối',              icon: 'hand-left-outline' as const },
+    { key: 'HATE_SPEECH',  label: 'Ngôn từ thù hận',       icon: 'warning-outline' as const },
+    { key: 'VIOLENCE',     label: 'Bạo lực',               icon: 'skull-outline' as const },
+    { key: 'NUDITY',       label: 'Nội dung nhạy cảm',     icon: 'eye-off-outline' as const },
+    { key: 'MISINFORMATION', label: 'Thông tin sai lệch',  icon: 'newspaper-outline' as const },
+    { key: 'COPYRIGHT',    label: 'Vi phạm bản quyền',     icon: 'copy-outline' as const },
+    { key: 'OTHER',        label: 'Lý do khác',            icon: 'ellipsis-horizontal-outline' as const },
+  ];
+
+  const handleReport = async (reason: string) => {
+    setReportLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        Alert.alert('Thông báo', 'Bạn cần đăng nhập để báo cáo.');
+        return;
+      }
+      const api = authApis(token);
+      await api.post(endpoints.submitReport, { voicePinId: pin.id, reason });
+      setHasReported(true);
+      setShowReportModal(false);
+      Alert.alert('Cảm ơn!', 'Báo cáo của bạn đã được ghi nhận. Chúng tôi sẽ xem xét sớm nhất.');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Không thể gửi báo cáo. Vui lòng thử lại.';
+      Alert.alert('Lỗi', msg);
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
   const toggleReactions = () => {
     if (showReactions) {
       Animated.spring(reactionAnim, { toValue: 0, useNativeDriver: true }).start(() => setShowReactions(false));
@@ -337,6 +376,7 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: { 
   };
 
   return (
+    <>
     <BlurView intensity={colorScheme === 'dark' ? 50 : 30} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={styles.overlay}>
       <View style={[styles.turntableBody, { backgroundColor: currentTheme.colors.surface, borderColor: currentTheme.colors.border }]}>
 
@@ -351,9 +391,25 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: { 
               </View>
             )}
           </View>
-          <TouchableOpacity onPress={onClose} hitSlop={15} style={[styles.closeBtn, { backgroundColor: currentTheme.colors.surfaceAlt }]}>
-            <Ionicons name="close" size={20} color={currentTheme.colors.text} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {/* Report flag button */}
+            {!pin.isAnonymous && (
+              <TouchableOpacity
+                onPress={() => hasReported ? Alert.alert('Đã báo cáo', 'Bạn đã báo cáo bài đăng này rồi.') : setShowReportModal(true)}
+                hitSlop={10}
+                style={[styles.reportBtn, { backgroundColor: hasReported ? '#ef444422' : currentTheme.colors.surfaceAlt }]}
+              >
+                <Ionicons
+                  name={hasReported ? 'flag' : 'flag-outline'}
+                  size={16}
+                  color={hasReported ? '#ef4444' : currentTheme.colors.textMuted}
+                />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={onClose} hitSlop={15} style={[styles.closeBtn, { backgroundColor: currentTheme.colors.surfaceAlt }]}>
+              <Ionicons name="close" size={20} color={currentTheme.colors.text} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* ── VINYL RECORD ─────────────────────────────── */}
@@ -512,6 +568,57 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: { 
         )}
       </View>
     </BlurView>
+
+    {/* ── REPORT MODAL ─────────────────────────────── */}
+    <Modal
+      visible={showReportModal}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setShowReportModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalSheet, { backgroundColor: currentTheme.colors.surface, borderColor: currentTheme.colors.border }]}>
+          <View style={styles.modalHeader}>
+            <View style={styles.modalDragHandle} />
+          </View>
+          <Text style={[styles.modalTitle, { color: currentTheme.colors.text }]}>Báo cáo vi phạm</Text>
+          <Text style={[styles.modalSubtitle, { color: currentTheme.colors.textMuted }]}>
+            Chọn lý do báo cáo bài đăng này:
+          </Text>
+          <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
+            {REPORT_REASONS.map((r) => (
+              <TouchableOpacity
+                key={r.key}
+                style={[styles.reportReasonBtn, { backgroundColor: currentTheme.colors.surfaceAlt, borderColor: currentTheme.colors.border }]}
+                onPress={() => {
+                  Alert.alert(
+                    'Xác nhận báo cáo',
+                    `Bạn muốn báo cáo bài đăng này vì "${r.label}"?`,
+                    [
+                      { text: 'Hủy', style: 'cancel' },
+                      { text: 'Báo cáo', style: 'destructive', onPress: () => handleReport(r.key) }
+                    ]
+                  );
+                }}
+                disabled={reportLoading}
+                activeOpacity={0.7}
+              >
+                <Ionicons name={r.icon} size={20} color="#ef4444" style={{ marginRight: 12 }} />
+                <Text style={[styles.reportReasonText, { color: currentTheme.colors.text }]}>{r.label}</Text>
+                <Ionicons name="chevron-forward" size={16} color={currentTheme.colors.textMuted} style={{ marginLeft: 'auto' }} />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <TouchableOpacity
+            style={[styles.modalCancelBtn, { borderColor: currentTheme.colors.border }]}
+            onPress={() => setShowReportModal(false)}
+          >
+            <Text style={[styles.modalCancelText, { color: currentTheme.colors.textSecondary }]}>Hủy</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -834,5 +941,69 @@ const styles = StyleSheet.create({
   noTranscriptionText: {
     fontSize: 12,
     fontStyle: 'italic',
+  },
+  // ── Report button ─────────────────────────────────
+  reportBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // ── Report modal ──────────────────────────────
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderWidth: 1,
+    padding: 20,
+    paddingBottom: 36,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalDragHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#64748b55',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    marginBottom: 14,
+  },
+  reportReasonBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  reportReasonText: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  modalCancelBtn: {
+    marginTop: 12,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
