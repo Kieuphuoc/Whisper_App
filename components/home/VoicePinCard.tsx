@@ -9,7 +9,6 @@ import {
   Modal,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
   useColorScheme,
@@ -25,6 +24,7 @@ import { BlurView } from "expo-blur";
 import { View as MotiView } from "moti";
 import { EMOTION_COLORS, EmotionType } from "@/constants/Emotions";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import { Text } from "../ui/text";
 
 const { width } = Dimensions.get("window");
 

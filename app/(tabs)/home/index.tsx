@@ -13,11 +13,12 @@ import { MyDispatchContext, MyUserContext } from "@/configs/Context";
 import { useLocation } from "@/hooks/useLocation";
 import { useRecorder } from "@/hooks/useRecorder";
 import { useVisibility } from "@/hooks/useVisibility";
-import { useVoicePins } from "@/hooks/useVoicePins";
+import { BoundingBox, useVoicePins } from "@/hooks/useVoicePins";
 import { Ionicons } from "@expo/vector-icons";
 import { useDiscovery } from "@/hooks/useDiscovery";
 import VoicePinMiniCard from "@/components/discovery/VoicePinMiniCard";
 import { VoicePin } from "@/types";
+import { Region } from "react-native-maps";
 import { theme } from "@/constants/Theme";
 import StatsBento from "@/components/home/StatsBento";
 import FilterToggle from "@/components/home/Filter";
@@ -28,7 +29,29 @@ export default function HomeScreen() {
   const currentTheme = theme[colorScheme];
   const { location } = useLocation();
   const { visibility, setVisibility } = useVisibility("PUBLIC");
-  const { pins, refetch } = useVoicePins(visibility);
+  
+  // Bounding box state for map-based fetching
+  const [bbox, setBbox] = useState<BoundingBox | undefined>(undefined);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { data: latestPins = [], refetch } = useVoicePins(visibility, bbox);
+  const [accumulatedPins, setAccumulatedPins] = useState<VoicePin[]>([]);
+
+  // Reset cache when changing filter
+  useEffect(() => {
+    setAccumulatedPins([]);
+  }, [visibility]);
+
+  // Accumulate pins across different BBox queries
+  useEffect(() => {
+    if (latestPins.length > 0) {
+      setAccumulatedPins((prev) => {
+        const pinMap = new Map(prev.map((p) => [p.id, p]));
+        latestPins.forEach((p) => pinMap.set(p.id, p));
+        return Array.from(pinMap.values());
+      });
+    }
+  }, [latestPins]);
   const dispatch = useContext(MyDispatchContext);
   const user = useContext(MyUserContext);
   const router = useRouter();
@@ -95,22 +118,43 @@ export default function HomeScreen() {
 
   const recenterMap = () => {
     if (location && mapRef.current) {
-      mapRef.current.animateToRegion({
+      const region = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
-      }, 1000);
+      };
+      mapRef.current.animateToRegion(region, 1000);
+      // Manually trigger region change logic for immediate fetch if needed
+      handleRegionChangeComplete(region);
     } else if (!location) {
       Alert.alert("Vị trí", "Đang lấy vị trí của bạn...");
     }
+  };
+
+  const handleRegionChangeComplete = (region: Region) => {
+    // Clear any pending debounce
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // Set 500ms debounce to prevent excessive backend requests
+    debounceTimerRef.current = setTimeout(() => {
+      const newBbox: BoundingBox = {
+        minLat: region.latitude - region.latitudeDelta / 2,
+        maxLat: region.latitude + region.latitudeDelta / 2,
+        minLng: region.longitude - region.longitudeDelta / 2,
+        maxLng: region.longitude + region.longitudeDelta / 2,
+      };
+      setBbox(newBbox);
+    }, 500);
   };
 
   return (
     <View style={styles.container}>
       <MapContainer
         location={location}
-        pins={pins}
+        pins={accumulatedPins}
         isScanning={isScanning}
         discoveredPin={discoveredPin}
         onPressDiscoveredPin={() => setIsMiniCardOpen(true)}
@@ -120,6 +164,7 @@ export default function HomeScreen() {
           if (!pin) setAutoPlayPin(false);
         }}
         autoPlayPin={autoPlayPin}
+        onRegionChangeComplete={handleRegionChangeComplete}
         ref={mapRef}
       />
 
@@ -162,7 +207,7 @@ export default function HomeScreen() {
       </TouchableOpacity> */}
 
       <FilterToggle value={visibility} onChange={setVisibility} />
-      <StatsBento voicePins={pins} />
+      <StatsBento voicePins={accumulatedPins} />
       <QuickActions
         onExplore={() => {
           if (location) {

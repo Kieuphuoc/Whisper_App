@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, useColorScheme } from "react-native";
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator, useColorScheme } from "react-native";
+import { Text } from "@/components/ui/text";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "@/constants/Theme";
 

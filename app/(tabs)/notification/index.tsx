@@ -7,10 +7,10 @@ import {
     RefreshControl,
     StatusBar,
     StyleSheet,
-    Text,
     TouchableOpacity,
     View,
 } from 'react-native';
+import { Text } from '@/components/ui/text';
 import { authApis, endpoints } from '@/configs/Apis';
 
 // ─── Types ────────────────────────────────────────────────

@@ -9,11 +9,11 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
-    Text,
     TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
+import { Text } from '@/components/ui/text';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 export default function ChangePasswordScreen() {

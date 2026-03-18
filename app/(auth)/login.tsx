@@ -3,7 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
 import React, { useState, useContext } from 'react';
-import { Image, StatusBar, Text, TextInput, TouchableOpacity, View, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { Image, StatusBar, TextInput, TouchableOpacity, View, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { Text } from '@/components/ui/text';
 import Apis, { endpoints } from '../../configs/Apis';
 import { MyDispatchContext } from '../../configs/Context';
 

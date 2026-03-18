@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, useColorScheme, ActivityIndicator } from 'react-native';
+import { View, TouchableOpacity, Image, StyleSheet, useColorScheme, ActivityIndicator } from 'react-native';
+import { Text } from '@/components/ui/text';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';

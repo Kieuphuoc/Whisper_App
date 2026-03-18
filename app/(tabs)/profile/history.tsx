@@ -7,7 +7,6 @@ import React, { useEffect, useState, useMemo } from 'react';
 import {
     ActivityIndicator,
     RefreshControl,
-    Text,
     TouchableOpacity,
     View,
     Image,
@@ -15,6 +14,7 @@ import {
     Dimensions,
     StyleSheet,
 } from 'react-native';
+import { Text } from '@/components/ui/text';
 import { useColorScheme } from "nativewind";
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {

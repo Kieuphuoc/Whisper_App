@@ -3,7 +3,8 @@ import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { Text } from '@/components/ui/text';
 import { theme } from '@/constants/Theme';
 
 type QuickActionItem = {

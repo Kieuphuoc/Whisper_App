@@ -2,7 +2,8 @@ import { VoicePin, VoiceType } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useState, useEffect, useCallback, forwardRef } from "react";
-import { StyleSheet, Text, TouchableOpacity, View, useColorScheme } from "react-native";
+import { StyleSheet, TouchableOpacity, View, useColorScheme } from "react-native";
+import { Text } from "@/components/ui/text";
 import MapView, { Callout, Marker, Region, MapType } from "react-native-maps";
 import MapViewClustering from "react-native-map-clustering";
 import VoicePinCard from "./VoicePinCard";
@@ -27,20 +28,22 @@ type Props = {
   externalSelectedPin?: VoicePin | null;
   onSelectPin?: (pin: VoicePin | null) => void;
   autoPlayPin?: boolean;
+  onRegionChangeComplete?: (region: Region) => void;
 };
 
-const MapSection = forwardRef<MapView, Props>(({ 
-    location, 
-    pins, 
-    isScanning = false, 
-    discoveredPin, 
-    onPressDiscoveredPin,
-    externalSelectedPin,
-    onSelectPin,
-    autoPlayPin = false
+const MapSection = forwardRef<MapView, Props>(({
+  location,
+  pins,
+  isScanning = false,
+  discoveredPin,
+  onPressDiscoveredPin,
+  externalSelectedPin,
+  onSelectPin,
+  autoPlayPin = false,
+  onRegionChangeComplete,
 }, ref) => {
   const [internalSelectedPin, setInternalSelectedPin] = useState<VoicePin | null>(null);
-  
+
   const selectedPin = externalSelectedPin !== undefined ? externalSelectedPin : internalSelectedPin;
   const setSelectedPin = (pin: VoicePin | null) => {
     if (onSelectPin) {
@@ -96,6 +99,7 @@ const MapSection = forwardRef<MapView, Props>(({
         showsMyLocationButton={false}
         mapType={mapType}
         customMapStyle={mapType === 'standard' ? darkMapStyle : undefined}
+        onRegionChangeComplete={onRegionChangeComplete}
         // Clustering config
         radius={60}           // pixel radius of each cluster
         minPoints={3}         // min pins before forming a cluster
@@ -118,6 +122,7 @@ const MapSection = forwardRef<MapView, Props>(({
               coordinate={coord}
               onPress={onPress}
               anchor={{ x: 0.5, y: 0.5 }}
+              tracksViewChanges={false}
             >
               <View style={[styles.cluster, { width: size, height: size, borderRadius: size / 2, backgroundColor: bg + 'dd' }]}>
                 <View style={[styles.clusterInner, { width: size - 12, height: size - 12, borderRadius: (size - 12) / 2, backgroundColor: bg }]}>
@@ -136,6 +141,7 @@ const MapSection = forwardRef<MapView, Props>(({
               coordinate={{ latitude: pin.latitude, longitude: pin.longitude }}
               onPress={() => setSelectedPin(pin)}
               anchor={{ x: 0.5, y: 1 }}
+              tracksViewChanges={false}
             >
               {/* Custom pin marker */}
               <View style={styles.markerWrap}>
@@ -197,9 +203,9 @@ const MapSection = forwardRef<MapView, Props>(({
 
       {/* Full-screen overlay when pin selected */}
       {selectedPin && (
-        <VoicePinCard 
-          pin={selectedPin} 
-          onClose={() => setSelectedPin(null)} 
+        <VoicePinCard
+          pin={selectedPin}
+          onClose={() => setSelectedPin(null)}
           autoPlay={autoPlayPin && selectedPin.id === discoveredPin?.id}
         />
       )}

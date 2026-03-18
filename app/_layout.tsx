@@ -3,18 +3,22 @@ import { MyDispatchContext, MyUserContext, userReducer } from "@/configs/Context
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect, useReducer, useState } from "react";
-import { ActivityIndicator, View, Text } from "react-native";
+import { ActivityIndicator, View } from "react-native";
+import { Text } from "@/components/ui/text";
 import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import { 
-  useFonts, 
+import {
+  useFonts,
   Quicksand_300Light,
-  Quicksand_400Regular, 
+  Quicksand_400Regular,
   Quicksand_500Medium,
   Quicksand_600SemiBold,
-  Quicksand_700Bold 
+  Quicksand_700Bold
 } from '@expo-google-fonts/quicksand';
 import { setCustomText, setCustomTextInput } from 'react-native-global-props';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
 
 SplashScreen.preventAutoHideAsync();
 
@@ -53,17 +57,6 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (isReady && fontsLoaded) {
-      // Apply global font once loaded
-      setCustomText({
-        style: {
-          fontFamily: 'Quicksand_400Regular',
-        }
-      });
-      setCustomTextInput({
-        style: {
-          fontFamily: 'Quicksand_400Regular',
-        }
-      });
       SplashScreen.hideAsync();
     }
   }, [isReady, fontsLoaded]);
@@ -77,11 +70,13 @@ export default function RootLayout() {
   }
 
   return (
-    <MyUserContext.Provider value={user}>
-      <MyDispatchContext.Provider value={dispatch}>
-        <RootLayoutNav user={user} />
-      </MyDispatchContext.Provider>
-    </MyUserContext.Provider>
+    <QueryClientProvider client={queryClient}>
+      <MyUserContext.Provider value={user}>
+        <MyDispatchContext.Provider value={dispatch}>
+          <RootLayoutNav user={user} />
+        </MyDispatchContext.Provider>
+      </MyUserContext.Provider>
+    </QueryClientProvider>
   );
 }
 

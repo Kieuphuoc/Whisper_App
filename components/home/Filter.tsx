@@ -1,5 +1,6 @@
 import { Visibility } from "@/types";
-import { View, Text, StyleSheet, TouchableOpacity, useColorScheme } from "react-native";
+import { View, StyleSheet, TouchableOpacity, useColorScheme } from "react-native";
+import { Text } from "@/components/ui/text";
 import { theme } from "@/constants/Theme";
 
 type FilterToggleProps = {

@@ -16,13 +16,13 @@ import {
   ScrollView,
   StatusBar,
   StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
   UIManager,
   View,
   useColorScheme
 } from 'react-native';
+import { Text } from '@/components/ui/text';
 import Animated, {
   Extrapolation,
   SharedValue,

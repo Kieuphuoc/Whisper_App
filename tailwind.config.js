@@ -56,10 +56,6 @@ module.exports = {
             // 🔤 Font Family
             fontFamily: {
                 quicksand: ["Quicksand_400Regular"],
-                "quicksand-light": ["Quicksand_300Light"],
-                "quicksand-medium": ["Quicksand_500Medium"],
-                "quicksand-semibold": ["Quicksand_600SemiBold"],
-                "quicksand-bold": ["Quicksand_700Bold"],
             },
 
             // 🔲 Border Radius
@@ -85,29 +81,7 @@ module.exports = {
                 'slow': animation.slow,
             },
 
-            // 📱 Component Width/Height
-            width: {
-                'btn-sm': size.button.sm,
-                'btn-md': size.button.md,
-                'btn-lg': size.button.lg,
-                'avatar-sm': size.avatar.sm,
-                'avatar-md': size.avatar.md,
-                'avatar-lg': size.avatar.lg,
-                'avatar-xl': size.avatar.xl,
-                'icon-sm': size.icon.sm,
-                'icon-md': size.icon.md,
-                'icon-lg': size.icon.lg,
-            },
-            height: {
-                'btn-sm': size.button.sm,
-                'btn-md': size.button.md,
-                'btn-lg': size.button.lg,
-                'input': size.input.height,
-                'avatar-sm': size.avatar.sm,
-                'avatar-md': size.avatar.md,
-                'avatar-lg': size.avatar.lg,
-                'avatar-xl': size.avatar.xl,
-            },
+
         },
     },
     plugins: [],

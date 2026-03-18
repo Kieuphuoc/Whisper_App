@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Dimensions, useColorScheme, StatusBar } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions, useColorScheme, StatusBar } from 'react-native';
+import { Text } from '@/components/ui/text';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useMyPins } from '@/hooks/useMyPins';

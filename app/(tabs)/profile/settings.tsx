@@ -13,12 +13,12 @@ import {
     ScrollView,
     StatusBar,
     StyleSheet,
-    Text,
     TouchableOpacity,
     View,
     useColorScheme,
     Switch,
 } from 'react-native';
+import { Text } from '@/components/ui/text';
 import MapView, { Marker } from 'react-native-maps';
 import { darkMapStyle } from '@/constants/MapStyles';
 
@@ -58,10 +58,10 @@ const SettingItem = ({
                         color={textColor === '#ef4444' ? '#ef4444' : (colorScheme === 'dark' ? '#f3f4f6' : '#374151')}
                     />
                 </View>
-                <Text className={`text-[17px] font-semibold ${textColor ? '' : 'text-gray-900 dark:text-gray-100'}`} style={textColor ? { color: textColor } : {}}>{label}</Text>
+                <Text style={{ fontSize: 17, fontWeight: '600', color: textColor || '#1f2937' }}>{label}</Text>
             </View>
             <View className="flex-row items-center">
-                {!!value && <Text className="text-gray-500 dark:text-gray-400 text-sm mr-2">{value}</Text>}
+                {!!value && <Text style={{ color: '#6b7280', fontSize: 14 }}>{value}</Text>}
                 {children}
                 {showArrow && !children && <Ionicons name="chevron-forward" size={20} color="#9ca3af" />}
             </View>
@@ -176,7 +176,7 @@ export default function SettingsScreen() {
                                     onPress={() => handleMapTypeChange(type)}
                                     className={`flex-1 py-3.5 rounded-xl items-center justify-center ${isActive ? 'bg-gray-900 dark:bg-white' : ''}`}
                                 >
-                                    <Text className={`text-[13px] font-bold ${isActive ? 'text-white dark:text-black' : 'text-gray-500 dark:text-gray-400'}`}>
+                                    <Text style={{ fontSize: 13, fontWeight: '700', color: isActive ? (colorScheme === 'dark' ? '#000' : '#fff') : '#6b7280' }}>
                                         {labels[type]}
                                     </Text>
                                 </TouchableOpacity>
@@ -196,7 +196,7 @@ export default function SettingsScreen() {
                 <TouchableOpacity onPress={() => router.back()} className="w-11 h-11 items-center justify-center">
                     <Ionicons name="close" size={28} color={colorScheme === 'dark' ? '#fff' : '#111'} />
                 </TouchableOpacity>
-                <Text className="text-2xl font-bold text-gray-900 dark:text-white">Cài đặt</Text>
+                <Text style={{ fontSize: 24, fontWeight: '700', color: colorScheme === 'dark' ? '#fff' : '#111' }}>Cài đặt</Text>
                 <View className="w-11" />
             </View>
 
@@ -208,15 +208,15 @@ export default function SettingsScreen() {
                 >
                     <Image source={{ uri: avatarUri }} className="w-16 h-16 rounded-full mr-4" />
                     <View className="flex-1">
-                        <Text className="text-xl font-bold text-gray-900 dark:text-white">{displayName}</Text>
-                        <Text className="text-gray-500 text-sm">Chỉnh sửa hồ sơ</Text>
+                        <Text style={{ fontSize: 18, fontWeight: '700', color: colorScheme === 'dark' ? '#fff' : '#111' }}>{displayName}</Text>
+                        <Text style={{ color: '#6b7280', fontSize: 14 }}>Chỉnh sửa hồ sơ</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
                 </TouchableOpacity>
 
                 {/* Account Section */}
                 <View className="mb-6">
-                    <Text className="font-bold uppercase tracking-widest text-[12px] mb-3 ml-1 text-gray-500">TÀI KHOẢN</Text>
+                    <Text style={{ fontWeight: '700', fontSize: 12, color: '#6b7280' }}>TÀI KHOẢN</Text>
                     <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden">
                         <SettingItem icon="person-outline" label="Thông tin cá nhân" onPress={() => router.push('/(tabs)/profile/edit-profile')} />
                         <SettingItem icon="notifications-outline" label="Push Notifications" showArrow={false}>
@@ -233,7 +233,7 @@ export default function SettingsScreen() {
 
                 {/* App Section */}
                 <View className="mb-6">
-                    <Text className="font-bold uppercase tracking-widest text-[12px] mb-3 ml-1 text-gray-500">ỨNG DỤNG</Text>
+                    <Text style={{ fontWeight: '700', fontSize: 12, color: '#6b7280' }}>ỨNG DỤNG</Text>
                     <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden">
                         <SettingItem
                             icon={colorScheme === 'dark' ? 'moon' : 'sunny'}
@@ -253,7 +253,7 @@ export default function SettingsScreen() {
                                 <View className="w-9 h-9 rounded-xl items-center justify-center mr-4 bg-gray-100 dark:bg-gray-800">
                                     <Ionicons name="map-outline" size={20} color={colorScheme === 'dark' ? '#f3f4f6' : '#374151'} />
                                 </View>
-                                <Text className="text-[17px] font-semibold text-gray-900 dark:text-white">Loại bản đồ</Text>
+                                <Text style={{ fontSize: 17, fontWeight: '600', color: colorScheme === 'dark' ? '#fff' : '#111' }}>Loại bản đồ</Text>
                             </View>
                             {renderMapTypePicker()}
                         </View>
@@ -266,7 +266,7 @@ export default function SettingsScreen() {
 
                 {/* Privacy Section */}
                 <View className="mb-6">
-                    <Text className="font-bold uppercase tracking-widest text-[12px] mb-3 ml-1 text-gray-500">QUYỀN RIÊNG TƯ</Text>
+                    <Text style={{ fontWeight: '700', fontSize: 12, color: '#6b7280' }}>QUYỀN RIÊNG TƯ</Text>
                     <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden">
                         <SettingItem icon="eye-outline" label="Trạng thái hoạt động" value="Bật" />
                         <SettingItem icon="location-outline" label="Chia sẻ vị trí" value="Bạn bè" />
@@ -288,7 +288,7 @@ export default function SettingsScreen() {
                 </View>
 
                 <View className="items-center mt-5 mb-10">
-                    <Text className="text-gray-400 text-sm">Phiên bản 1.0.0</Text>
+                    <Text style={{ color: '#9ca3af', fontSize: 14 }}>Phiên bản 1.0.0</Text>
                 </View>
             </ScrollView>
 

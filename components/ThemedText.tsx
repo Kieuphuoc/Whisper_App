@@ -38,26 +38,26 @@ const styles = StyleSheet.create({
   default: {
     fontSize: 16,
     lineHeight: 24,
-    fontFamily: 'Quicksand-Regular',
+    fontFamily: 'Quicksand_400Regular',
   },
   defaultSemiBold: {
     fontSize: 16,
     lineHeight: 24,
-    fontFamily: 'Quicksand-SemiBold',
+    fontFamily: 'Quicksand_600SemiBold',
   },
   title: {
     fontSize: 32,
-    fontFamily: 'Quicksand-Bold',
+    fontFamily: 'Quicksand_700Bold',
     lineHeight: 32,
   },
   subtitle: {
     fontSize: 20,
-    fontFamily: 'Quicksand-Bold',
+    fontFamily: 'Quicksand_700Bold',
   },
   link: {
     lineHeight: 30,
     fontSize: 16,
     color: Colors.primary,
-    fontFamily: 'Quicksand-Regular',
+    fontFamily: 'Quicksand_400Regular',
   },
 });

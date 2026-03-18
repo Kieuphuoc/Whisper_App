@@ -1,0 +1,897 @@
+{
+  "info": {
+    "name": "Whisper API",
+    "description": "Whisper Voice Pin API Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"your_username\",\n  \"password\": \"your_password\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login/",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login", ""]
+            }
+          }
+        },
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"new_user\",\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register/",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/user/me",
+              "host": ["{{base_url}}"],
+              "path": ["user", "me"]
+            }
+          }
+        },
+        {
+          "name": "Get User Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/user/me/stats",
+              "host": ["{{base_url}}"],
+              "path": ["user", "me", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Get User Profile by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/user/{{userId}}",
+              "host": ["{{base_url}}"],
+              "path": ["user", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get User Stats by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/user/{{userId}}/stats",
+              "host": ["{{base_url}}"],
+              "path": ["user", "{{userId}}", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Get User History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/user/me/history",
+              "host": ["{{base_url}}"],
+              "path": ["user", "me", "history"]
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"old_password\": \"old_pass\",\n  \"new_password\": \"new_pass\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/user/me/password",
+              "host": ["{{base_url}}"],
+              "path": ["user", "me", "password"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Voice Pins",
+      "item": [
+        {
+          "name": "Get My Voice Pins",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/voice/",
+              "host": ["{{base_url}}"],
+              "path": ["voice", ""]
+            }
+          }
+        },
+        {
+          "name": "Create Voice Pin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "audio",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "title",
+                  "value": "Voice Pin Title",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Voice Pin Description",
+                  "type": "text"
+                },
+                {
+                  "key": "latitude",
+                  "value": "10.7769",
+                  "type": "text"
+                },
+                {
+                  "key": "longitude",
+                  "value": "106.6966",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/voice/",
+              "host": ["{{base_url}}"],
+              "path": ["voice", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Voice Pin Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/voice/{{voiceId}}/",
+              "host": ["{{base_url}}"],
+              "path": ["voice", "{{voiceId}}", ""]
+            }
+          }
+        },
+        {
+          "name": "Update Voice Pin",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Title\",\n  \"description\": \"Updated Description\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/voice/{{voiceId}}",
+              "host": ["{{base_url}}"],
+              "path": ["voice", "{{voiceId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Voice Pin",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/voice/{{voiceId}}",
+              "host": ["{{base_url}}"],
+              "path": ["voice", "{{voiceId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Public Voice Pins",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/voice/public/",
+              "host": ["{{base_url}}"],
+              "path": ["voice", "public", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Public Voice Pins by User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/voice/user/{{userId}}/public/",
+              "host": ["{{base_url}}"],
+              "path": ["voice", "user", "{{userId}}", "public", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Friends Voice Pins",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/voice/friends/",
+              "host": ["{{base_url}}"],
+              "path": ["voice", "friends", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Random Voice Pins",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/voice/random",
+              "host": ["{{base_url}}"],
+              "path": ["voice", "random"]
+            }
+          }
+        },
+        {
+          "name": "Get Voice Pins by BBox",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/voice/bbox?min_lat=10&max_lat=11&min_lon=106&max_lon=107",
+              "host": ["{{base_url}}"],
+              "path": ["voice", "bbox"],
+              "query": [
+                {
+                  "key": "min_lat",
+                  "value": "10"
+                },
+                {
+                  "key": "max_lat",
+                  "value": "11"
+                },
+                {
+                  "key": "min_lon",
+                  "value": "106"
+                },
+                {
+                  "key": "max_lon",
+                  "value": "107"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Voice Discover",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/voice/{{voiceId}}/discover",
+              "host": ["{{base_url}}"],
+              "path": ["voice", "{{voiceId}}", "discover"]
+            }
+          }
+        },
+        {
+          "name": "Get Voice Reactions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/voice/{{voiceId}}/reactions/",
+              "host": ["{{base_url}}"],
+              "path": ["voice", "{{voiceId}}", "reactions", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Voice Comments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/voice/{{voiceId}}/comments/",
+              "host": ["{{base_url}}"],
+              "path": ["voice", "{{voiceId}}", "comments", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reactions",
+      "item": [
+        {
+          "name": "Create Reaction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"voice_id\": \"{{voiceId}}\",\n  \"reaction_type\": \"like\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/reaction/",
+              "host": ["{{base_url}}"],
+              "path": ["reaction", ""]
+            }
+          }
+        },
+        {
+          "name": "Delete Reaction",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reaction/{{voiceId}}",
+              "host": ["{{base_url}}"],
+              "path": ["reaction", "{{voiceId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Reaction Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reaction/voice/{{voiceId}}/summary",
+              "host": ["{{base_url}}"],
+              "path": ["reaction", "voice", "{{voiceId}}", "summary"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Get Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notification/",
+              "host": ["{{base_url}}"],
+              "path": ["notification", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Unread Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notification/unread",
+              "host": ["{{base_url}}"],
+              "path": ["notification", "unread"]
+            }
+          }
+        },
+        {
+          "name": "Mark Notification as Read",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notification/{{notificationId}}/read",
+              "host": ["{{base_url}}"],
+              "path": ["notification", "{{notificationId}}", "read"]
+            }
+          }
+        },
+        {
+          "name": "Mark All Notifications as Read",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notification/read-all",
+              "host": ["{{base_url}}"],
+              "path": ["notification", "read-all"]
+            }
+          }
+        },
+        {
+          "name": "Clear Notifications",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notification/clear",
+              "host": ["{{base_url}}"],
+              "path": ["notification", "clear"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "Submit Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"voice_id\": \"{{voiceId}}\",\n  \"reason\": \"Inappropriate content\",\n  \"description\": \"This pin contains inappropriate content\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/report/",
+              "host": ["{{base_url}}"],
+              "path": ["report", ""]
+            }
+          }
+        },
+        {
+          "name": "Get My Reports",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/report/my",
+              "host": ["{{base_url}}"],
+              "path": ["report", "my"]
+            }
+          }
+        },
+        {
+          "name": "Get Report Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/report/{{reportId}}",
+              "host": ["{{base_url}}"],
+              "path": ["report", "{{reportId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Friends",
+      "item": [
+        {
+          "name": "Get Friend List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/friend/list/{{userId}}",
+              "host": ["{{base_url}}"],
+              "path": ["friend", "list", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Pending Friend Requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/friend/pending",
+              "host": ["{{base_url}}"],
+              "path": ["friend", "pending"]
+            }
+          }
+        },
+        {
+          "name": "Send Friend Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"receiver_id\": \"{{userId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/friend/request",
+              "host": ["{{base_url}}"],
+              "path": ["friend", "request"]
+            }
+          }
+        },
+        {
+          "name": "Respond to Friend Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"accept\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/friend/request/{{requestId}}/respond",
+              "host": ["{{base_url}}"],
+              "path": ["friend", "request", "{{requestId}}", "respond"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Friend Request",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/friend/request/{{requestId}}",
+              "host": ["{{base_url}}"],
+              "path": ["friend", "request", "{{requestId}}"]
+            }
+          }
+        },
+        {
+          "name": "Remove Friend",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"friend_id\": \"{{userId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/friend/remove",
+              "host": ["{{base_url}}"],
+              "path": ["friend", "remove"]
+            }
+          }
+        },
+        {
+          "name": "Get Friend Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/friend/status/{{userId}}",
+              "host": ["{{base_url}}"],
+              "path": ["friend", "status", "{{userId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Translate",
+      "item": [
+        {
+          "name": "Translate Text",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/translate/?q=Hello&target=vi",
+              "host": ["{{base_url}}"],
+              "path": ["translate", ""],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "Hello"
+                },
+                {
+                  "key": "target",
+                  "value": "vi"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Comments",
+      "item": [
+        {
+          "name": "Get Comment Replies",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/comments/{{commentId}}/replies/",
+              "host": ["{{base_url}}"],
+              "path": ["comments", "{{commentId}}", "replies", ""]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://10.5.1.186:5000"
+    },
+    {
+      "key": "token",
+      "value": "your_token_here"
+    },
+    {
+      "key": "userId",
+      "value": "user_id_here"
+    },
+    {
+      "key": "voiceId",
+      "value": "voice_id_here"
+    },
+    {
+      "key": "notificationId",
+      "value": "notification_id_here"
+    },
+    {
+      "key": "reportId",
+      "value": "report_id_here"
+    },
+    {
+      "key": "requestId",
+      "value": "request_id_here"
+    },
+    {
+      "key": "commentId",
+      "value": "comment_id_here"
+    }
+  ]
+}

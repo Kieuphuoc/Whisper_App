@@ -13,12 +13,12 @@ import {
   ScrollView,
   StatusBar,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
   Dimensions,
   useColorScheme
 } from 'react-native';
+import { Text } from '@/components/ui/text';
 import Animated, {
     FadeInDown,
     useAnimatedStyle,

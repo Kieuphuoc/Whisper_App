@@ -14,11 +14,11 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
-    Text,
     TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
+import { Text } from '@/components/ui/text';
 
 export default function EditProfileScreen() {
     const { colorScheme } = useColorScheme();
