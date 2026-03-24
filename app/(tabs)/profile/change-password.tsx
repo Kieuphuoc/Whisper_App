@@ -9,12 +9,13 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
-    TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
 import { Text } from '@/components/ui/text';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { SettingTabHeader } from '@/components/profile/SettingTabHeader';
+import { SettingInput } from '@/components/profile/SettingInput';
 
 export default function ChangePasswordScreen() {
     const router = useRouter();
@@ -62,42 +63,25 @@ export default function ChangePasswordScreen() {
         }
     };
 
-    const InputField = ({ label, value, onChangeText, placeholder, secureKey }: any) => (
-        <View className="mb-6">
-            <Text className="text-gray-500 font-semibold mb-2 ml-1">{label}</Text>
-            <View className="flex-row items-center bg-gray-50 border border-gray-100 rounded-2xl px-4 py-1">
-                <TextInput
-                    value={value}
-                    onChangeText={onChangeText}
-                    placeholder={placeholder}
-                    secureTextEntry={!showPassword[secureKey as keyof typeof showPassword]}
-                    className="flex-1 py-3 text-[#1e293b]"
-                />
-                <TouchableOpacity
-                    onPress={() => setShowPassword({ ...showPassword, [secureKey]: !showPassword[secureKey as keyof typeof showPassword] })}
-                >
-                    <Ionicons
-                        name={showPassword[secureKey as keyof typeof showPassword] ? "eye-off-outline" : "eye-outline"}
-                        size={20}
-                        color="#94a3b8"
-                    />
-                </TouchableOpacity>
-            </View>
-        </View>
+    const PasswordToggle = ({ field }: { field: keyof typeof showPassword }) => (
+        <TouchableOpacity
+            onPress={() => setShowPassword({ ...showPassword, [field]: !showPassword[field] })}
+        >
+            <Ionicons
+                name={showPassword[field] ? "eye-off-outline" : "eye-outline"}
+                size={20}
+                color="#94a3b8"
+            />
+        </TouchableOpacity>
     );
 
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            className="flex-1 bg-white"
+            className="flex-1 bg-white dark:bg-gray-950"
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
-            {/* Header */}
-            <View className="pt-14 pb-4 px-6 flex-row items-center border-b border-gray-100">
-                <TouchableOpacity onPress={() => router.back()} className="mr-4">
-                    <Ionicons name="arrow-back" size={24} color="#1e293b" />
-                </TouchableOpacity>
-                <Text className="text-2xl font-bold text-[#1e293b]">Đổi mật khẩu</Text>
-            </View>
+            <SettingTabHeader title="Đổi mật khẩu" leftIcon="arrow-back" />
 
             <ScrollView className="flex-1 px-6 pt-8" showsVerticalScrollIndicator={false}>
                 <Animated.View entering={FadeInDown.duration(500)}>
@@ -105,34 +89,37 @@ export default function ChangePasswordScreen() {
                         Để bảo mật tài khoản, vui lòng không chia sẻ mật khẩu của bạn cho người khác.
                     </Text>
 
-                    <InputField
+                    <SettingInput
                         label="Mật khẩu hiện tại"
                         value={oldPassword}
                         onChangeText={setOldPassword}
                         placeholder="Nhập mật khẩu hiện tại"
-                        secureKey="old"
+                        secureTextEntry={!showPassword.old}
+                        rightElement={<PasswordToggle field="old" />}
                     />
 
-                    <InputField
+                    <SettingInput
                         label="Mật khẩu mới"
                         value={newPassword}
                         onChangeText={setNewPassword}
                         placeholder="Nhập mật khẩu mới"
-                        secureKey="new"
+                        secureTextEntry={!showPassword.new}
+                        rightElement={<PasswordToggle field="new" />}
                     />
 
-                    <InputField
+                    <SettingInput
                         label="Xác nhận mật khẩu mới"
                         value={confirmPassword}
                         onChangeText={setConfirmPassword}
                         placeholder="Nhập lại mật khẩu mới"
-                        secureKey="confirm"
+                        secureTextEntry={!showPassword.confirm}
+                        rightElement={<PasswordToggle field="confirm" />}
                     />
 
                     <TouchableOpacity
                         onPress={handleChangePassword}
                         disabled={loading}
-                        className={`mt-10 py-5 rounded-3xl items-center shadow-lg shadow-primary-200 ${loading ? 'bg-gray-300' : 'bg-primary-500'}`}
+                        className={`mt-10 py-5 rounded-3xl items-center shadow-lg shadow-primary-500/20 ${loading ? 'bg-gray-300' : 'bg-primary-500'}`}
                     >
                         {loading ? (
                             <ActivityIndicator color="#fff" />

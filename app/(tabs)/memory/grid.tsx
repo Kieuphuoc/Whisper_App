@@ -109,8 +109,8 @@ export default function MemoryGridScreen() {
                     <MemoryCard
                         pin={item}
                         onPress={() => setSelectedPin(item)}
-                        customWidth={CARD_WIDTH}
-                        customMarginRight={0}
+                        cardWidth={CARD_WIDTH}
+                        cardSpacing={0}
                         currentTheme={currentTheme}
                     />
                 )}

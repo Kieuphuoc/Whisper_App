@@ -21,7 +21,7 @@ import {
     useColorScheme,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { MemoryCard } from '../(tabs)/memory/index';
+import VoicePinCarousel from '@/components/memory/VoicePinCarousel';
 
 const { width, height } = Dimensions.get('window');
 
@@ -277,38 +277,15 @@ export default function UserProfileScreen() {
                 </View>
 
                 {/* Public Voice Pins Feed */}
-                <View style={styles.feedSection}>
-                    <View style={styles.sectionHeader}>
-                         <Text style={[styles.sectionTitle, { color: currentTheme.colors.text, fontSize: 24 }]}>Ký ức công khai</Text>
-                        <Text style={[styles.sectionCount, { color: currentTheme.colors.primary, backgroundColor: currentTheme.colors.primary + '15' }]}>
-                            {publicPins.length}
-                        </Text>
-                    </View>
-
-                    {publicPins.length > 0 ? (
-                        <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
-                        >
-                            {publicPins.map((pin, index) => (
-                                <MemoryCard
-                                    key={pin.id}
-                                    pin={pin}
-                                    onPress={() => router.push({ pathname: '/(tabs)/home/voiceDetail', params: { id: pin.id } })}
-                                    customWidth={width * 0.7}
-                                    customMarginRight={15}
-                                    currentTheme={currentTheme}
-                                />
-                            ))}
-                        </ScrollView>
-                    ) : (
-                        <View style={styles.emptyFeed}>
-                            <Ionicons name="musical-notes-outline" size={48} color={currentTheme.colors.icon + '40'} />
-                             <Text style={[styles.emptyText, { color: currentTheme.colors.icon, fontSize: 14 }]}>Chưa có ký ức công khai nào</Text>
-                        </View>
-                    )}
-                </View>
+                <VoicePinCarousel
+                  title="Ký ức công khai"
+                  subtitle={`${publicPins.length} khoảnh khắc`}
+                  pins={publicPins}
+                  onSelectPin={(pin) => router.push({ pathname: '/(tabs)/home/voiceDetail', params: { id: pin.id } })}
+                  currentTheme={currentTheme}
+                  limit={5}
+                  emptyText="Chưa có ký ức công khai nào"
+                />
 
                 <View style={[styles.extraSection, { paddingHorizontal: currentTheme.spacing.lg, marginTop: 10 }]}>
                     <View style={[styles.extraStatsRow, { backgroundColor: currentTheme.colors.icon + '08', borderRadius: currentTheme.radius.xl }]}>

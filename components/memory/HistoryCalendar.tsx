@@ -6,7 +6,6 @@ import {
   Dimensions,
   Image,
   TouchableOpacity,
-  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { VoicePin } from '@/types';
@@ -14,12 +13,30 @@ import { BASE_URL } from '@/configs/Apis';
 
 const { width } = Dimensions.get('window');
 const GRID_COLS = 6;
-const DAY_SIZE = (width - 80) / GRID_COLS; 
+
+function startOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function clampToValidDate(input?: string) {
+  if (!input) return null;
+  const d = new Date(input);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function fmtKey(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 interface HistoryCalendarProps {
   pins: VoicePin[];
   currentTheme: any;
   onSelectPin: (pin: VoicePin) => void;
+  startDate?: string;
+  onPressAddToday?: () => void;
 }
 
 const getPinImage = (pin: VoicePin) => {
@@ -28,47 +45,50 @@ const getPinImage = (pin: VoicePin) => {
   return imgUrl.startsWith('http') ? imgUrl : `${BASE_URL}${imgUrl.startsWith('/') ? '' : '/'}${imgUrl}`;
 };
 
-const HistoryCalendar: React.FC<HistoryCalendarProps> = ({ pins, currentTheme, onSelectPin }) => {
-  const groupedData = useMemo(() => {
-    const monthsMap: Record<string, Record<number, VoicePin[]>> = {};
+const HistoryCalendar: React.FC<HistoryCalendarProps> = ({
+  pins,
+  currentTheme,
+  onSelectPin,
+  startDate,
+  onPressAddToday,
+}) => {
+  const today = useMemo(() => startOfDay(new Date()), []);
 
-    pins.forEach((pin) => {
-      const date = new Date(pin.createdAt);
-      const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
-      const day = date.getDate();
-
-      if (!monthsMap[monthKey]) {
-        monthsMap[monthKey] = {};
-      }
-      if (!monthsMap[monthKey][day]) {
-        monthsMap[monthKey][day] = [];
-      }
-      monthsMap[monthKey][day].push(pin);
-    });
-
-    // Convert to sorted array
-    return Object.keys(monthsMap)
-      .map((key) => {
-        const [year, month] = key.split('-').map(Number);
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        return {
-          monthKey: key,
-          label: `tháng ${month + 1} ${year}`,
-          year,
-          month,
-          daysInMonth,
-          pinsByDay: monthsMap[key],
-        };
-      })
-      .sort((a, b) => {
-        if (a.year !== b.year) return b.year - a.year;
-        return b.month - a.month;
-      });
+  const pinsByDateKey = useMemo(() => {
+    const map: Record<string, VoicePin[]> = {};
+    for (const pin of pins) {
+      const d = startOfDay(new Date(pin.createdAt));
+      const key = fmtKey(d);
+      (map[key] = map[key] ?? []).push(pin);
+    }
+    return map;
   }, [pins]);
+
+  const monthRange = useMemo(() => {
+    const now = new Date();
+    const start = clampToValidDate(startDate) ?? (pins.length ? new Date(pins.reduce((min, p) => (new Date(p.createdAt) < new Date(min.createdAt) ? p : min), pins[0]).createdAt) : now);
+    const startMonth = new Date(start.getFullYear(), start.getMonth(), 1);
+    const endMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const months: { monthKey: string; label: string; year: number; month: number; daysInMonth: number }[] = [];
+    for (let d = new Date(startMonth); d <= endMonth; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
+      const year = d.getFullYear();
+      const month = d.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      months.push({
+        monthKey: `${year}-${month}`,
+        label: `tháng ${month + 1} ${year}`,
+        year,
+        month,
+        daysInMonth,
+      });
+    }
+    return months;
+  }, [startDate, pins]);
 
   return (
     <View style={styles.container}>
-      {groupedData.map((monthData, index) => (
+      {monthRange.map((monthData, index) => (
         <View key={monthData.monthKey} style={styles.monthWrapper}>
           {/* Month Card */}
           <View
@@ -87,9 +107,16 @@ const HistoryCalendar: React.FC<HistoryCalendarProps> = ({ pins, currentTheme, o
             <View style={styles.grid}>
               {Array.from({ length: monthData.daysInMonth }).map((_, i) => {
                 const day = i + 1;
-                const dayPins = monthData.pinsByDay[day];
+                const cellDate = new Date(monthData.year, monthData.month, day);
+                const cellDateStart = startOfDay(cellDate);
+                const key = fmtKey(cellDateStart);
+                const dayPins = pinsByDateKey[key];
                 const firstPin = dayPins?.[0];
                 const imgUrl = firstPin ? getPinImage(firstPin) : null;
+
+                const isToday = cellDateStart.getTime() === today.getTime();
+                const isFuture = cellDateStart.getTime() > today.getTime();
+                const showAdd = isToday && !dayPins?.length && !!onPressAddToday;
 
                 return (
                   <View key={day} style={styles.dayCell}>
@@ -106,6 +133,30 @@ const HistoryCalendar: React.FC<HistoryCalendarProps> = ({ pins, currentTheme, o
                           </View>
                         )}
                       </TouchableOpacity>
+                    ) : showAdd ? (
+                      <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={onPressAddToday}
+                        style={[
+                          styles.addWrapper,
+                          {
+                            borderColor: currentTheme.colors.primary,
+                            backgroundColor: currentTheme.colors.primary + '10',
+                          },
+                        ]}
+                      >
+                        <Ionicons name="add" size={20} color={currentTheme.colors.primary} />
+                      </TouchableOpacity>
+                    ) : isFuture ? (
+                      <View
+                        style={[
+                          styles.futurePlaceholder,
+                          {
+                            backgroundColor: currentTheme.colors.textMuted + '10',
+                            borderColor: currentTheme.colors.textMuted + '15',
+                          },
+                        ]}
+                      />
                     ) : (
                       <View style={[styles.dot, { backgroundColor: currentTheme.colors.textMuted + '40' }]} />
                     )}
@@ -116,7 +167,7 @@ const HistoryCalendar: React.FC<HistoryCalendarProps> = ({ pins, currentTheme, o
           </View>
 
           {/* Dashed line separator */}
-          {index < groupedData.length - 1 && (
+          {index < monthRange.length - 1 && (
             <View style={styles.separatorWrapper}>
               <View style={[styles.dashedLine, { borderColor: currentTheme.colors.textMuted + '30' }]} />
             </View>
@@ -161,8 +212,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   dayCell: {
-    width: DAY_SIZE,
-    height: DAY_SIZE,
+    width: (width - 40 - 48 - 12 * (GRID_COLS - 1)) / GRID_COLS,
+    height: (width - 40 - 48 - 12 * (GRID_COLS - 1)) / GRID_COLS,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -172,8 +223,8 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   pinImageWrapper: {
-    width: DAY_SIZE * 1.2,
-    height: DAY_SIZE * 1.2,
+    width: ((width - 40 - 48 - 12 * (GRID_COLS - 1)) / GRID_COLS) * 1.2,
+    height: ((width - 40 - 48 - 12 * (GRID_COLS - 1)) / GRID_COLS) * 1.2,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#333',
@@ -183,6 +234,20 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  addWrapper: {
+    width: ((width - 40 - 48 - 12 * (GRID_COLS - 1)) / GRID_COLS) * 1.2,
+    height: ((width - 40 - 48 - 12 * (GRID_COLS - 1)) / GRID_COLS) * 1.2,
+    borderRadius: 12,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  futurePlaceholder: {
+    width: ((width - 40 - 48 - 12 * (GRID_COLS - 1)) / GRID_COLS) * 1.2,
+    height: ((width - 40 - 48 - 12 * (GRID_COLS - 1)) / GRID_COLS) * 1.2,
+    borderRadius: 12,
+    borderWidth: 1,
   },
   badge: {
     position: 'absolute',

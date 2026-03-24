@@ -139,6 +139,8 @@ const HistoryCard = ({ item, index, currentTheme, onPress }: { item: ViewHistory
     );
 };
 
+import { SettingTabHeader } from '@/components/profile/SettingTabHeader';
+
 export default function HistoryScreen() {
     const { colorScheme } = useColorScheme();
     const currentTheme = theme[colorScheme || 'light'];
@@ -193,26 +195,21 @@ export default function HistoryScreen() {
 
     return (
         <View className="flex-1" style={{ backgroundColor: currentTheme.colors.background }}>
-            {/* Header */}
-            <View className="pt-14 pb-4 px-6 flex-row items-center justify-between border-b" style={{ backgroundColor: currentTheme.colors.background, borderColor: currentTheme.colors.border }}>
-                <View className="flex-row items-center">
-                    <TouchableOpacity onPress={() => router.back()} className="mr-4">
-                        <Ionicons name="chevron-back" size={28} color={currentTheme.colors.text} />
-                    </TouchableOpacity>
-                    <Text
-                        style={{ fontFamily: currentTheme.typography.fonts.bold, fontSize: currentTheme.typography.fontSizes.xl }}
-                        className="text-gray-900 dark:text-white"
-                    >Lịch sử xem</Text>
-                </View>
-                <View className="flex-row items-center">
-                    <TouchableOpacity className="p-2">
-                        <Ionicons name="search-outline" size={24} color={currentTheme.colors.text} />
-                    </TouchableOpacity>
-                    <TouchableOpacity className="p-2">
-                        <Ionicons name="ellipsis-horizontal" size={24} color={currentTheme.colors.text} />
-                    </TouchableOpacity>
-                </View>
-            </View>
+            <SettingTabHeader 
+                title="Lịch sử nghe" 
+                leftIcon="arrow-back" 
+                rightElement={
+                    <View className="flex-row items-center">
+                        <TouchableOpacity className="p-2">
+                            <Ionicons name="search-outline" size={24} color={currentTheme.colors.text} />
+                        </TouchableOpacity>
+                        <TouchableOpacity className="p-2">
+                            <Ionicons name="ellipsis-horizontal" size={24} color={currentTheme.colors.text} />
+                        </TouchableOpacity>
+                    </View>
+                }
+            />
+
 
             {loading && !refreshing ? (
                 <View className="flex-1 justify-center items-center">

@@ -175,34 +175,39 @@ export default function VoiceUploadSheet({
                         ))}
                     </View>
 
-                    {/* Actions */}
-                    <View style={styles.actions}>
-                        <TouchableOpacity
-                            style={[styles.discardBtn, { borderRadius: currentTheme.radius.lg, borderColor: currentTheme.colors.icon + '20' }]}
-                            onPress={onClose}
-                            disabled={uploading}
-                        >
-                            <Text style={[styles.discardText, { color: currentTheme.colors.icon }]}>Hủy</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[
-                                styles.uploadBtn,
-                                { borderRadius: currentTheme.radius.lg, backgroundColor: currentTheme.colors.primary, shadowColor: currentTheme.colors.primary },
-                                uploading && styles.uploadBtnDisabled
-                            ]}
-                            onPress={handleUpload}
-                            disabled={uploading}
-                        >
-                            {uploading ? (
-                                <ActivityIndicator color="white" size="small" />
-                            ) : (
-                                <>
-                                    <Ionicons name="cloud-upload-outline" size={18} color="white" />
-                                    <Text style={styles.uploadText}>Đăng lên bản đồ</Text>
-                                </>
-                            )}
-                        </TouchableOpacity>
-                    </View>
+                    {/* Actions / AI Analysis Skeleton */}
+                    {uploading ? (
+                        <View style={styles.skeletonContainer}>
+                            <ActivityIndicator size="large" color={currentTheme.colors.primary} />
+                            <Text style={[styles.skeletonText, { color: currentTheme.colors.primary, marginTop: 16 }]}>
+                                AI đang phân tích và tải lên...
+                            </Text>
+                            <Text style={[styles.skeletonSubText, { color: currentTheme.colors.icon, marginTop: 4 }]}>
+                                Hệ thống đang nhận diện cảm xúc từ giọng nói của bạn
+                            </Text>
+                        </View>
+                    ) : (
+                        <View style={styles.actions}>
+                            <TouchableOpacity
+                                style={[styles.discardBtn, { borderRadius: currentTheme.radius.lg, borderColor: currentTheme.colors.icon + '20' }]}
+                                onPress={onClose}
+                                disabled={uploading}
+                            >
+                                <Text style={[styles.discardText, { color: currentTheme.colors.icon }]}>Hủy</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[
+                                    styles.uploadBtn,
+                                    { borderRadius: currentTheme.radius.lg, backgroundColor: currentTheme.colors.primary, shadowColor: currentTheme.colors.primary }
+                                ]}
+                                onPress={handleUpload}
+                                disabled={uploading}
+                            >
+                                <Ionicons name="cloud-upload-outline" size={18} color="white" />
+                                <Text style={styles.uploadText}>Đăng lên bản đồ</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </View>
             </View>
         </Modal>
@@ -340,5 +345,20 @@ const styles = StyleSheet.create({
         fontSize: 17,
         fontWeight: '700',
         color: '#ffffff',
+    },
+    skeletonContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 20,
+    },
+    skeletonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        textAlign: 'center',
+    },
+    skeletonSubText: {
+        fontSize: 13,
+        textAlign: 'center',
+        opacity: 0.8,
     },
 });

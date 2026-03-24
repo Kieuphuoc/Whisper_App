@@ -1,8 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useContext, useState, useEffect, useRef } from "react";
 import { StyleSheet, TouchableOpacity, View, Alert, useColorScheme } from "react-native";
-import MapView from "react-native-maps";
+import MapView, { Region } from "react-native-maps";
 
 import MapContainer from "@/components/home/MapContainer";
 import VoiceButton from "@/components/home/VoiceButton";
@@ -18,17 +18,20 @@ import { Ionicons } from "@expo/vector-icons";
 import { useDiscovery } from "@/hooks/useDiscovery";
 import VoicePinMiniCard from "@/components/discovery/VoicePinMiniCard";
 import { VoicePin } from "@/types";
-import { Region } from "react-native-maps";
 import { theme } from "@/constants/Theme";
 import StatsBento from "@/components/home/StatsBento";
 import FilterToggle from "@/components/home/Filter";
 import QuickActions from "@/components/home/QuickActions";
+import { useARProximity } from "@/hooks/useARProximity";
+import ExploreOverlay from "@/components/voice-ar/ExploreOverlay";
+import { markPromptedAR } from "@/storage/voiceARProgress";
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme() || "light";
   const currentTheme = theme[colorScheme];
   const { location } = useLocation();
   const { visibility, setVisibility } = useVisibility("PUBLIC");
+  const params = useLocalSearchParams<{ selectPinId?: string; autoPlay?: string }>();
   
   // Bounding box state for map-based fetching
   const [bbox, setBbox] = useState<BoundingBox | undefined>(undefined);
@@ -56,6 +59,12 @@ export default function HomeScreen() {
   const user = useContext(MyUserContext);
   const router = useRouter();
 
+  // Lightweight AR proximity (foreground-only, low frequency)
+  const { location: arLocation, nearbyPin: nearbyARPin, distanceMeters: nearbyARDistance } = useARProximity(accumulatedPins);
+  const [arOverlayVisible, setArOverlayVisible] = useState(false);
+  const arOverlayPinIdRef = useRef<number | null>(null);
+  const handledSelectParamRef = useRef<string | null>(null);
+
   // Step state
   const [pendingAudioUri, setPendingAudioUri] = useState<string | null>(null);
   const [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null);
@@ -64,7 +73,7 @@ export default function HomeScreen() {
   const [friendsVisible, setFriendsVisible] = useState(false);
 
   // Discovery
-  const { isScanning, discoveredPin, error, triggerScan, resetDiscovery } = useDiscovery();
+  const { isScanning, discoveredPin, error, triggerScan } = useDiscovery();
   const [isMiniCardOpen, setIsMiniCardOpen] = useState(false);
   const [externalSelectedPin, setExternalSelectedPin] = useState<VoicePin | null>(null);
   const [autoPlayPin, setAutoPlayPin] = useState(false);
@@ -75,6 +84,52 @@ export default function HomeScreen() {
       Alert.alert("Khám phá", error);
     }
   }, [error]);
+
+  // Debug: log current location & AR proximity state
+  useEffect(() => {
+    if (!__DEV__) return;
+    if (!arLocation) return;
+    const arCount = accumulatedPins.filter((p) => p.type?.toString?.() === "HIDDEN_AR").length;
+    console.log(
+      "[AR] location=",
+      arLocation.coords.latitude,
+      arLocation.coords.longitude,
+      "arPins=",
+      arCount,
+      "nearby=",
+      nearbyARPin?.id,
+      "d=",
+      nearbyARDistance
+    );
+  }, [arLocation, accumulatedPins, nearbyARPin?.id, nearbyARDistance]);
+
+  // Show AR overlay when entering 100m (anti-flicker)
+  useEffect(() => {
+    if (nearbyARPin && typeof nearbyARDistance === "number") {
+      if (!arOverlayVisible || arOverlayPinIdRef.current !== nearbyARPin.id) {
+        arOverlayPinIdRef.current = nearbyARPin.id;
+        setArOverlayVisible(true);
+      }
+    } else {
+      arOverlayPinIdRef.current = null;
+      setArOverlayVisible(false);
+    }
+  }, [nearbyARPin, nearbyARDistance, arOverlayVisible]);
+
+  // If coming back from AR screens, select & autoplay pin
+  useEffect(() => {
+    const selectPinId = params.selectPinId;
+    if (!selectPinId) return;
+    if (handledSelectParamRef.current === selectPinId) return;
+    handledSelectParamRef.current = selectPinId;
+
+    const idNum = Number(selectPinId);
+    const target = accumulatedPins.find((p) => p.id === idNum);
+    if (target) {
+      setExternalSelectedPin(target);
+      setAutoPlayPin(params.autoPlay === "1");
+    }
+  }, [params.selectPinId, params.autoPlay, accumulatedPins]);
 
   // Step 1 & 2: record
   const { isRecording, record, stop } = useRecorder({
@@ -104,16 +159,6 @@ export default function HomeScreen() {
     setPendingPhotoUri(null);
     setCameraVisible(false);
     setUploadSheetVisible(false);
-  };
-
-  const logout = async () => {
-    try {
-      await AsyncStorage.removeItem("token");
-      await AsyncStorage.removeItem("user");
-      if (dispatch) dispatch({ type: "LOGOUT" });
-    } catch (e) {
-      console.error("Logout failed", e);
-    }
   };
 
   const recenterMap = () => {
@@ -260,6 +305,22 @@ export default function HomeScreen() {
 
       {/* Friends modal */}
       <FriendsModal visible={friendsVisible} onClose={() => setFriendsVisible(false)} />
+
+      {arOverlayVisible && nearbyARPin && typeof nearbyARDistance === "number" && (
+        <ExploreOverlay
+          pin={nearbyARPin}
+          distanceMeters={nearbyARDistance}
+          onDismiss={async () => {
+            setArOverlayVisible(false);
+            await markPromptedAR(nearbyARPin.id, 10 * 60);
+          }}
+          onStart={async () => {
+            await markPromptedAR(nearbyARPin.id, 10 * 60);
+            setArOverlayVisible(false);
+            router.push({ pathname: "/voice-ar/hunt", params: { pinId: String(nearbyARPin.id) } });
+          }}
+        />
+      )}
     </View>
   );
 }

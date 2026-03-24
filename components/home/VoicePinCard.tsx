@@ -159,6 +159,12 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: { 
   const currentTheme = theme[colorScheme];
   const router = useRouter();
 
+  // Open/close animation for the overlay card
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const cardScale = useRef(new Animated.Value(0.94)).current;
+  const cardTranslateY = useRef(new Animated.Value(18)).current;
+  const [isClosing, setIsClosing] = useState(false);
+
   const player = useAudioPlayer(pin.audioUrl);
   const { playing } = useAudioPlayerStatus(player);
 
@@ -227,6 +233,64 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: { 
   const fireFloatingEmoji = (emoji: string) => {
     const id = Date.now().toString() + Math.random().toString();
     setFloatingEmojis(prev => [...prev, { id, emoji }]);
+  };
+
+  useEffect(() => {
+    overlayOpacity.setValue(0);
+    cardScale.setValue(0.94);
+    cardTranslateY.setValue(18);
+    setIsClosing(false);
+
+    Animated.parallel([
+      Animated.timing(overlayOpacity, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.spring(cardScale, {
+        toValue: 1,
+        damping: 18,
+        stiffness: 260,
+        mass: 1,
+        useNativeDriver: true,
+      }),
+      Animated.timing(cardTranslateY, {
+        toValue: 0,
+        duration: 260,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [pin.id]);
+
+  const handleClose = () => {
+    if (isClosing) return;
+    setIsClosing(true);
+
+    Animated.parallel([
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 180,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(cardScale, {
+        toValue: 0.96,
+        duration: 180,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(cardTranslateY, {
+        toValue: 10,
+        duration: 180,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => {
+      if (finished) onClose();
+      else onClose();
+    });
   };
 
   useEffect(() => {
@@ -343,7 +407,7 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: { 
 
   const navigateToProfile = () => {
     if (!pin.isAnonymous && pin.userId) {
-      onClose();
+      handleClose();
       router.push(`/user/${pin.userId}`);
     }
   };
@@ -377,8 +441,18 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: { 
 
   return (
     <>
-    <BlurView intensity={colorScheme === 'dark' ? 50 : 30} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={styles.overlay}>
-      <View style={[styles.turntableBody, { backgroundColor: currentTheme.colors.surface, borderColor: currentTheme.colors.border }]}>
+    <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
+      <BlurView intensity={colorScheme === 'dark' ? 50 : 30} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+      <Animated.View
+        style={[
+          styles.turntableBody,
+          {
+            backgroundColor: currentTheme.colors.surface,
+            borderColor: currentTheme.colors.border,
+            transform: [{ translateY: cardTranslateY }, { scale: cardScale }],
+          },
+        ]}
+      >
 
         {/* ── TOP BAR ─────────────────────────────────── */}
         <View style={styles.topBar}>
@@ -406,7 +480,7 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: { 
                 />
               </TouchableOpacity>
             )}
-            <TouchableOpacity onPress={onClose} hitSlop={15} style={[styles.closeBtn, { backgroundColor: currentTheme.colors.surfaceAlt }]}>
+            <TouchableOpacity onPress={handleClose} hitSlop={15} style={[styles.closeBtn, { backgroundColor: currentTheme.colors.surfaceAlt }]}>
               <Ionicons name="close" size={20} color={currentTheme.colors.text} />
             </TouchableOpacity>
           </View>
@@ -566,8 +640,8 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: { 
             ))}
           </Animated.View>
         )}
-      </View>
-    </BlurView>
+      </Animated.View>
+    </Animated.View>
 
     {/* ── REPORT MODAL ─────────────────────────────── */}
     <Modal

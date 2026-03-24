@@ -1,7 +1,7 @@
 import { VoicePin, VoiceType } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import { useState, useEffect, useCallback, forwardRef } from "react";
+import { useState, useCallback, forwardRef } from "react";
 import { StyleSheet, TouchableOpacity, View, useColorScheme } from "react-native";
 import { Text } from "@/components/ui/text";
 import MapView, { Callout, Marker, Region, MapType } from "react-native-maps";
@@ -9,6 +9,7 @@ import MapViewClustering from "react-native-map-clustering";
 import VoicePinCard from "./VoicePinCard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from '@react-navigation/native';
+import ClusterMarker from "./ClusterMarker";
 
 import RadarOverlay from "../discovery/RadarOverlay";
 import SpawnedVoicePin from "../discovery/SpawnedVoicePin";
@@ -53,7 +54,7 @@ const MapSection = forwardRef<MapView, Props>(({
     }
   };
   const [mapType, setMapType] = useState<MapType>('standard');
-  const colorScheme = useColorScheme();
+  useColorScheme();
 
   const loadMapType = useCallback(async () => {
     try {
@@ -116,21 +117,7 @@ const MapSection = forwardRef<MapView, Props>(({
           // Size grows with count
           const size = count < 5 ? 44 : count < 15 ? 52 : 62;
           const bg = count < 5 ? '#ef4444' : count < 15 ? '#f97316' : '#8b5cf6';
-          return (
-            <Marker
-              key={`cluster-${id}`}
-              coordinate={coord}
-              onPress={onPress}
-              anchor={{ x: 0.5, y: 0.5 }}
-              tracksViewChanges={false}
-            >
-              <View style={[styles.cluster, { width: size, height: size, borderRadius: size / 2, backgroundColor: bg + 'dd' }]}>
-                <View style={[styles.clusterInner, { width: size - 12, height: size - 12, borderRadius: (size - 12) / 2, backgroundColor: bg }]}>
-                  <Text style={styles.clusterCount}>{count}</Text>
-                </View>
-              </View>
-            </Marker>
-          );
+          return <ClusterMarker id={id} coordinate={coord} count={count} size={size} bg={bg} onPress={onPress} />;
         }}
       >
         {pins.map((pin) => {
@@ -212,6 +199,8 @@ const MapSection = forwardRef<MapView, Props>(({
     </View>
   );
 });
+
+MapSection.displayName = "MapSection";
 
 export default MapSection;
 

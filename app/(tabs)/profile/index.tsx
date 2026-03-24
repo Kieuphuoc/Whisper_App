@@ -5,7 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   ActivityIndicator,
   Image,
@@ -30,7 +31,7 @@ import Animated, {
     withDelay,
 } from 'react-native-reanimated';
 import { theme } from '@/constants/Theme';
-import { MemoryCard } from '../memory/index';
+import VoicePinCarousel from '@/components/memory/VoicePinCarousel';
 import * as Haptics from 'expo-haptics';
 import { MotiView } from 'moti';
 
@@ -80,9 +81,11 @@ export default function ProfileScreen() {
         }
     };
 
-    useEffect(() => {
-        fetchAll();
-    }, []);
+    useFocusEffect(
+        useCallback(() => {
+            fetchAll(true);
+        }, [])
+    );
 
     useEffect(() => {
         if (tapCount === 0) return;
@@ -120,15 +123,16 @@ export default function ProfileScreen() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     };
 
-  const getAvatarUri = (avatar?: string) => {
-    if (!avatar) return 'https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg';
-    if (avatar.startsWith('http')) return avatar;
-    return `${BASE_URL}${avatar.startsWith('/') ? '' : '/'}${avatar}`;
-  };
-
   const currentAvatar = profile?.avatar || userContext?.avatar;
+  const avatarUpdatedAt = profile?.updatedAt || userContext?.updatedAt || '';
+
+  const avatarUri = useMemo(() => {
+    if (!currentAvatar) return 'https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg';
+    const uri = currentAvatar.startsWith('http') ? currentAvatar : `${BASE_URL}${currentAvatar.startsWith('/') ? '' : '/'}${currentAvatar}`;
+    return avatarUpdatedAt ? `${uri}?t=${new Date(avatarUpdatedAt).getTime()}` : uri;
+  }, [currentAvatar, avatarUpdatedAt]);
+
   const displayName = profile?.displayName || profile?.username || userContext?.displayName || userContext?.username || 'User';
-  const avatarUri = getAvatarUri(currentAvatar);
   const bio = profile?.bio || userContext?.bio || 'Chưa có tiểu sử';
   const level = profile?.level || userContext?.level || 1;
 
@@ -238,38 +242,18 @@ export default function ProfileScreen() {
                 </View>
 
         {/* Public Voice Pins Feed */}
-        <View style={styles.feedSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: currentTheme.colors.text, fontSize: 24 }]}>Ký ức công khai</Text>
-            <Text style={[styles.sectionCount, { color: currentTheme.colors.primary, backgroundColor: currentTheme.colors.primary + '15' }]}>
-              {publicPins.length}
-            </Text>
-          </View>
-
-          {publicPins.length > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
-            >
-              {publicPins.map((pin) => (
-                <MemoryCard
-                  key={pin.id}
-                  pin={pin}
-                  onPress={() => router.push({ pathname: '/(tabs)/home/voiceDetail', params: { id: pin.id } })}
-                  customWidth={width * 0.7}
-                  customMarginRight={15}
-                  currentTheme={currentTheme}
-                />
-              ))}
-            </ScrollView>
-          ) : (
-            <View style={styles.emptyFeed}>
-              <Ionicons name="musical-notes-outline" size={48} color={currentTheme.colors.icon + '40'} />
-              <Text style={[styles.emptyText, { color: currentTheme.colors.icon, fontSize: 14 }]}>Chưa có ký ức công khai nào</Text>
-            </View>
-          )}
-        </View>
+        <VoicePinCarousel
+          title="Ký ức công khai"
+          subtitle={`${publicPins.length} khoảnh khắc`}
+          pins={publicPins}
+          onSelectPin={(pin) => router.push({ pathname: '/(tabs)/home/voiceDetail', params: { id: pin.id } })}
+          currentTheme={currentTheme}
+          limit={5}
+          onSeeAll={() => {
+            // Logic for see all if needed, or navigate to a specialized view
+          }}
+          emptyText="Chưa có ký ức công khai nào"
+        />
 
         {/* Extra Information Below Hero */}
         <View style={[styles.extraSection, { paddingHorizontal: currentTheme.spacing.lg }]}>

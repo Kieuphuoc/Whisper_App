@@ -219,7 +219,16 @@ export default function SettingsScreen() {
                     <Text style={{ fontWeight: '700', fontSize: 12, color: '#6b7280' }}>TÀI KHOẢN</Text>
                     <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden">
                         <SettingItem icon="person-outline" label="Thông tin cá nhân" onPress={() => router.push('/(tabs)/profile/edit-profile')} />
-                        <SettingItem icon="notifications-outline" label="Push Notifications" showArrow={false}>
+                        <SettingItem icon="key-outline" label="Đổi mật khẩu" onPress={() => router.push('/(tabs)/profile/change-password')} />
+                        <SettingItem icon="headset-outline" label="Lịch sử nghe" onPress={() => router.push('/(tabs)/profile/history')} />
+                    </View>
+                </View>
+
+                {/* Settings Section */}
+                <View className="mb-6">
+                    <Text style={{ fontWeight: '700', fontSize: 12, color: '#6b7280' }}>CÀI ĐẶT CHUNG</Text>
+                    <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden">
+                        <SettingItem icon="notifications-outline" label="Thông báo đẩy" showArrow={false}>
                             <Switch
                                 value={notifications}
                                 onValueChange={setNotifications}
@@ -227,14 +236,7 @@ export default function SettingsScreen() {
                                 thumbColor="#fff"
                             />
                         </SettingItem>
-                        <SettingItem icon="lock-closed-outline" label="Quyền riêng tư" />
-                    </View>
-                </View>
 
-                {/* App Section */}
-                <View className="mb-6">
-                    <Text style={{ fontWeight: '700', fontSize: 12, color: '#6b7280' }}>ỨNG DỤNG</Text>
-                    <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden">
                         <SettingItem
                             icon={colorScheme === 'dark' ? 'moon' : 'sunny'}
                             label="Giao diện tối"
@@ -259,8 +261,6 @@ export default function SettingsScreen() {
                         </View>
 
                         <SettingItem icon="language-outline" label="Ngôn ngữ" value="Tiếng Việt" />
-                        <SettingItem icon="help-circle-outline" label="Hỗ trợ & Phản hồi" />
-                        <SettingItem icon="information-circle-outline" label="Về chúng tôi" />
                     </View>
                 </View>
 
@@ -271,6 +271,15 @@ export default function SettingsScreen() {
                         <SettingItem icon="eye-outline" label="Trạng thái hoạt động" value="Bật" />
                         <SettingItem icon="location-outline" label="Chia sẻ vị trí" value="Bạn bè" />
                         <SettingItem icon="shield-checkmark-outline" label="Hồ sơ công khai" value="Bật" />
+                    </View>
+                </View>
+
+                {/* Support Section */}
+                <View className="mb-6">
+                    <Text style={{ fontWeight: '700', fontSize: 12, color: '#6b7280' }}>HỖ TRỢ</Text>
+                    <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden">
+                        <SettingItem icon="help-circle-outline" label="Hỗ trợ & Phản hồi" />
+                        <SettingItem icon="information-circle-outline" label="Về chúng tôi" />
                     </View>
                 </View>
 

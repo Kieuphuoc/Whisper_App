@@ -5,7 +5,11 @@ import { useMyPins } from '@/hooks/useMyPins';
 import { VoicePin } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import VoicePinCarousel from '@/components/memory/VoicePinCarousel';
+import { VoicePinCarouselCard as MemoryCard } from '@/components/memory/VoicePinCarouselCard';
+import React, { useCallback, useContext, useMemo, useState } from 'react';
+
+export { MemoryCard };
 import {
   ActivityIndicator,
   Dimensions,
@@ -23,6 +27,7 @@ import {
   useColorScheme
 } from 'react-native';
 import { Text } from '@/components/ui/text';
+import { MyUserContext } from '@/configs/Context';
 import Animated, {
   Extrapolation,
   SharedValue,
@@ -164,288 +169,13 @@ const waveStyles = StyleSheet.create({
   },
 });
 
-// ─── Memory Card ──────────────────────────────────────────
-export function MemoryCard({ pin, onPress, customWidth, customMarginRight, index, scrollX, currentTheme }: { pin: VoicePin; onPress: () => void; customWidth?: number; customMarginRight?: number; index?: number; scrollX?: SharedValue<number>; currentTheme: any }) {
-  const meta = getMeta(pin.emotionLabel);
-  const imgUrl = getPinImage(pin);
-  const pressedScale = useSharedValue(1);
-
-  const handlePressIn = () => {
-    pressedScale.value = withSpring(0.96, { mass: 1, damping: 20, stiffness: 300 });
-  };
-  const handlePressOut = () => {
-    pressedScale.value = withSpring(1, { mass: 1, damping: 20, stiffness: 300 });
-  };
-
-  const ITEM_SIZE = CARD_WIDTH + CARD_SPACING;
-
-  const animatedStyle = useAnimatedStyle(() => {
-    let carouselScale = 1;
-    let opacity = 1;
-
-    if (index !== undefined && scrollX !== undefined) {
-      carouselScale = interpolate(
-        scrollX.value,
-        [(index - 1) * ITEM_SIZE, index * ITEM_SIZE, (index + 1) * ITEM_SIZE],
-        [0.85, 1, 0.85],
-        Extrapolation.CLAMP
-      );
-      opacity = interpolate(
-        scrollX.value,
-        [(index - 1.5) * ITEM_SIZE, index * ITEM_SIZE, (index + 1.5) * ITEM_SIZE],
-        [0.7, 1, 0.7],
-        Extrapolation.CLAMP
-      );
-    }
-
-    return {
-      transform: [{ scale: carouselScale * pressedScale.value }],
-      opacity,
-    };
-  });
-
-  const dateStr = new Date(pin.createdAt).toLocaleDateString('vi-VN', {
-    day: '2-digit',
-    month: 'short',
-  });
-
-  const w = customWidth ?? CARD_WIDTH;
-  const mr = customMarginRight ?? CARD_SPACING;
-
-  return (
-    <Animated.View style={[{ width: w, marginRight: mr }, animatedStyle]}>
-      <TouchableOpacity
-        onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        activeOpacity={1}
-        style={[
-          memCard.container,
-          {
-            backgroundColor: currentTheme.colors.background === '#111118' ? '#1f1f2e' : meta.gradient,
-            borderColor: currentTheme.colors.icon + '15',
-            borderWidth: 1
-          }
-        ]}
-      >
-        {/* Mood badge */}
-        <View style={[memCard.moodBadge, { backgroundColor: meta.color + '20' }]}>
-          <Ionicons name={meta.icon} size={14} color={meta.color} />
-        </View>
-
-        {/* Image */}
-        {imgUrl ? (
-          <Image source={{ uri: imgUrl }} style={[memCard.image, { height: w * 0.6 }]} />
-        ) : (
-          <View style={[memCard.image, memCard.imagePlaceholder, { height: w * 0.6 }]}>
-            <Ionicons name="musical-notes-outline" size={32} color={meta.color + '60'} />
-          </View>
-        )}
-
-        {/* Info */}
-        <View style={memCard.info}>
-          <Text
-            style={[memCard.content, { color: currentTheme.colors.text, fontSize: 17, fontWeight: '600' }]}
-            numberOfLines={2}
-          >
-            {pin.content ?? 'Ký ức giọng nói'}
-          </Text>
-
-          <View style={memCard.metaRow}>
-            <Ionicons name="location-outline" size={11} color={currentTheme.colors.icon} />
-            <Text
-              style={[memCard.metaText, { color: currentTheme.colors.icon, fontSize: 14 }]}
-              numberOfLines={1}
-            >
-              {pin.address ?? 'Không rõ vị trí'}
-            </Text>
-          </View>
-
-          <Waveform color={meta.color} />
-
-          <View style={memCard.bottomRow}>
-            <Text style={[memCard.dateText, { fontSize: 14 }]}>{dateStr}</Text>
-            <View style={memCard.statsRow}>
-              <Ionicons name="headset-outline" size={10} color={currentTheme.colors.icon} />
-              <Text style={[memCard.statNum, { fontSize: 14 }]}>{pin.listensCount ?? 0}</Text>
-              <Ionicons name="heart" size={10} color={currentTheme.colors.primary} style={{ marginLeft: 6 }} />
-              <Text style={[memCard.statNum, { fontSize: 14 }]}>{pin.reactionsCount ?? 0}</Text>
-            </View>
-          </View>
-        </View>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-}
-
-const memCard = StyleSheet.create({
-  container: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    elevation: 3,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-  },
-  moodBadge: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    zIndex: 2,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  image: {
-    width: '100%',
-    backgroundColor: 'rgba(0,0,0,0.05)',
-  },
-  imagePlaceholder: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  info: {
-    padding: 12,
-    gap: 2,
-  },
-  content: {
-    fontWeight: '700',
-    lineHeight: 18,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    marginTop: 3,
-  },
-  metaText: {
-    flex: 1,
-  },
-  bottomRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  dateText: {
-    color: '#b0b0b0',
-    fontWeight: '500',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  statNum: {
-    color: '#b0b0b0',
-    marginLeft: 2,
-  },
-});
-
-// ─── Section (carousel) ──────────────────────────────────
-function Section({
-  title,
-  icon,
-  iconColor,
-  pins,
-  onSeeAll,
-  onSelectPin,
-  currentTheme
-}: {
-  title: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  iconColor: string;
-  pins: VoicePin[];
-  onSeeAll?: () => void;
-  onSelectPin: (p: VoicePin) => void;
-  currentTheme: any;
-}) {
-  if (pins.length === 0) return null;
-  const displayPins = pins.slice(0, 10);
-  const scrollX = useSharedValue(0);
-
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollX.value = event.contentOffset.x;
-    },
-  });
-
-  return (
-    <View style={section.container}>
-      <View style={section.header}>
-        <View style={section.titleRow}>
-          <View style={[section.iconDot, { backgroundColor: iconColor + '18' }]}>
-            <Ionicons name={icon} size={14} color={iconColor} />
-          </View>
-          <Text style={[section.title, { color: currentTheme.colors.text, fontSize: 17, fontWeight: '600' }]}>{title}</Text>
-        </View>
-        {pins.length > 10 && onSeeAll && (
-          <TouchableOpacity onPress={onSeeAll} style={section.seeAllBtn}>
-            <Text style={[section.seeAllText, { color: currentTheme.colors.primary, fontSize: currentTheme.typography.fontSizes.xs }]}>Xem tất cả</Text>
-            <Ionicons name="chevron-forward" size={14} color={currentTheme.colors.primary} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <Animated.FlatList
-        data={displayPins}
-        horizontal
-        keyExtractor={p => String(p.id)}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20 }}
-        snapToInterval={CARD_WIDTH + CARD_SPACING}
-        decelerationRate="fast"
-        onScroll={scrollHandler}
-        scrollEventThrottle={16}
-        renderItem={({ item, index }) => (
-          <MemoryCard pin={item} onPress={() => onSelectPin(item)} index={index} scrollX={scrollX} currentTheme={currentTheme} />
-        )}
-      />
-    </View>
-  );
-}
-
-const section = StyleSheet.create({
-  container: { marginBottom: 28 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 14,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  iconDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    fontWeight: '700',
-    letterSpacing: -0.3,
-  },
-  seeAllBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  seeAllText: {
-    fontWeight: '600',
-  },
-});
+// Removed MemoryCard and Section - now using VoicePinCarousel
 
 export default function MemoryScreen() {
   const colorScheme = useColorScheme() || 'light';
   const currentTheme = theme[colorScheme];
   const router = useRouter();
+  const user = useContext(MyUserContext);
   const { pins, loading, error, refetch } = useMyPins();
   const [selectedPin, setSelectedPin] = useState<VoicePin | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -576,10 +306,15 @@ export default function MemoryScreen() {
 
   if (selectedPin) {
     return (
-      <VoicePinTurntable
-        pin={selectedPin}
-        onClose={() => setSelectedPin(null)}
-      />
+      <View style={{ flex: 1 }}>
+        <StatusBar barStyle="light-content" />
+        {/* Import would be needed if VoicePinTurntable was used, but it's imported at top */}
+        {/* Actually, let's keep it consistent, if it was imported, it works */}
+        <VoicePinTurntable
+            pin={selectedPin}
+            onClose={() => setSelectedPin(null)}
+        />
+      </View>
     );
   }
 
@@ -668,7 +403,7 @@ export default function MemoryScreen() {
 
         {/* Sections */}
         {!loading && activeFilter !== 'diary' && sections.map(s => (
-          <Section
+          <VoicePinCarousel
             key={s.key}
             title={s.title}
             icon={s.icon}
@@ -676,6 +411,7 @@ export default function MemoryScreen() {
             pins={s.pins}
             onSelectPin={p => setSelectedPin(p)}
             currentTheme={currentTheme}
+            limit={10}
             onSeeAll={() => {
               router.push({
                 pathname: '/(tabs)/memory/grid',
@@ -691,6 +427,11 @@ export default function MemoryScreen() {
             pins={filtered}
             currentTheme={currentTheme}
             onSelectPin={(p) => setSelectedPin(p)}
+            startDate={user?.createdAt}
+            onPressAddToday={() => {
+              // Go back to the Map/Home tab so user can create a new voice pin
+              router.replace('/home');
+            }}
           />
         )}
 
