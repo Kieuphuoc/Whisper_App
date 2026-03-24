@@ -67,13 +67,11 @@ export function getPinImage(pin: VoicePin): string | undefined {
 }
 
 // ─── Filter chips ─────────────────────────────────────────
-type FilterType = 'mood' | 'time' | 'visibility' | 'location' | 'diary';
+type FilterType = 'time' | 'diary' | 'visibility';
 const FILTERS: { key: FilterType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: 'mood', label: 'Tâm trạng', icon: 'happy-outline' },
-  { key: 'diary', label: 'Nhật ký', icon: 'journal-outline' },
-  { key: 'time', label: 'Thời gian', icon: 'time-outline' },
+  { key: 'time', label: 'Dòng thời gian', icon: 'time-outline' },
+  { key: 'diary', label: 'Nhật ký lịch', icon: 'calendar-outline' },
   { key: 'visibility', label: 'Quyền riêng tư', icon: 'lock-closed-outline' },
-  { key: 'location', label: 'Địa điểm', icon: 'location-outline' },
 ];
 
 function FilterChips({ active, onChange, currentTheme }: { active: FilterType; onChange: (f: FilterType) => void; currentTheme: any }) {
@@ -179,7 +177,7 @@ export default function MemoryScreen() {
   const { pins, loading, error, refetch } = useMyPins();
   const [selectedPin, setSelectedPin] = useState<VoicePin | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<FilterType>('mood');
+  const [activeFilter, setActiveFilter] = useState<FilterType>('time');
   const [refreshing, setRefreshing] = useState(false);
 
   const handleFilterChange = (f: FilterType) => {
@@ -225,35 +223,6 @@ export default function MemoryScreen() {
       if (thisMonth.length > 0) {
         result.push({ key: 'month', title: 'Tháng này', icon: 'calendar-outline', iconColor: '#3b82f6', pins: thisMonth });
       }
-
-      const timeMap: Record<string, VoicePin[]> = {};
-      for (const p of filtered) {
-        const d = new Date(p.createdAt);
-        const isRecent = new Date(p.createdAt) >= sevenDaysAgo;
-        const isThisMonth = d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-        if (isRecent || isThisMonth) continue;
-
-        const key = d.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
-        (timeMap[key] = timeMap[key] ?? []).push(p);
-      }
-      const sortedTime = Object.entries(timeMap)
-        .sort((a, b) => new Date(b[1][0].createdAt).getTime() - new Date(a[1][0].createdAt).getTime());
-      for (const [label, tpins] of sortedTime) {
-        result.push({ key: `time-${label}`, title: label, icon: 'calendar-outline', iconColor: '#10b981', pins: tpins });
-      }
-    }
-
-    if (activeFilter === 'mood') {
-      const emotionMap: Record<string, VoicePin[]> = {};
-      for (const p of filtered) {
-        const key = p.emotionLabel ?? 'Khác';
-        (emotionMap[key] = emotionMap[key] ?? []).push(p);
-      }
-      const sorted = Object.entries(emotionMap).sort((a, b) => b[1].length - a[1].length);
-      for (const [emotion, epins] of sorted) {
-        const meta = getMeta(emotion);
-        result.push({ key: `emo-${emotion}`, title: meta.vi, icon: meta.icon, iconColor: meta.color, pins: epins });
-      }
     }
 
     if (activeFilter === 'visibility') {
@@ -272,27 +241,6 @@ export default function MemoryScreen() {
       for (const [vis, vpins] of sorted) {
         const meta = VIS_META[vis] || VIS_META['PRIVATE'];
         result.push({ key: `vis-${vis}`, title: meta.label, icon: meta.icon, iconColor: meta.color, pins: vpins });
-      }
-    }
-
-    if (activeFilter === 'location') {
-      const locMap: Record<string, VoicePin[]> = {};
-      for (const p of filtered) {
-        if (!p.address) continue;
-        const parts = p.address.split(',').map(s => s.trim());
-        const cityKey = parts.length >= 2 ? parts[parts.length - 2] : parts[0];
-        (locMap[cityKey] = locMap[cityKey] ?? []).push(p);
-      }
-      const sortedLoc = Object.entries(locMap).sort((a, b) => b[1].length - a[1].length);
-      for (const [loc, lpins] of sortedLoc) {
-        if (lpins.length >= 1) {
-          result.push({ key: `loc-${loc}`, title: loc, icon: 'location-outline', iconColor: '#f59e0b', pins: lpins });
-        }
-      }
-
-      const noLoc = filtered.filter(p => !p.address);
-      if (noLoc.length > 0) {
-        result.push({ key: `loc-unknown`, title: 'Không rõ vị trí', icon: 'help-circle-outline', iconColor: '#9ca3af', pins: noLoc });
       }
     }
 

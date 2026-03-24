@@ -216,19 +216,19 @@ export default function SettingsScreen() {
 
                 {/* Account Section */}
                 <View className="mb-6">
-                    <Text style={{ fontWeight: '700', fontSize: 12, color: '#6b7280' }}>TÀI KHOẢN</Text>
-                    <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden">
+                    <Text style={{ fontWeight: '700', fontSize: 12, color: '#6b7280', marginBottom: 8, marginLeft: 4 }}>TÀI KHOẢN</Text>
+                    <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800">
                         <SettingItem icon="person-outline" label="Thông tin cá nhân" onPress={() => router.push('/(tabs)/profile/edit-profile')} />
                         <SettingItem icon="key-outline" label="Đổi mật khẩu" onPress={() => router.push('/(tabs)/profile/change-password')} />
-                        <SettingItem icon="headset-outline" label="Lịch sử nghe" onPress={() => router.push('/(tabs)/profile/history')} />
+                        <SettingItem icon="time-outline" label="Lịch sử nghe" onPress={() => router.push('/(tabs)/profile/history')} />
                     </View>
                 </View>
 
-                {/* Settings Section */}
+                {/* Preferences Section - Toggles are grouped here */}
                 <View className="mb-6">
-                    <Text style={{ fontWeight: '700', fontSize: 12, color: '#6b7280' }}>CÀI ĐẶT CHUNG</Text>
-                    <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden">
-                        <SettingItem icon="notifications-outline" label="Thông báo đẩy" showArrow={false}>
+                    <Text style={{ fontWeight: '700', fontSize: 12, color: '#6b7280', marginBottom: 8, marginLeft: 4 }}>TÙY CHỈNH & HIỂN THỊ</Text>
+                    <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800">
+                        <SettingItem icon="notifications-outline" label="Push Notifications" showArrow={false}>
                             <Switch
                                 value={notifications}
                                 onValueChange={setNotifications}
@@ -236,7 +236,6 @@ export default function SettingsScreen() {
                                 thumbColor="#fff"
                             />
                         </SettingItem>
-
                         <SettingItem
                             icon={colorScheme === 'dark' ? 'moon' : 'sunny'}
                             label="Giao diện tối"
@@ -249,7 +248,7 @@ export default function SettingsScreen() {
                                 thumbColor="#fff"
                             />
                         </SettingItem>
-
+                        
                         <View className="px-1 border-b border-gray-100 dark:border-gray-800 py-4">
                             <View className="flex-row items-center mb-4">
                                 <View className="w-9 h-9 rounded-xl items-center justify-center mr-4 bg-gray-100 dark:bg-gray-800">
@@ -259,15 +258,16 @@ export default function SettingsScreen() {
                             </View>
                             {renderMapTypePicker()}
                         </View>
-
+                        
                         <SettingItem icon="language-outline" label="Ngôn ngữ" value="Tiếng Việt" />
                     </View>
                 </View>
 
                 {/* Privacy Section */}
                 <View className="mb-6">
-                    <Text style={{ fontWeight: '700', fontSize: 12, color: '#6b7280' }}>QUYỀN RIÊNG TƯ</Text>
-                    <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden">
+                    <Text style={{ fontWeight: '700', fontSize: 12, color: '#6b7280', marginBottom: 8, marginLeft: 4 }}>QUYỀN RIÊNG TƯ</Text>
+                    <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800">
+                        <SettingItem icon="lock-closed-outline" label="Kiểm tra quyền riêng tư" />
                         <SettingItem icon="eye-outline" label="Trạng thái hoạt động" value="Bật" />
                         <SettingItem icon="location-outline" label="Chia sẻ vị trí" value="Bạn bè" />
                         <SettingItem icon="shield-checkmark-outline" label="Hồ sơ công khai" value="Bật" />
@@ -276,8 +276,8 @@ export default function SettingsScreen() {
 
                 {/* Support Section */}
                 <View className="mb-6">
-                    <Text style={{ fontWeight: '700', fontSize: 12, color: '#6b7280' }}>HỖ TRỢ</Text>
-                    <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden">
+                    <Text style={{ fontWeight: '700', fontSize: 12, color: '#6b7280', marginBottom: 8, marginLeft: 4 }}>HỖ TRỢ & THÔNG TIN</Text>
+                    <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800">
                         <SettingItem icon="help-circle-outline" label="Hỗ trợ & Phản hồi" />
                         <SettingItem icon="information-circle-outline" label="Về chúng tôi" />
                     </View>
@@ -285,7 +285,7 @@ export default function SettingsScreen() {
 
                 {/* Danger Zone */}
                 <View className="mb-6 mt-2">
-                    <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden">
+                    <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800">
                         <SettingItem
                             icon="log-out-outline"
                             label="Đăng xuất"

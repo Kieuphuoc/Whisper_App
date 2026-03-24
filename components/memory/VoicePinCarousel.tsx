@@ -111,7 +111,7 @@ export default function VoicePinCarousel({
             {subtitle && <Text style={[subtitleStyles.text, { color: currentTheme.colors.icon }]}>{subtitle}</Text>}
           </View>
         </View>
-        {(pins.length > limit) && onSeeAll && (
+        {onSeeAll && (
           <TouchableOpacity onPress={onSeeAll} style={styles.seeAllBtn}>
             <Text style={[styles.seeAllText, { color: currentTheme.colors.primary }]}>Xem tất cả</Text>
             <Ionicons name="chevron-forward" size={16} color={currentTheme.colors.primary} />
