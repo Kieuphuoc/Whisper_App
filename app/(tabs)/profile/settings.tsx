@@ -58,10 +58,10 @@ const SettingItem = ({
                         color={textColor === '#ef4444' ? '#ef4444' : (colorScheme === 'dark' ? '#f3f4f6' : '#374151')}
                     />
                 </View>
-                <Text style={{ fontSize: 17, fontWeight: '600', color: textColor || '#1f2937' }}>{label}</Text>
+                <Text style={{ fontSize: 17, fontWeight: '600', color: textColor || (colorScheme === 'dark' ? '#f3f4f6' : '#1f2937') }}>{label}</Text>
             </View>
             <View className="flex-row items-center">
-                {!!value && <Text style={{ color: '#6b7280', fontSize: 14 }}>{value}</Text>}
+                {!!value && <Text style={{ color: colorScheme === 'dark' ? '#9ca3af' : '#6b7280', fontSize: 14 }}>{value}</Text>}
                 {children}
                 {showArrow && !children && <Ionicons name="chevron-forward" size={20} color="#9ca3af" />}
             </View>
@@ -76,13 +76,17 @@ export default function SettingsScreen() {
     const dispatch = useContext(MyDispatchContext);
     const router = useRouter();
     const [loading, setLoading] = useState(false);
-    const [mapType, setMapType] = useState('standard');
+    const [mapType, setMapType] = useState('dark');
     const [notifications, setNotifications] = useState(true);
 
     useEffect(() => {
         const loadSettings = async () => {
             const savedMapType = await AsyncStorage.getItem('mapType');
-            if (savedMapType) setMapType(savedMapType);
+            if (savedMapType) {
+                if (savedMapType === 'standard') setMapType('dark');
+                else if (savedMapType === 'terrain') setMapType('light');
+                else setMapType(savedMapType);
+            }
         };
         loadSettings();
     }, []);
@@ -133,6 +137,7 @@ export default function SettingsScreen() {
                 <View className="relative h-48 rounded-3xl overflow-hidden bg-gray-200 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
                     {/* Native Map Preview */}
                     <MapView
+                        key={mapType}
                         style={StyleSheet.absoluteFill}
                         initialRegion={{
                             latitude: FALLBACK_LAT,
@@ -146,8 +151,9 @@ export default function SettingsScreen() {
                             latitudeDelta: 0.05,
                             longitudeDelta: 0.05,
                         }}
-                        mapType={mapType as any}
-                        customMapStyle={mapType === 'standard' ? darkMapStyle : undefined}
+                        mapType={mapType === 'satellite' ? 'satellite' : 'standard'}
+                        customMapStyle={mapType === 'dark' ? darkMapStyle : []}
+                        userInterfaceStyle={mapType === 'dark' ? 'dark' : 'light'}
                         scrollEnabled={false}
                         zoomEnabled={false}
                         pitchEnabled={false}
@@ -167,8 +173,8 @@ export default function SettingsScreen() {
 
                     {/* Map Type Controls */}
                     <View className="absolute bottom-4 left-4 right-4 bg-white/95 dark:bg-gray-900/95 p-1.5 rounded-2xl flex-row shadow-lg">
-                        {['standard', 'terrain', 'satellite'].map((type) => {
-                            const labels: Record<string, string> = { standard: 'Tối', terrain: 'Sáng', satellite: 'Bản đồ vệ tinh' };
+                        {['dark', 'light', 'satellite'].map((type) => {
+                            const labels: Record<string, string> = { dark: 'Tối', light: 'Sáng', satellite: 'Vệ tinh' };
                             const isActive = mapType === type;
                             return (
                                 <TouchableOpacity
@@ -209,14 +215,14 @@ export default function SettingsScreen() {
                     <Image source={{ uri: avatarUri }} className="w-16 h-16 rounded-full mr-4" />
                     <View className="flex-1">
                         <Text style={{ fontSize: 18, fontWeight: '700', color: colorScheme === 'dark' ? '#fff' : '#111' }}>{displayName}</Text>
-                        <Text style={{ color: '#6b7280', fontSize: 14 }}>Chỉnh sửa hồ sơ</Text>
+                        <Text style={{ color: colorScheme === 'dark' ? '#9ca3af' : '#6b7280', fontSize: 14 }}>Chỉnh sửa hồ sơ</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
                 </TouchableOpacity>
 
                 {/* Account Section */}
                 <View className="mb-6">
-                    <Text style={{ fontWeight: '700', fontSize: 12, color: '#6b7280', marginBottom: 8, marginLeft: 4 }}>TÀI KHOẢN</Text>
+                    <Text style={{ fontWeight: '700', fontSize: 12, color: colorScheme === 'dark' ? '#9ca3af' : '#6b7280', marginBottom: 8, marginLeft: 4 }}>TÀI KHOẢN</Text>
                     <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800">
                         <SettingItem icon="person-outline" label="Thông tin cá nhân" onPress={() => router.push('/(tabs)/profile/edit-profile')} />
                         <SettingItem icon="key-outline" label="Đổi mật khẩu" onPress={() => router.push('/(tabs)/profile/change-password')} />
@@ -226,7 +232,7 @@ export default function SettingsScreen() {
 
                 {/* Preferences Section - Toggles are grouped here */}
                 <View className="mb-6">
-                    <Text style={{ fontWeight: '700', fontSize: 12, color: '#6b7280', marginBottom: 8, marginLeft: 4 }}>TÙY CHỈNH & HIỂN THỊ</Text>
+                    <Text style={{ fontWeight: '700', fontSize: 12, color: colorScheme === 'dark' ? '#9ca3af' : '#6b7280', marginBottom: 8, marginLeft: 4 }}>TÙY CHỈNH & HIỂN THỊ</Text>
                     <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800">
                         <SettingItem icon="notifications-outline" label="Push Notifications" showArrow={false}>
                             <Switch
@@ -265,7 +271,7 @@ export default function SettingsScreen() {
 
                 {/* Privacy Section */}
                 <View className="mb-6">
-                    <Text style={{ fontWeight: '700', fontSize: 12, color: '#6b7280', marginBottom: 8, marginLeft: 4 }}>QUYỀN RIÊNG TƯ</Text>
+                    <Text style={{ fontWeight: '700', fontSize: 12, color: colorScheme === 'dark' ? '#9ca3af' : '#6b7280', marginBottom: 8, marginLeft: 4 }}>QUYỀN RIÊNG TƯ</Text>
                     <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800">
                         <SettingItem icon="lock-closed-outline" label="Kiểm tra quyền riêng tư" />
                         <SettingItem icon="eye-outline" label="Trạng thái hoạt động" value="Bật" />
@@ -276,8 +282,17 @@ export default function SettingsScreen() {
 
                 {/* Support Section */}
                 <View className="mb-6">
-                    <Text style={{ fontWeight: '700', fontSize: 12, color: '#6b7280', marginBottom: 8, marginLeft: 4 }}>HỖ TRỢ & THÔNG TIN</Text>
+                    <Text style={{ fontWeight: '700', fontSize: 12, color: colorScheme === 'dark' ? '#9ca3af' : '#6b7280', marginBottom: 8, marginLeft: 4 }}>HỖ TRỢ & THÔNG TIN</Text>
                     <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800">
+                        <SettingItem 
+                            icon="refresh-outline" 
+                            label="Xem lại hướng dẫn" 
+                            onPress={async () => {
+                                await AsyncStorage.removeItem('onboarding_completed');
+                                await AsyncStorage.removeItem('walkthrough_completed');
+                                Alert.alert('Thành công', 'Hướng dẫn đã được đặt lại. Bạn sẽ thấy chúng ở lần khởi động tới.');
+                            }} 
+                        />
                         <SettingItem icon="help-circle-outline" label="Hỗ trợ & Phản hồi" />
                         <SettingItem icon="information-circle-outline" label="Về chúng tôi" />
                     </View>

@@ -83,21 +83,56 @@ export default function RootLayout() {
 function RootLayoutNav({ user }: { user: any }) {
   const segments = useSegments();
   const router = useRouter();
+  const [isOnboardingChecked, setIsOnboardingChecked] = useState(false);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
 
   useEffect(() => {
-    const inAuthGroup = segments[0] === "(auth)";
+    const checkOnboarding = async () => {
+      try {
+        const completed = await AsyncStorage.getItem("onboarding_completed");
+        setHasCompletedOnboarding(completed === "true");
+      } catch (e) {
+        console.error("Failed to check onboarding status", e);
+      } finally {
+        setIsOnboardingChecked(true);
+      }
+    };
+    checkOnboarding();
+  }, [segments]);
 
-    if (!user && !inAuthGroup) {
-      router.replace("/login");
-    } else if (user && (inAuthGroup || !segments[0])) {
-      router.replace("/home");
+  useEffect(() => {
+    if (!isOnboardingChecked) return;
+
+    const inAuthGroup = segments[0] === "(auth)";
+    const inOnboarding = segments[0] === "onboarding";
+
+    if (!hasCompletedOnboarding && !inOnboarding) {
+       router.replace("/onboarding");
+       return;
     }
-  }, [user, segments]);
+
+    if (hasCompletedOnboarding) {
+        if (!user && !inAuthGroup && !inOnboarding) {
+          router.replace("/login");
+        } else if (user && (inAuthGroup || inOnboarding || !segments[0])) {
+          router.replace("/home");
+        }
+    }
+  }, [user, segments, isOnboardingChecked, hasCompletedOnboarding]);
+
+  if (!isOnboardingChecked) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: '#f8fafc' }}>
+        <ActivityIndicator size="large" color="#8b5cf6" />
+      </View>
+    );
+  }
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
       <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+      <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
       <Stack.Screen name="index" options={{ animation: 'fade' }} />
     </Stack>
   );

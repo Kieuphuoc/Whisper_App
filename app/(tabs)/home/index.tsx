@@ -25,6 +25,10 @@ import QuickActions from "@/components/home/QuickActions";
 import { useARProximity } from "@/hooks/useARProximity";
 import ExploreOverlay from "@/components/voice-ar/ExploreOverlay";
 import { markPromptedAR } from "@/storage/voiceARProgress";
+import WalkthroughOverlay, { WalkthroughStep } from "@/components/onboarding/WalkthroughOverlay";
+import { Dimensions } from "react-native";
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme() || "light";
@@ -78,6 +82,57 @@ export default function HomeScreen() {
   const [externalSelectedPin, setExternalSelectedPin] = useState<VoicePin | null>(null);
   const [autoPlayPin, setAutoPlayPin] = useState(false);
   const mapRef = useRef<MapView>(null);
+
+  // Walkthrough state
+  const [walkthroughVisible, setWalkthroughVisible] = useState(false);
+  const [walkthroughSteps, setWalkthroughSteps] = useState<WalkthroughStep[]>([]);
+
+  useEffect(() => {
+    const checkWalkthrough = async () => {
+      const completed = await AsyncStorage.getItem("walkthrough_completed");
+      if (completed !== "true") {
+        setWalkthroughSteps([
+          {
+            id: 'voice',
+            title: 'Ghi âm Kỷ niệm',
+            description: 'Nhấn vào nút Micro để bắt đầu ghi lại những khoảnh khắc và tâm tư của bạn tại địa điểm này.',
+            icon: 'mic',
+            targetPos: { bottom: 110, left: SCREEN_WIDTH / 2 - 37.5, width: 75, height: 75 }
+          },
+          {
+            id: 'stats',
+            title: 'Chỉ số của bạn',
+            description: 'Xem nhanh tổng số VoicePins bạn đã tạo và những thành tựu bạn đạt được.',
+            icon: 'stats-chart',
+            targetPos: { top: 60, right: 25, width: 60, height: 60 } // Roughly near stats or profile
+          },
+          {
+            id: 'explore',
+            title: 'Khám phá xung quanh',
+            description: 'Sử dụng các phím tắt để quét tìm những VoicePins bí ẩn hoặc kết nối với bạn bè.',
+            icon: 'planet',
+            targetPos: { bottom: 40, left: 10, width: SCREEN_WIDTH - 20, height: 60 }
+          },
+          {
+            id: 'recenter',
+            title: 'Định vị lại',
+            description: 'Nhấn vào đây bất cứ lúc nào để quay lại vị trí hiện tại của bạn trên bản đồ.',
+            icon: 'navigate',
+            targetPos: { bottom: 122, left: SCREEN_WIDTH / 2 + 60, width: 50, height: 50 }
+          }
+        ]);
+        setWalkthroughVisible(true);
+      }
+    };
+    if (user) {
+        checkWalkthrough();
+    }
+  }, [user]);
+
+  const finishWalkthrough = async () => {
+    await AsyncStorage.setItem("walkthrough_completed", "true");
+    setWalkthroughVisible(false);
+  };
 
   useEffect(() => {
     if (error) {
@@ -321,6 +376,12 @@ export default function HomeScreen() {
           }}
         />
       )}
+
+      <WalkthroughOverlay 
+        visible={walkthroughVisible} 
+        steps={walkthroughSteps} 
+        onFinish={finishWalkthrough} 
+      />
     </View>
   );
 }

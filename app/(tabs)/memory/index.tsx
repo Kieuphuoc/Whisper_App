@@ -259,8 +259,8 @@ export default function MemoryScreen() {
         {/* Import would be needed if VoicePinTurntable was used, but it's imported at top */}
         {/* Actually, let's keep it consistent, if it was imported, it works */}
         <VoicePinTurntable
-            pin={selectedPin}
-            onClose={() => setSelectedPin(null)}
+          pin={selectedPin}
+          onClose={() => setSelectedPin(null)}
         />
       </View>
     );

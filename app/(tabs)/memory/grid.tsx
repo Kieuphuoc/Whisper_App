@@ -112,6 +112,7 @@ export default function MemoryGridScreen() {
                         cardWidth={CARD_WIDTH}
                         cardSpacing={0}
                         currentTheme={currentTheme}
+                        isGrid={true}
                     />
                 )}
             />

@@ -53,14 +53,16 @@ const MapSection = forwardRef<MapView, Props>(({
       setInternalSelectedPin(pin);
     }
   };
-  const [mapType, setMapType] = useState<MapType>('standard');
+  const [mapType, setMapType] = useState<string>('dark');
   useColorScheme();
 
   const loadMapType = useCallback(async () => {
     try {
       const savedMapType = await AsyncStorage.getItem('mapType');
       if (savedMapType) {
-        setMapType(savedMapType as MapType);
+        if (savedMapType === 'standard') setMapType('dark');
+        else if (savedMapType === 'terrain') setMapType('light');
+        else setMapType(savedMapType);
       }
     } catch (e) {
       console.error("Failed to load map type", e);
@@ -93,13 +95,15 @@ const MapSection = forwardRef<MapView, Props>(({
     <View style={styles.map}>
       {/* MapViewClustering is a drop-in replacement for MapView that adds cluster support */}
       <MapViewClustering
+        key={mapType}
         ref={ref}
         style={styles.map}
         initialRegion={initialRegion}
         showsUserLocation
         showsMyLocationButton={false}
-        mapType={mapType}
-        customMapStyle={mapType === 'standard' ? darkMapStyle : undefined}
+        mapType={(mapType === 'satellite' ? 'satellite' : 'standard') as MapType}
+        customMapStyle={mapType === 'dark' ? darkMapStyle : []}
+        userInterfaceStyle={mapType === 'dark' ? 'dark' : 'light'}
         onRegionChangeComplete={onRegionChangeComplete}
         // Clustering config
         radius={60}           // pixel radius of each cluster

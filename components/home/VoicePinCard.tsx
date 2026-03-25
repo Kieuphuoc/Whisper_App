@@ -190,14 +190,14 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: { 
   const [hasReported, setHasReported] = useState(false);
 
   const REPORT_REASONS = [
-    { key: 'SPAM',          label: 'Spam',                  icon: 'mail-unread-outline' as const },
-    { key: 'HARASSMENT',   label: 'Quấy rối',              icon: 'hand-left-outline' as const },
-    { key: 'HATE_SPEECH',  label: 'Ngôn từ thù hận',       icon: 'warning-outline' as const },
-    { key: 'VIOLENCE',     label: 'Bạo lực',               icon: 'skull-outline' as const },
-    { key: 'NUDITY',       label: 'Nội dung nhạy cảm',     icon: 'eye-off-outline' as const },
-    { key: 'MISINFORMATION', label: 'Thông tin sai lệch',  icon: 'newspaper-outline' as const },
-    { key: 'COPYRIGHT',    label: 'Vi phạm bản quyền',     icon: 'copy-outline' as const },
-    { key: 'OTHER',        label: 'Lý do khác',            icon: 'ellipsis-horizontal-outline' as const },
+    { key: 'SPAM', label: 'Spam', icon: 'mail-unread-outline' as const },
+    { key: 'HARASSMENT', label: 'Quấy rối', icon: 'hand-left-outline' as const },
+    { key: 'HATE_SPEECH', label: 'Ngôn từ thù hận', icon: 'warning-outline' as const },
+    { key: 'VIOLENCE', label: 'Bạo lực', icon: 'skull-outline' as const },
+    { key: 'NUDITY', label: 'Nội dung nhạy cảm', icon: 'eye-off-outline' as const },
+    { key: 'MISINFORMATION', label: 'Thông tin sai lệch', icon: 'newspaper-outline' as const },
+    { key: 'COPYRIGHT', label: 'Vi phạm bản quyền', icon: 'copy-outline' as const },
+    { key: 'OTHER', label: 'Lý do khác', icon: 'ellipsis-horizontal-outline' as const },
   ];
 
   const handleReport = async (reason: string) => {
@@ -400,8 +400,9 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: { 
   const spin = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
   const armRotate = armAnim.interpolate({ inputRange: [0, 1], outputRange: ["-10deg", "5deg"] });
 
-  const emotionColor = EMOTION_COLOR[pin.emotionLabel as EmotionType ?? ""] ?? Colors.primary;
-  const authorLabel = pin.isAnonymous
+  const isHidden = pin.isAnonymous || pin.type === 'HIDDEN_AR';
+  const emotionColor = isHidden ? '#6A5ACD' : (EMOTION_COLOR[pin.emotionLabel as EmotionType ?? ""] ?? Colors.primary);
+  const authorLabel = isHidden
     ? "Ẩn danh"
     : pin.user?.displayName ?? pin.user?.username ?? `Voice #${pin.id}`;
 
@@ -441,257 +442,260 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: { 
 
   return (
     <>
-    <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
-      <BlurView intensity={colorScheme === 'dark' ? 50 : 30} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
-      <Animated.View
-        style={[
-          styles.turntableBody,
-          {
-            backgroundColor: currentTheme.colors.surface,
-            borderColor: currentTheme.colors.border,
-            transform: [{ translateY: cardTranslateY }, { scale: cardScale }],
-          },
-        ]}
-      >
+      <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
+        <BlurView intensity={colorScheme === 'dark' ? 50 : 30} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+        <Animated.View
+          style={[
+            styles.turntableBody,
+            {
+              backgroundColor: currentTheme.colors.surface,
+              borderColor: currentTheme.colors.border,
+              transform: [{ translateY: cardTranslateY }, { scale: cardScale }],
+            },
+          ]}
+        >
 
-        {/* ── TOP BAR ─────────────────────────────────── */}
-        <View style={styles.topBar}>
-          <View style={styles.topLeft}>
-            {!!pin.emotionLabel && (
-              <View style={[styles.emotionBadge, { backgroundColor: emotionColor + "33", borderColor: emotionColor + "88" }]}>
-                <Text style={[styles.emotionBadgeText, { color: emotionColor }]}>
-                  {pin.emotionLabel}
-                </Text>
-              </View>
-            )}
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            {/* Report flag button */}
-            {!pin.isAnonymous && (
-              <TouchableOpacity
-                onPress={() => hasReported ? Alert.alert('Đã báo cáo', 'Bạn đã báo cáo bài đăng này rồi.') : setShowReportModal(true)}
-                hitSlop={10}
-                style={[styles.reportBtn, { backgroundColor: hasReported ? '#ef444422' : currentTheme.colors.surfaceAlt }]}
-              >
-                <Ionicons
-                  name={hasReported ? 'flag' : 'flag-outline'}
-                  size={16}
-                  color={hasReported ? '#ef4444' : currentTheme.colors.textMuted}
-                />
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity onPress={handleClose} hitSlop={15} style={[styles.closeBtn, { backgroundColor: currentTheme.colors.surfaceAlt }]}>
-              <Ionicons name="close" size={20} color={currentTheme.colors.text} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* ── VINYL RECORD ─────────────────────────────── */}
-        <View style={[styles.playerContainer, { backgroundColor: currentTheme.colors.surfaceAlt, borderRadius: currentTheme.borderRadius.xl, overflow: 'visible' }]}>
-          <TouchableOpacity activeOpacity={0.9} onPress={() => playing ? player.pause() : player.play()} style={{ zIndex: 1 }}>
-            <View style={{
-              shadowColor: emotionColor,
-              shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: 0.8,
-              shadowRadius: 20,
-              elevation: 15,
-            }}>
-              <Animated.View style={[styles.vinylPlate, { transform: [{ rotate: spin }], borderColor: currentTheme.colors.border }]}>
-                <Image
-                  source={{ uri: pin.images?.[0]?.imageUrl ?? pin.imageUrl ?? 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&q=80' }}
-                  style={styles.recordImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.vinylCenterContainer}>
-                  <View style={styles.vinylCenterRing2} />
-                  <View style={styles.vinylCenterRing3} />
-                  <View style={[styles.vinylCenterHole, { backgroundColor: currentTheme.colors.background }]} />
+          {/* ── TOP BAR ─────────────────────────────────── */}
+          <View style={styles.topBar}>
+            <View style={styles.topLeft}>
+              {isHidden ? (
+                <View style={[styles.emotionBadge, { backgroundColor: '#6A5ACD33', borderColor: '#6A5ACD88', paddingHorizontal: 8 }]}>
+                  <Ionicons name="sparkles" size={14} color="#6A5ACD" />
                 </View>
-              </Animated.View>
-            </View>
-          </TouchableOpacity>
-
-          <Animated.View
-            pointerEvents="none"
-            style={[styles.tonearmContainer, { transform: [{ rotate: armRotate }] }]}
-          >
-            <Image
-              source={require("../../assets/images/3d_tonearm.png")}
-              style={styles.tonearmImage}
-            />
-          </Animated.View>
-        </View>
-
-        {/* ── INFO + PLAY BUTTON ───────────────────────── */}
-        <View style={styles.infoRow}>
-          <View style={styles.infoLeft}>
-            <TouchableOpacity onPress={navigateToProfile} style={styles.authorRow}>
-              <View style={[styles.authorAvatar, { backgroundColor: currentTheme.colors.surfaceAlt }]}>
-                {pin.user?.avatar ? (
-                  <Image source={{ uri: pin.user.avatar }} style={styles.avatarImg} />
-                ) : (
-                  <Ionicons name="person-circle-outline" size={18} color={currentTheme.colors.textMuted} />
-                )}
-              </View>
-              <Text style={[styles.authorText, { color: currentTheme.colors.textMuted }]}>{authorLabel}</Text>
-              {pin.type === "HIDDEN_AR" && (
-                <View style={[styles.arBadge, { backgroundColor: Colors.primary + '33', borderColor: Colors.primary + '80' }]}>
-                  <Text style={[styles.arBadgeText, { color: Colors.primary }]}>AR</Text>
-                </View>
+              ) : (
+                !!pin.emotionLabel && (
+                  <View style={[styles.emotionBadge, { backgroundColor: emotionColor + "33", borderColor: emotionColor + "88" }]}>
+                    <Text style={[styles.emotionBadgeText, { color: emotionColor }]}>
+                      {pin.emotionLabel}
+                    </Text>
+                  </View>
+                )
               )}
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {/* Report flag button */}
+              {!pin.isAnonymous && (
+                <TouchableOpacity
+                  onPress={() => hasReported ? Alert.alert('Đã báo cáo', 'Bạn đã báo cáo bài đăng này rồi.') : setShowReportModal(true)}
+                  hitSlop={10}
+                  style={[styles.reportBtn, { backgroundColor: hasReported ? '#ef444422' : currentTheme.colors.surfaceAlt }]}
+                >
+                  <Ionicons
+                    name={hasReported ? 'flag' : 'flag-outline'}
+                    size={16}
+                    color={hasReported ? '#ef4444' : currentTheme.colors.textMuted}
+                  />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity onPress={handleClose} hitSlop={15} style={[styles.closeBtn, { backgroundColor: currentTheme.colors.surfaceAlt }]}>
+                <Ionicons name="close" size={20} color={currentTheme.colors.text} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* ── VINYL RECORD ─────────────────────────────── */}
+          <View style={[styles.playerContainer, { backgroundColor: currentTheme.colors.surfaceAlt, borderRadius: currentTheme.borderRadius.xl, overflow: 'visible' }]}>
+            <TouchableOpacity activeOpacity={0.9} onPress={() => playing ? player.pause() : player.play()} style={{ zIndex: 1 }}>
+              <View style={{
+                shadowColor: emotionColor,
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.8,
+                shadowRadius: 20,
+                elevation: 15,
+              }}>
+                <Animated.View style={[styles.vinylPlate, { transform: [{ rotate: spin }], borderColor: currentTheme.colors.border }]}>
+                  <Image
+                    source={{ uri: pin.images?.[0]?.imageUrl ?? pin.imageUrl ?? 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&q=80' }}
+                    style={styles.recordImage}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.vinylCenterContainer}>
+                    <View style={styles.vinylCenterRing2} />
+                    <View style={styles.vinylCenterRing3} />
+                    <View style={styles.vinylCenterHole} />
+                  </View>
+                </Animated.View>
+              </View>
             </TouchableOpacity>
 
-            <Text style={[styles.title, { color: currentTheme.colors.text }]} numberOfLines={2}>
-              {pin.content ?? (pin.isAnonymous ? "Ký ức thầm lặng" : `Bản ghi #${String(pin.id).slice(-4)}`)}
-            </Text>
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.tonearmContainer, { transform: [{ rotate: armRotate }] }]}
+            >
+              <Image
+                source={require("../../assets/images/3d_tonearm.png")}
+                style={styles.tonearmImage}
+              />
+            </Animated.View>
+          </View>
 
-            {/* Transcription Button & Display */}
-            <View style={styles.transcriptionContainer}>
-              <TouchableOpacity
-                onPress={handleToggleTranscription}
-                style={[styles.transcriptionBtn, { backgroundColor: currentTheme.colors.surfaceAlt }]}
-                activeOpacity={0.7}
-              >
-                {isThinking ? (
+          {/* ── INFO + PLAY BUTTON ───────────────────────── */}
+          <View style={styles.infoRow}>
+            <View style={styles.infoLeft}>
+              {!isHidden && (
+                <TouchableOpacity onPress={navigateToProfile} style={styles.authorRow}>
+                  <View style={[styles.authorAvatar, { backgroundColor: currentTheme.colors.surfaceAlt }]}>
+                    {pin.user?.avatar ? (
+                      <Image source={{ uri: pin.user.avatar }} style={styles.avatarImg} />
+                    ) : (
+                      <Ionicons name="person-circle-outline" size={18} color={currentTheme.colors.textMuted} />
+                    )}
+                  </View>
+                  <Text style={[styles.authorText, { color: currentTheme.colors.textMuted }]}>{authorLabel}</Text>
+                </TouchableOpacity>
+              )}
+
+              <Text style={[styles.title, { color: currentTheme.colors.text }]} numberOfLines={2}>
+                {pin.content ?? (pin.isAnonymous ? "Ký ức thầm lặng" : `Bản ghi #${String(pin.id).slice(-4)}`)}
+              </Text>
+
+              {/* Transcription Button & Display */}
+              <View style={styles.transcriptionContainer}>
+                <TouchableOpacity
+                  onPress={handleToggleTranscription}
+                  style={[styles.transcriptionBtn, { backgroundColor: currentTheme.colors.surfaceAlt }]}
+                  activeOpacity={0.7}
+                >
+                  {isThinking ? (
+                    <MotiView
+                      from={{ rotate: '0deg' }}
+                      animate={{ rotate: '360deg' }}
+                      transition={{ loop: true, duration: 1000, type: 'timing', easing: ReanimatedEasing.linear }}
+                    >
+                      <Ionicons name="sparkles" size={16} color={Colors.primary} />
+                    </MotiView>
+                  ) : (
+                    <Ionicons name={showTranscription ? "eye-off-outline" : "language-outline"} size={16} color={currentTheme.colors.primary} />
+                  )}
+                  <Text style={[styles.transcriptionBtnText, { color: currentTheme.colors.primary }]}>
+                    {isThinking ? "Đang suy nghĩ..." : showTranscription ? "Ẩn phiên âm" : "Xem phiên âm"}
+                  </Text>
+                </TouchableOpacity>
+
+                {showTranscription && transcription && (
                   <MotiView
-                    from={{ rotate: '0deg' }}
-                    animate={{ rotate: '360deg' }}
-                    transition={{ loop: true, duration: 1000, type: 'timing', easing: ReanimatedEasing.linear }}
+                    from={{ opacity: 0, translateY: 10 }}
+                    animate={{ opacity: 1, translateY: 0 }}
+                    style={[styles.transcriptionBox, { backgroundColor: currentTheme.colors.surfaceAlt, borderColor: currentTheme.colors.primary + '44' }]}
                   >
-                    <Ionicons name="sparkles" size={16} color={Colors.primary} />
+                    <Text style={[styles.transcriptionText, { color: currentTheme.colors.text }]}>
+                      {transcription}
+                    </Text>
                   </MotiView>
-                ) : (
-                  <Ionicons name={showTranscription ? "eye-off-outline" : "language-outline"} size={16} color={currentTheme.colors.primary} />
                 )}
-                <Text style={[styles.transcriptionBtnText, { color: currentTheme.colors.primary }]}>
-                  {isThinking ? "Đang suy nghĩ..." : showTranscription ? "Ẩn phiên âm" : "Xem phiên âm"}
+
+                {showTranscription && !transcription && (
+                  <MotiView
+                    from={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    style={styles.noTranscriptionBox}
+                  >
+                    <Text style={[styles.noTranscriptionText, { color: currentTheme.colors.textMuted }]}>
+                      Chưa có bản phiên âm cho âm thanh này.
+                    </Text>
+                  </MotiView>
+                )}
+              </View>
+
+              <View style={styles.metaRow}>
+                <Ionicons name="location-outline" size={12} color={currentTheme.colors.textMuted} />
+                <Text style={[styles.metaText, { color: currentTheme.colors.textMuted }]} numberOfLines={1}>
+                  {pin.address ?? "Không rõ vị trí"}
                 </Text>
-              </TouchableOpacity>
-
-              {showTranscription && transcription && (
-                <MotiView
-                  from={{ opacity: 0, translateY: 10 }}
-                  animate={{ opacity: 1, translateY: 0 }}
-                  style={[styles.transcriptionBox, { backgroundColor: currentTheme.colors.surfaceAlt, borderColor: currentTheme.colors.primary + '44' }]}
-                >
-                  <Text style={[styles.transcriptionText, { color: currentTheme.colors.text }]}>
-                    {transcription}
-                  </Text>
-                </MotiView>
-              )}
-
-              {showTranscription && !transcription && (
-                <MotiView
-                  from={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  style={styles.noTranscriptionBox}
-                >
-                  <Text style={[styles.noTranscriptionText, { color: currentTheme.colors.textMuted }]}>
-                    Chưa có bản phiên âm cho âm thanh này.
-                  </Text>
-                </MotiView>
-              )}
+              </View>
+              {/* <View style={styles.metaRow}>
+                <Ionicons name="time-outline" size={12} color={currentTheme.colors.textMuted} />
+                <Text style={[styles.metaText, { color: currentTheme.colors.textMuted }]}>{timeAgo(pin.createdAt)}</Text>
+              </View> */}
             </View>
+          </View>
 
-            <View style={styles.metaRow}>
-              <Ionicons name="location-outline" size={12} color={currentTheme.colors.textMuted} />
-              <Text style={[styles.metaText, { color: currentTheme.colors.textMuted }]} numberOfLines={1}>
-                {pin.address ?? "Không rõ vị trí"}
+          {/* ── FOOTER: visibility + date ─────────────────── */}
+          <View style={styles.footer}>
+            <View style={styles.footerLeft}>
+              <Ionicons name={VISIBILITY_ICON[pin.visibility] ?? "earth-outline"} size={13} color={currentTheme.colors.textMuted} />
+              <Text style={[styles.visLabel, { color: currentTheme.colors.textMuted }]}>
+                {pin.visibility === 'PUBLIC' ? 'Công khai' : pin.visibility === 'FRIENDS' ? 'Bạn bè' : 'Riêng tư'}
               </Text>
             </View>
-            <View style={styles.metaRow}>
-              <Ionicons name="time-outline" size={12} color={currentTheme.colors.textMuted} />
-              <Text style={[styles.metaText, { color: currentTheme.colors.textMuted }]}>{timeAgo(pin.createdAt)}</Text>
-            </View>
+            <Text style={[styles.dateText, { color: currentTheme.colors.textMuted }]}>{new Date(pin.createdAt).toLocaleDateString()}</Text>
           </View>
-        </View>
 
-        {/* ── FOOTER: visibility + date ─────────────────── */}
-        <View style={styles.footer}>
-          <View style={styles.footerLeft}>
-            <Ionicons name={VISIBILITY_ICON[pin.visibility] ?? "earth-outline"} size={13} color={currentTheme.colors.textMuted} />
-            <Text style={[styles.visLabel, { color: currentTheme.colors.textMuted }]}>
-              {pin.visibility === 'PUBLIC' ? 'Công khai' : pin.visibility === 'FRIENDS' ? 'Bạn bè' : 'Riêng tư'}
-            </Text>
-          </View>
-          <Text style={[styles.dateText, { color: currentTheme.colors.textMuted }]}>{new Date(pin.createdAt).toLocaleDateString()}</Text>
-        </View>
-
-        {/* Reaction Picker Overlay */}
-        {showReactions && (
-          <Animated.View style={[styles.reactionPicker, {
-            transform: [
-              { scale: reactionAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) },
-              { translateY: reactionAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }
-            ],
-            opacity: reactionAnim,
-            backgroundColor: currentTheme.colors.background,
-            borderColor: currentTheme.colors.border,
-          }]}>
-            {REACTION_TYPES.map((r) => (
-              <TouchableOpacity
-                key={r.type}
-                onPress={() => { toggleReactions(); handleReaction(r.type); }}
-                style={styles.reactionBtn}
-                activeOpacity={0.6}
-              >
-                <Text style={styles.reactionEmoji}>{r.emoji}</Text>
-              </TouchableOpacity>
-            ))}
-          </Animated.View>
-        )}
+          {/* Reaction Picker Overlay */}
+          {showReactions && (
+            <Animated.View style={[styles.reactionPicker, {
+              transform: [
+                { scale: reactionAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) },
+                { translateY: reactionAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }
+              ],
+              opacity: reactionAnim,
+              backgroundColor: currentTheme.colors.background,
+              borderColor: currentTheme.colors.border,
+            }]}>
+              {REACTION_TYPES.map((r) => (
+                <TouchableOpacity
+                  key={r.type}
+                  onPress={() => { toggleReactions(); handleReaction(r.type); }}
+                  style={styles.reactionBtn}
+                  activeOpacity={0.6}
+                >
+                  <Text style={styles.reactionEmoji}>{r.emoji}</Text>
+                </TouchableOpacity>
+              ))}
+            </Animated.View>
+          )}
+        </Animated.View>
       </Animated.View>
-    </Animated.View>
 
-    {/* ── REPORT MODAL ─────────────────────────────── */}
-    <Modal
-      visible={showReportModal}
-      transparent
-      animationType="slide"
-      onRequestClose={() => setShowReportModal(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modalSheet, { backgroundColor: currentTheme.colors.surface, borderColor: currentTheme.colors.border }]}>
-          <View style={styles.modalHeader}>
-            <View style={styles.modalDragHandle} />
+      {/* ── REPORT MODAL ─────────────────────────────── */}
+      <Modal
+        visible={showReportModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowReportModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { backgroundColor: currentTheme.colors.surface, borderColor: currentTheme.colors.border }]}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalDragHandle} />
+            </View>
+            <Text style={[styles.modalTitle, { color: currentTheme.colors.text }]}>Báo cáo vi phạm</Text>
+            <Text style={[styles.modalSubtitle, { color: currentTheme.colors.textMuted }]}>
+              Chọn lý do báo cáo bài đăng này:
+            </Text>
+            <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
+              {REPORT_REASONS.map((r) => (
+                <TouchableOpacity
+                  key={r.key}
+                  style={[styles.reportReasonBtn, { backgroundColor: currentTheme.colors.surfaceAlt, borderColor: currentTheme.colors.border }]}
+                  onPress={() => {
+                    Alert.alert(
+                      'Xác nhận báo cáo',
+                      `Bạn muốn báo cáo bài đăng này vì "${r.label}"?`,
+                      [
+                        { text: 'Hủy', style: 'cancel' },
+                        { text: 'Báo cáo', style: 'destructive', onPress: () => handleReport(r.key) }
+                      ]
+                    );
+                  }}
+                  disabled={reportLoading}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name={r.icon} size={20} color="#ef4444" style={{ marginRight: 12 }} />
+                  <Text style={[styles.reportReasonText, { color: currentTheme.colors.text }]}>{r.label}</Text>
+                  <Ionicons name="chevron-forward" size={16} color={currentTheme.colors.textMuted} style={{ marginLeft: 'auto' }} />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={[styles.modalCancelBtn, { borderColor: currentTheme.colors.border }]}
+              onPress={() => setShowReportModal(false)}
+            >
+              <Text style={[styles.modalCancelText, { color: currentTheme.colors.textSecondary }]}>Hủy</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={[styles.modalTitle, { color: currentTheme.colors.text }]}>Báo cáo vi phạm</Text>
-          <Text style={[styles.modalSubtitle, { color: currentTheme.colors.textMuted }]}>
-            Chọn lý do báo cáo bài đăng này:
-          </Text>
-          <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
-            {REPORT_REASONS.map((r) => (
-              <TouchableOpacity
-                key={r.key}
-                style={[styles.reportReasonBtn, { backgroundColor: currentTheme.colors.surfaceAlt, borderColor: currentTheme.colors.border }]}
-                onPress={() => {
-                  Alert.alert(
-                    'Xác nhận báo cáo',
-                    `Bạn muốn báo cáo bài đăng này vì "${r.label}"?`,
-                    [
-                      { text: 'Hủy', style: 'cancel' },
-                      { text: 'Báo cáo', style: 'destructive', onPress: () => handleReport(r.key) }
-                    ]
-                  );
-                }}
-                disabled={reportLoading}
-                activeOpacity={0.7}
-              >
-                <Ionicons name={r.icon} size={20} color="#ef4444" style={{ marginRight: 12 }} />
-                <Text style={[styles.reportReasonText, { color: currentTheme.colors.text }]}>{r.label}</Text>
-                <Ionicons name="chevron-forward" size={16} color={currentTheme.colors.textMuted} style={{ marginLeft: 'auto' }} />
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          <TouchableOpacity
-            style={[styles.modalCancelBtn, { borderColor: currentTheme.colors.border }]}
-            onPress={() => setShowReportModal(false)}
-          >
-            <Text style={[styles.modalCancelText, { color: currentTheme.colors.textSecondary }]}>Hủy</Text>
-          </TouchableOpacity>
         </View>
-      </View>
-    </Modal>
+      </Modal>
     </>
   );
 }
@@ -778,20 +782,21 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#111111",
+    backgroundColor: "#4043486e", // Light gray
   },
   vinylCenterRing3: {
     position: "absolute",
-    width: 32,
-    height: 32,
+    width: 15,
+    height: 15,
     borderRadius: 16,
-    backgroundColor: "#555555",
+    backgroundColor: "#000000", // Black
   },
   vinylCenterHole: {
     position: "absolute",
-    width: 10,
-    height: 10,
+    width: 7,
+    height: 7,
     borderRadius: 5,
+    backgroundColor: "#4c4f56c2", // Gray
   },
   emotionBadge: {
     position: "absolute",

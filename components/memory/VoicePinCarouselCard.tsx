@@ -56,6 +56,7 @@ export interface VoicePinCarouselCardProps {
   currentTheme: any;
   cardWidth: number;
   cardSpacing: number;
+  isGrid?: boolean;
 }
 
 export function VoicePinCarouselCard({
@@ -65,9 +66,11 @@ export function VoicePinCarouselCard({
   scrollX,
   currentTheme,
   cardWidth,
-  cardSpacing
+  cardSpacing,
+  isGrid = false,
 }: VoicePinCarouselCardProps) {
-  const meta = getMeta(pin.emotionLabel);
+  const isHidden = pin.isAnonymous || pin.type === 'HIDDEN_AR';
+  const meta = isHidden ? { color: '#6A5ACD', icon: 'sparkles' as any, vi: 'Bí ẩn' } : getMeta(pin.emotionLabel);
   const imgUrl = getPinImage(pin);
   const pressedScale = useSharedValue(1);
 
@@ -163,9 +166,10 @@ export function VoicePinCarouselCard({
           cardStyles.container,
           {
             height: cardHeight,
-            backgroundColor: isDark ? '#1a1a24' : '#f8fafc',
-            borderColor: meta.color + '20',
-            borderWidth: 1.5
+            // Adjust styles for grid view (smaller cards)
+            ...(isGrid && {
+              borderRadius: 16,
+            })
           }
         ]}
       >
@@ -179,9 +183,17 @@ export function VoicePinCarouselCard({
         )}
 
         {/* Top Mood Badge */}
-        <View style={[cardStyles.moodBadge, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
-          <Ionicons name={meta.icon} size={14} color={meta.color} />
-          <Text style={[cardStyles.moodBadgeText, { color: '#334155' }]}>{meta.vi}</Text>
+        <View style={[cardStyles.moodBadge, {
+          backgroundColor: 'rgba(255,255,255,0.9)',
+          top: isGrid ? 8 : 16,
+          left: isGrid ? 8 : 16,
+          paddingHorizontal: isGrid ? 8 : 12,
+          paddingVertical: isGrid ? 4 : 6,
+        }]}>
+          <Ionicons name={meta.icon} size={isGrid ? 10 : 14} color={meta.color} />
+          {!isHidden && (
+            <Text style={[cardStyles.moodBadgeText, { color: '#334155', fontSize: isGrid ? 10 : 12 }]}>{meta.vi}</Text>
+          )}
         </View>
 
         {/* Bottom Info Gradient Overlay */}
@@ -192,46 +204,56 @@ export function VoicePinCarouselCard({
             style={StyleSheet.absoluteFill}
           />
 
-          <View style={cardStyles.infoContent}>
+          <View style={[cardStyles.infoContent, isGrid && { padding: 12 }]}>
             <View style={cardStyles.mainInfo}>
-              <Text style={[cardStyles.contentTitle, { color: '#FFFFFF' }]} numberOfLines={1}>
+              <Text style={[cardStyles.contentTitle, { color: '#FFFFFF', fontSize: isGrid ? 14 : 20 }]} numberOfLines={1}>
                 {pin.content || 'Ghi âm mới'}
               </Text>
-              <Text style={[cardStyles.locationText, { color: 'rgba(255,255,255,0.7)' }]} numberOfLines={2}>
+              <Text style={[cardStyles.locationText, { color: 'rgba(255,255,255,0.7)', fontSize: isGrid ? 10 : 12 }]} numberOfLines={2}>
                 {pin.address ?? 'Không rõ địa điểm'}
               </Text>
             </View>
 
-            <View style={cardStyles.statsContainer}>
-              <View style={cardStyles.statBox}>
-                <View style={cardStyles.statIconRow}>
-                  <Ionicons name="play-circle-outline" size={16} color="rgba(255,255,255,0.6)" />
-                  <Text style={[cardStyles.statLabel, { color: 'rgba(255,255,255,0.5)' }]}>Lượt nghe</Text>
+            {!isGrid && (
+              <View style={cardStyles.statsContainer}>
+                <View style={cardStyles.statBox}>
+                  <View style={cardStyles.statIconRow}>
+                    <Ionicons name="play-circle-outline" size={16} color="rgba(255,255,255,0.6)" />
+                    <Text style={[cardStyles.statLabel, { color: 'rgba(255,255,255,0.5)' }]}>Lượt nghe</Text>
+                  </View>
+                  <Text style={[cardStyles.statValue, { color: '#FFFFFF' }]}>{pin.listensCount ?? 0}</Text>
                 </View>
-                <Text style={[cardStyles.statValue, { color: '#FFFFFF' }]}>{pin.listensCount ?? 0}</Text>
-              </View>
 
-              <View style={cardStyles.statDivider} />
+                <View style={cardStyles.statDivider} />
 
-              <View style={cardStyles.statBox}>
-                <View style={cardStyles.statIconRow}>
-                  <Ionicons name="heart-outline" size={16} color="rgba(255,255,255,0.6)" />
-                  <Text style={[cardStyles.statLabel, { color: 'rgba(255,255,255,0.5)' }]}>Cảm xúc</Text>
+                <View style={cardStyles.statBox}>
+                  <View style={cardStyles.statIconRow}>
+                    <Ionicons name="heart-outline" size={16} color="rgba(255,255,255,0.6)" />
+                    <Text style={[cardStyles.statLabel, { color: 'rgba(255,255,255,0.5)' }]}>Cảm xúc</Text>
+                  </View>
+                  <Text style={[cardStyles.statValue, { color: '#FFFFFF' }]}>{pin.reactionsCount ?? 0}</Text>
                 </View>
-                <Text style={[cardStyles.statValue, { color: '#FFFFFF' }]}>{pin.reactionsCount ?? 0}</Text>
               </View>
+            )}
+          </View>
+
+          {!isGrid && (
+            <View style={cardStyles.footer}>
+              {!isHidden && (
+                <View style={[cardStyles.authorAvatar, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                  {pin.user?.avatar ? (
+                    <Image source={pin.user.avatar} style={cardStyles.avatarImg} contentFit="cover" />
+                  ) : (
+                    <Ionicons name="person-circle-outline" size={14} color="rgba(255,255,255,0.6)" />
+                  )}
+                </View>
+              )}
+              <Text style={[cardStyles.footerText, { color: 'rgba(255,255,255,0.4)' }]}>
+                {isHidden ? dateStr : `${pin.user?.displayName || 'Whisper'} • ${dateStr}`}
+              </Text>
             </View>
-          </View>
-
-          <View style={cardStyles.footer}>
-            <Text style={[cardStyles.footerText, { color: 'rgba(255,255,255,0.4)' }]}>
-              By <Text style={{ fontWeight: '700', color: 'rgba(255,255,255,0.6)' }}>Whisper</Text> • {dateStr}
-            </Text>
-          </View>
+          )}
         </View>
-
-
-
       </TouchableOpacity>
     </Animated.View>
   );
@@ -239,13 +261,8 @@ export function VoicePinCarouselCard({
 
 const cardStyles = StyleSheet.create({
   container: {
-    borderRadius: 36,
+    borderRadius: 25,
     overflow: 'hidden',
-    elevation: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.25,
-    shadowRadius: 30
   },
   moodBadge: {
     position: 'absolute',
@@ -258,10 +275,6 @@ const cardStyles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
     gap: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   moodBadgeText: {
     fontSize: 12,
@@ -329,9 +342,26 @@ const cardStyles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
     marginTop: -10,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   footerText: {
     fontSize: 11,
     fontWeight: '500',
+  },
+  authorAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    marginRight: 8,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  avatarImg: {
+    width: '100%',
+    height: '100%',
   },
 });

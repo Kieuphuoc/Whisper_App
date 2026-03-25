@@ -7,6 +7,8 @@ const fontFamilyMap: Record<string | number, string> = {
   '500': 'Quicksand_500Medium',
   '600': 'Quicksand_600SemiBold',
   '700': 'Quicksand_700Bold',
+  '800': 'Quicksand_700Bold',
+  '900': 'Quicksand_700Bold',
   'light': 'Quicksand_300Light',
   'normal': 'Quicksand_400Regular',
   'bold': 'Quicksand_700Bold',
@@ -15,12 +17,15 @@ const fontFamilyMap: Record<string | number, string> = {
 export function Text(props: TextProps) {
   const style = useMemo(() => {
     const flatStyle = StyleSheet.flatten(props.style) || {};
-    const fontWeight = flatStyle.fontWeight || '400';
-    const fontFamily = fontFamilyMap[fontWeight] || 'Quicksand_400Regular';
+    const weight = flatStyle.fontWeight || '400';
+    const fontFamily = fontFamilyMap[weight] || 'Quicksand_400Regular';
+
+    // Remove fontWeight from the combined style to avoid conflicts with custom font families
+    const { fontWeight, ...styleWithoutWeight } = flatStyle;
 
     return [
       { fontFamily },
-      props.style,
+      styleWithoutWeight,
     ];
   }, [props.style]);
 

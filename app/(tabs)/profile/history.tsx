@@ -57,87 +57,11 @@ const MONTH_NAMES_VI = [
 const formatMonthYear = (date: Date) =>
     `${MONTH_NAMES_VI[date.getMonth()]}, ${date.getFullYear()}`;
 
-const getPinImage = (pin: VoicePin) => {
-    const imgUrl = pin.images?.[0]?.imageUrl || pin.imageUrl;
-    if (!imgUrl) return null;
-    return imgUrl.startsWith('http') ? imgUrl : `${BASE_URL}${imgUrl.startsWith('/') ? '' : '/'}${imgUrl}`;
-};
+// getPinImage removed - using component's internal logic
 
-// ── History Card Component ──
-const HistoryCard = ({ item, index, currentTheme, onPress }: { item: ViewHistory, index: number, currentTheme: any, onPress: (id: number) => void }) => {
-    const { voicePin } = item;
-    const scale = useSharedValue(1);
-    const imgUrl = getPinImage(voicePin);
+import { VoicePinCarouselCard } from '@/components/memory/VoicePinCarouselCard';
 
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: scale.value }]
-    }));
-
-    const onPressIn = () => {
-        scale.value = withSpring(0.96, { damping: 10, stiffness: 300 });
-    };
-
-    const onPressOut = () => {
-        scale.value = withSpring(1, { damping: 10, stiffness: 300 });
-    };
-
-    return (
-        <Animated.View
-            entering={FadeInDown.delay(index * 50).springify().damping(20)}
-            style={[animatedStyle, styles.cardContainer]}
-        >
-            <TouchableOpacity
-                onPressIn={onPressIn}
-                onPressOut={onPressOut}
-                activeOpacity={1}
-                onPress={() => onPress(voicePin.id)}
-                style={[styles.card, { backgroundColor: currentTheme.colors.surfaceAlt }]}
-            >
-                <View style={styles.imageWrapper}>
-                    {imgUrl ? (
-                        <Image source={{ uri: imgUrl }} style={styles.cardImage} resizeMode="cover" />
-                    ) : (
-                        <View style={styles.imagePlaceholder}>
-                            <Ionicons name="mic" size={32} color={currentTheme.colors.primary} style={{ opacity: 0.2 }} />
-                        </View>
-                    )}
-
-                    {/* View Count Overlay */}
-                    <LinearGradient
-                        colors={['transparent', 'rgba(0,0,0,0.6)']}
-                        style={styles.countOverlay}
-                    >
-                        <View style={styles.countRow}>
-                            <Ionicons name="play" size={12} color="white" />
-                            <Text style={[styles.countText, { fontFamily: currentTheme.typography.fonts.bold }]}>
-                                {(voicePin.listensCount || 0) > 1000 ? `${((voicePin.listensCount || 0) / 1000).toFixed(1)}K` : voicePin.listensCount || 0}
-                            </Text>
-                        </View>
-                    </LinearGradient>
-                </View>
-
-                <View style={styles.cardContent}>
-                    <Text
-                        style={[styles.cardTitle, { color: currentTheme.colors.text, fontFamily: currentTheme.typography.fonts.bold }]}
-                        numberOfLines={1}
-                    >
-                        {voicePin.content || "Chưa có nội dung"}
-                    </Text>
-                    <View style={styles.cardFooter}>
-                        <View style={styles.statItem}>
-                            <Ionicons name="heart" size={12} color="#ef4444" />
-                            <Text style={[styles.statText, { color: currentTheme.colors.textSecondary }]}>{voicePin.reactionsCount || 0}</Text>
-                        </View>
-                        <View style={[styles.statItem, { marginLeft: 10 }]}>
-                            <Ionicons name="chatbubble" size={11} color={currentTheme.colors.primary} />
-                            <Text style={[styles.statText, { color: currentTheme.colors.textSecondary }]}>{voicePin.commentsCount || 0}</Text>
-                        </View>
-                    </View>
-                </View>
-            </TouchableOpacity>
-        </Animated.View>
-    );
-};
+// Removed local HistoryCard - now using VoicePinCarouselCard for consistency
 
 import { SettingTabHeader } from '@/components/profile/SettingTabHeader';
 
@@ -242,13 +166,15 @@ export default function HistoryScreen() {
                                     {group.title}
                                 </Text>
                                 <View style={styles.grid}>
-                                    {group.data.map((item, index) => (
-                                        <HistoryCard
+                                    {group.data.map((item) => (
+                                        <VoicePinCarouselCard
                                             key={item.id}
-                                            item={item}
-                                            index={index}
+                                            pin={item.voicePin}
+                                            onPress={() => router.push({ pathname: '/(tabs)/home', params: { voicePinId: item.voicePin.id } })}
                                             currentTheme={currentTheme}
-                                            onPress={(pinId) => router.push({ pathname: '/(tabs)/home', params: { voicePinId: pinId } })}
+                                            cardWidth={(width - 48) / 2}
+                                            cardSpacing={0}
+                                            isGrid={true}
                                         />
                                     ))}
                                 </View>
@@ -293,68 +219,4 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         justifyContent: 'space-between'
     },
-    cardContainer: {
-        width: (width - 48) / 2,
-        marginBottom: 16,
-    },
-    card: {
-        borderRadius: 20,
-        overflow: 'hidden',
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-    },
-    imageWrapper: {
-        width: '100%',
-        height: (width - 48) / 2 * 1.2,
-        backgroundColor: 'rgba(0,0,0,0.05)',
-    },
-    cardImage: {
-        width: '100%',
-        height: '100%',
-    },
-    imagePlaceholder: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    countOverlay: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 40,
-        justifyContent: 'flex-end',
-        padding: 10,
-    },
-    countRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    countText: {
-        color: 'white',
-        fontSize: 11,
-        marginLeft: 4,
-    },
-    cardContent: {
-        padding: 12,
-    },
-    cardTitle: {
-        fontSize: 14,
-        marginBottom: 6,
-    },
-    cardFooter: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    statItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    statText: {
-        fontSize: 11,
-        marginLeft: 4,
-    }
 });
