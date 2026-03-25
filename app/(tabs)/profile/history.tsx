@@ -119,9 +119,9 @@ export default function HistoryScreen() {
 
     return (
         <View className="flex-1" style={{ backgroundColor: currentTheme.colors.background }}>
-            <SettingTabHeader 
-                title="Lịch sử nghe" 
-                leftIcon="arrow-back" 
+            <SettingTabHeader
+                title="Lịch sử nghe"
+                leftIcon="arrow-back"
                 rightElement={
                     <View className="flex-row items-center">
                         <TouchableOpacity className="p-2">

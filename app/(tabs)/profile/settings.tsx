@@ -21,6 +21,7 @@ import {
 import { Text } from '@/components/ui/text';
 import MapView, { Marker } from 'react-native-maps';
 import { darkMapStyle } from '@/constants/MapStyles';
+import { SettingTabHeader } from '@/components/profile/SettingTabHeader';
 
 
 interface SettingItemProps {
@@ -78,6 +79,9 @@ export default function SettingsScreen() {
     const [loading, setLoading] = useState(false);
     const [mapType, setMapType] = useState('dark');
     const [notifications, setNotifications] = useState(true);
+    const [activityStatus, setActivityStatus] = useState(true);
+    const [publicProfile, setPublicProfile] = useState(true);
+    const [locationSharing, setLocationSharing] = useState('Bạn bè');
 
     useEffect(() => {
         const loadSettings = async () => {
@@ -198,15 +202,9 @@ export default function SettingsScreen() {
         <View className="flex-1 bg-white dark:bg-gray-950">
             <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
 
-            <View className="h-24 pt-12 flex-row items-center justify-between px-4">
-                <TouchableOpacity onPress={() => router.back()} className="w-11 h-11 items-center justify-center">
-                    <Ionicons name="close" size={28} color={colorScheme === 'dark' ? '#fff' : '#111'} />
-                </TouchableOpacity>
-                <Text style={{ fontSize: 24, fontWeight: '700', color: colorScheme === 'dark' ? '#fff' : '#111' }}>Cài đặt</Text>
-                <View className="w-11" />
-            </View>
+            <SettingTabHeader title="Cài đặt" leftIcon="close" />
 
-            <ScrollView contentContainerStyle={{ padding: 16 }}>
+            <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
                 {/* Profile Section */}
                 <TouchableOpacity
                     className="flex-row items-center p-4 mb-8 bg-gray-50 dark:bg-gray-900 rounded-2xl"
@@ -225,7 +223,6 @@ export default function SettingsScreen() {
                     <Text style={{ fontWeight: '700', fontSize: 12, color: colorScheme === 'dark' ? '#9ca3af' : '#6b7280', marginBottom: 8, marginLeft: 4 }}>TÀI KHOẢN</Text>
                     <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800">
                         <SettingItem icon="person-outline" label="Thông tin cá nhân" onPress={() => router.push('/(tabs)/profile/edit-profile')} />
-                        <SettingItem icon="key-outline" label="Đổi mật khẩu" onPress={() => router.push('/(tabs)/profile/change-password')} />
                         <SettingItem icon="time-outline" label="Lịch sử nghe" onPress={() => router.push('/(tabs)/profile/history')} />
                     </View>
                 </View>
@@ -264,8 +261,6 @@ export default function SettingsScreen() {
                             </View>
                             {renderMapTypePicker()}
                         </View>
-                        
-                        <SettingItem icon="language-outline" label="Ngôn ngữ" value="Tiếng Việt" />
                     </View>
                 </View>
 
@@ -273,10 +268,11 @@ export default function SettingsScreen() {
                 <View className="mb-6">
                     <Text style={{ fontWeight: '700', fontSize: 12, color: colorScheme === 'dark' ? '#9ca3af' : '#6b7280', marginBottom: 8, marginLeft: 4 }}>QUYỀN RIÊNG TƯ</Text>
                     <View className="bg-white dark:bg-gray-950 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800">
-                        <SettingItem icon="lock-closed-outline" label="Kiểm tra quyền riêng tư" />
-                        <SettingItem icon="eye-outline" label="Trạng thái hoạt động" value="Bật" />
-                        <SettingItem icon="location-outline" label="Chia sẻ vị trí" value="Bạn bè" />
-                        <SettingItem icon="shield-checkmark-outline" label="Hồ sơ công khai" value="Bật" />
+                        <SettingItem 
+                            icon="lock-closed-outline" 
+                            label="Kiểm tra quyền riêng tư" 
+                            onPress={() => router.push('/(tabs)/profile/privacy-checkup')}
+                        />
                     </View>
                 </View>
 
@@ -290,11 +286,19 @@ export default function SettingsScreen() {
                             onPress={async () => {
                                 await AsyncStorage.removeItem('onboarding_completed');
                                 await AsyncStorage.removeItem('walkthrough_completed');
-                                Alert.alert('Thành công', 'Hướng dẫn đã được đặt lại. Bạn sẽ thấy chúng ở lần khởi động tới.');
+                                Alert.alert('Thành công', 'Hướng dẫn đã được đặt lại. Bạn sẽ thấy chúng ở lần khởi động tới trên Whispery.');
                             }} 
                         />
-                        <SettingItem icon="help-circle-outline" label="Hỗ trợ & Phản hồi" />
-                        <SettingItem icon="information-circle-outline" label="Về chúng tôi" />
+                        <SettingItem 
+                            icon="help-circle-outline" 
+                            label="Hỗ trợ & Phản hồi" 
+                            onPress={() => router.push('/(tabs)/profile/support')}
+                        />
+                        <SettingItem 
+                            icon="information-circle-outline" 
+                            label="Về chúng tôi" 
+                            onPress={() => router.push('/(tabs)/profile/about')}
+                        />
                     </View>
                 </View>
 
@@ -312,7 +316,7 @@ export default function SettingsScreen() {
                 </View>
 
                 <View className="items-center mt-5 mb-10">
-                    <Text style={{ color: '#9ca3af', fontSize: 14 }}>Phiên bản 1.0.0</Text>
+                    <Text style={{ color: '#9ca3af', fontSize: 14 }}>Whispery v1.0.0</Text>
                 </View>
             </ScrollView>
 

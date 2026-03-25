@@ -30,6 +30,8 @@ import { Dimensions } from "react-native";
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+import { useFriends } from "@/hooks/useFriends";
+
 export default function HomeScreen() {
   const colorScheme = useColorScheme() || "light";
   const currentTheme = theme[colorScheme];
@@ -82,6 +84,9 @@ export default function HomeScreen() {
   const [externalSelectedPin, setExternalSelectedPin] = useState<VoicePin | null>(null);
   const [autoPlayPin, setAutoPlayPin] = useState(false);
   const mapRef = useRef<MapView>(null);
+
+  // Friends Hook
+  const { friends, receivedCount, refetch: refetchFriends } = useFriends();
 
   // Walkthrough state
   const [walkthroughVisible, setWalkthroughVisible] = useState(false);
@@ -321,7 +326,9 @@ export default function HomeScreen() {
             Alert.alert("Trending", "Tính năng đang được phát triển");
         }}
         isScanning={isScanning}
+        receivedCount={receivedCount}
       />
+
       {isMiniCardOpen && discoveredPin && (
         <VoicePinMiniCard
           pin={discoveredPin}

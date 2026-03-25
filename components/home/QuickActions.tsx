@@ -8,6 +8,7 @@ type QuickActionsProps = {
     onFriends?: () => void;
     onTrending?: () => void;
     isScanning?: boolean;
+    receivedCount?: number;
 };
 
 const QuickActions: React.FC<QuickActionsProps> = ({
@@ -15,6 +16,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
     onFriends,
     onTrending,
     isScanning,
+    receivedCount = 0,
 }) => {
     const colorScheme = useColorScheme() || "light";
     const currentTheme = theme[colorScheme];
@@ -38,6 +40,11 @@ const QuickActions: React.FC<QuickActionsProps> = ({
             <TouchableOpacity style={styles.quickActionButton} onPress={onFriends}>
                 <View style={styles.quickActionIcon}>
                     <Ionicons name="people" size={20} color="#8b5cf6" />
+                    {receivedCount > 0 && (
+                        <View style={styles.badge}>
+                            <Text style={styles.badgeText}>{receivedCount}</Text>
+                        </View>
+                    )}
                 </View>
                 <Text style={[styles.quickActionText, { color: currentTheme.colors.textSecondary }]}>Bạn bè</Text>
             </TouchableOpacity>
@@ -90,5 +97,24 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: "#6b7280",
         fontWeight: "600",
+    },
+    badge: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        backgroundColor: '#ef4444',
+        borderRadius: 8,
+        minWidth: 16,
+        height: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 3,
+        borderWidth: 1.5,
+        borderColor: '#fff',
+    },
+    badgeText: {
+        color: '#fff',
+        fontSize: 8,
+        fontWeight: 'bold',
     },
 });

@@ -72,20 +72,26 @@ export default function WalkthroughOverlay({ visible, steps, onFinish }: Walkthr
             <Text style={styles.description}>{currentStep.description}</Text>
             
             <View style={styles.footer}>
-              <Text style={styles.stepIndicator}>
-                {currentStepIndex + 1} / {steps.length}
-              </Text>
-              <TouchableOpacity style={styles.button} onPress={handleNext}>
-                <Text style={styles.buttonText}>
-                  {currentStepIndex === steps.length - 1 ? 'Bắt đầu' : 'Tiếp theo'}
-                </Text>
-                <Ionicons 
-                  name={currentStepIndex === steps.length - 1 ? "checkmark" : "arrow-forward"} 
-                  size={18} 
-                  color="#fff" 
-                  style={{ marginLeft: 5 }}
-                />
+              <TouchableOpacity onPress={onFinish}>
+                <Text style={styles.skipButtonText}>Bỏ qua</Text>
               </TouchableOpacity>
+              
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={styles.stepIndicator}>
+                  {currentStepIndex + 1} / {steps.length}
+                </Text>
+                <TouchableOpacity style={styles.button} onPress={handleNext}>
+                  <Text style={styles.buttonText}>
+                    {currentStepIndex === steps.length - 1 ? 'Bắt đầu' : 'Tiếp theo'}
+                  </Text>
+                  <Ionicons 
+                    name={currentStepIndex === steps.length - 1 ? "checkmark" : "arrow-forward"} 
+                    size={18} 
+                    color="#fff" 
+                    style={{ marginLeft: 5 }}
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
           </MotiView>
         </AnimatePresence>
@@ -170,6 +176,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Quicksand_600SemiBold',
     color: '#94a3b8',
+    marginRight: 12,
   },
   button: {
     flexDirection: 'row',
@@ -183,6 +190,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontFamily: 'Quicksand_700Bold',
+  },
+  skipButtonText: {
+    color: '#94a3b8',
+    fontSize: 15,
+    fontFamily: 'Quicksand_600SemiBold',
   },
   highlight: {
     position: 'absolute',
