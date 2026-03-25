@@ -3,13 +3,13 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
 import {
   Dimensions,
-  Image,
   StyleSheet,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Text } from '@/components/ui/text';
-import { BlurView } from 'expo-blur';
 import Animated, {
   Extrapolation,
   SharedValue,
@@ -18,10 +18,10 @@ import Animated, {
   useSharedValue,
   withSpring,
   useDerivedValue,
-  useAnimatedProps
 } from 'react-native-reanimated';
 
-const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
+
+
 
 const { width } = Dimensions.get('window');
 const PAGE_PADDING = 24;
@@ -123,33 +123,25 @@ export function VoicePinCarouselCard({
 
     return {
       transform: [
-        { 
-          scale: withSpring(targetScale * pressedScale.value, { 
-            damping: 18, 
+        {
+          scale: withSpring(targetScale * pressedScale.value, {
+            damping: 18,
             stiffness: 150,
-          }) 
+          })
         },
-        { 
-          translateY: withSpring(targetTranslateY, { 
-            damping: 18, 
+        {
+          translateY: withSpring(targetTranslateY, {
+            damping: 18,
             stiffness: 150,
-          }) 
+          })
         }
       ],
       opacity: targetOpacity,
     };
   });
 
-  const blurProps = useAnimatedProps(() => {
-    const range = cardWidth;
-    const intensity = interpolate(
-      distanceVal.value,
-      [0, range / 2, range],
-      [0, 0, 12], // Blur starts appearing after half distance
-      Extrapolation.CLAMP
-    );
-    return { intensity };
-  });
+
+
 
   const dateStr = new Date(pin.createdAt).toLocaleDateString('vi-VN', {
     day: '2-digit',
@@ -157,6 +149,8 @@ export function VoicePinCarouselCard({
   });
 
   const isDark = currentTheme.colors.background === '#111118';
+
+  const cardHeight = cardWidth * 1.2;
 
   return (
     <Animated.View style={[{ width: cardWidth, marginRight: cardSpacing }, animatedStyle]}>
@@ -168,123 +162,176 @@ export function VoicePinCarouselCard({
         style={[
           cardStyles.container,
           {
-            backgroundColor: isDark ? 'rgba(31, 31, 46, 0.7)' : 'rgba(255, 255, 255, 0.7)',
-            borderColor: meta.color + '30',
+            height: cardHeight,
+            backgroundColor: isDark ? '#1a1a24' : '#f8fafc',
+            borderColor: meta.color + '20',
             borderWidth: 1.5
           }
         ]}
       >
-        <BlurView 
-          intensity={isDark ? 40 : 60} 
-          tint={isDark ? 'dark' : 'light'} 
-          style={StyleSheet.absoluteFill} 
-        />
-
-        <View style={[cardStyles.moodBadge, { backgroundColor: meta.color + '25', borderColor: meta.color + '40', borderWidth: 1 }]}>
-          <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-          <Ionicons name={meta.icon} size={16} color={meta.color} />
-        </View>
-
+        {/* Background Image */}
         {imgUrl ? (
-          <View style={cardStyles.imageContainer}>
-            <Image source={{ uri: imgUrl }} style={[cardStyles.image, { height: cardWidth * 0.6 }]} />
-            <View style={[cardStyles.imageOverlay, { backgroundColor: meta.color + '10' }]} />
-          </View>
+          <Image source={imgUrl} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
         ) : (
-          <View style={[cardStyles.image, cardStyles.imagePlaceholder, { height: cardWidth * 0.6, backgroundColor: meta.color + '10' }]}>
-            <Ionicons name="mic-outline" size={40} color={meta.color + '40'} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: meta.color + '10', justifyContent: 'center', alignItems: 'center' }]}>
+            <Ionicons name="mic-outline" size={60} color={meta.color + '30'} />
           </View>
         )}
 
-        <View style={cardStyles.info}>
-          <View style={cardStyles.tagRow}>
-            <View style={[cardStyles.emotionTag, { backgroundColor: meta.color + '15' }]}>
-              <Text style={[cardStyles.emotionText, { color: meta.color }]}>{meta.vi}</Text>
+        {/* Top Mood Badge */}
+        <View style={[cardStyles.moodBadge, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
+          <Ionicons name={meta.icon} size={14} color={meta.color} />
+          <Text style={[cardStyles.moodBadgeText, { color: '#334155' }]}>{meta.vi}</Text>
+        </View>
+
+        {/* Bottom Info Gradient Overlay */}
+        <View style={cardStyles.infoContainer}>
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.8)', 'rgba(0,0,0,0.95)']}
+            locations={[0, 0.3, 0.6, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+
+          <View style={cardStyles.infoContent}>
+            <View style={cardStyles.mainInfo}>
+              <Text style={[cardStyles.contentTitle, { color: '#FFFFFF' }]} numberOfLines={1}>
+                {pin.content || 'Ghi âm mới'}
+              </Text>
+              <Text style={[cardStyles.locationText, { color: 'rgba(255,255,255,0.7)' }]} numberOfLines={2}>
+                {pin.address ?? 'Không rõ địa điểm'}
+              </Text>
             </View>
-            <Text style={cardStyles.dateText}>{dateStr}</Text>
+
+            <View style={cardStyles.statsContainer}>
+              <View style={cardStyles.statBox}>
+                <View style={cardStyles.statIconRow}>
+                  <Ionicons name="play-circle-outline" size={16} color="rgba(255,255,255,0.6)" />
+                  <Text style={[cardStyles.statLabel, { color: 'rgba(255,255,255,0.5)' }]}>Lượt nghe</Text>
+                </View>
+                <Text style={[cardStyles.statValue, { color: '#FFFFFF' }]}>{pin.listensCount ?? 0}</Text>
+              </View>
+
+              <View style={cardStyles.statDivider} />
+
+              <View style={cardStyles.statBox}>
+                <View style={cardStyles.statIconRow}>
+                  <Ionicons name="heart-outline" size={16} color="rgba(255,255,255,0.6)" />
+                  <Text style={[cardStyles.statLabel, { color: 'rgba(255,255,255,0.5)' }]}>Cảm xúc</Text>
+                </View>
+                <Text style={[cardStyles.statValue, { color: '#FFFFFF' }]}>{pin.reactionsCount ?? 0}</Text>
+              </View>
+            </View>
           </View>
 
-          <Text style={[cardStyles.content, { color: currentTheme.colors.text }]} numberOfLines={2}>
-            {pin.content || 'Ghi âm mới'}
-          </Text>
-
-          <View style={cardStyles.metaRow}>
-            <Ionicons name="location-sharp" size={14} color={meta.color} />
-            <Text style={[cardStyles.metaText, { color: isDark ? '#a1a1aa' : '#71717a' }]} numberOfLines={1}>
-              {pin.address ?? 'Không rõ địa điểm'}
+          <View style={cardStyles.footer}>
+            <Text style={[cardStyles.footerText, { color: 'rgba(255,255,255,0.4)' }]}>
+              By <Text style={{ fontWeight: '700', color: 'rgba(255,255,255,0.6)' }}>Whisper</Text> • {dateStr}
             </Text>
-          </View>
-
-          <View style={cardStyles.separator} />
-
-          <View style={cardStyles.bottomRow}>
-            <View style={cardStyles.statsGroup}>
-              <View style={cardStyles.statItem}>
-                <Ionicons name="play-circle-outline" size={14} color={isDark ? '#a1a1aa' : '#71717a'} />
-                <Text style={cardStyles.statNum}>{pin.listensCount ?? 0}</Text>
-              </View>
-              <View style={[cardStyles.statItem, { marginLeft: 12 }]}>
-                <Ionicons name="heart-outline" size={14} color={isDark ? '#a1a1aa' : '#71717a'} />
-                <Text style={cardStyles.statNum}>{pin.reactionsCount ?? 0}</Text>
-              </View>
-            </View>
-            
-            <View style={[cardStyles.actionIcon, { backgroundColor: meta.color }]}>
-              <Ionicons name="play" size={12} color="#fff" />
-            </View>
           </View>
         </View>
 
-        {/* Dynamic blur for out-of-focus cards */}
-        <AnimatedBlurView 
-          animatedProps={blurProps}
-          style={StyleSheet.absoluteFill}
-          pointerEvents="none"
-          tint={isDark ? 'dark' : 'light'}
-        />
+
+
       </TouchableOpacity>
     </Animated.View>
   );
 }
 
 const cardStyles = StyleSheet.create({
-  container: { 
-    borderRadius: 32, 
-    overflow: 'hidden', 
-    elevation: 8, 
+  container: {
+    borderRadius: 36,
+    overflow: 'hidden',
+    elevation: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 }, 
-    shadowOpacity: 0.15, 
-    shadowRadius: 24 
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.25,
+    shadowRadius: 30
   },
-  moodBadge: { 
-    position: 'absolute', 
-    top: 16, 
-    left: 16, 
-    zIndex: 10, 
-    width: 36, 
-    height: 36, 
-    borderRadius: 18, 
-    justifyContent: 'center', 
+  moodBadge: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    zIndex: 10,
+    flexDirection: 'row',
     alignItems: 'center',
-    overflow: 'hidden'
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  imageContainer: { width: '100%', overflow: 'hidden' },
-  image: { width: '100%' },
-  imageOverlay: { ...StyleSheet.absoluteFillObject },
-  imagePlaceholder: { justifyContent: 'center', alignItems: 'center' },
-  info: { padding: 20 },
-  tagRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  emotionTag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  emotionText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  dateText: { fontSize: 13, color: '#94a3b8', fontWeight: '600' },
-  content: { fontSize: 20, fontWeight: '800', lineHeight: 28, marginBottom: 8, letterSpacing: -0.5 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
-  metaText: { fontSize: 13, flex: 1, fontWeight: '600' },
-  separator: { height: 1, backgroundColor: 'rgba(150,150,150,0.1)', marginBottom: 14 },
-  bottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  statsGroup: { flexDirection: 'row', alignItems: 'center' },
-  statItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  statNum: { fontSize: 14, color: '#94a3b8', fontWeight: '700' },
-  actionIcon: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', shadowOpacity: 0.3, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
+  moodBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  infoContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '52%', // Increased height for better gradient transition
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+  },
+  infoContent: {
+    padding: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  mainInfo: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  contentTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    marginBottom: 4,
+  },
+  locationText: {
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 16,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  statBox: {
+    alignItems: 'center',
+  },
+  statIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 2,
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  statDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: 'rgba(150,150,150,0.2)',
+  },
+  footer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    marginTop: -10,
+  },
+  footerText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
 });

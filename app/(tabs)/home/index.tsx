@@ -106,7 +106,7 @@ export default function HomeScreen() {
   // Show AR overlay when entering 100m (anti-flicker)
   useEffect(() => {
     if (nearbyARPin && typeof nearbyARDistance === "number") {
-      if (!arOverlayVisible || arOverlayPinIdRef.current !== nearbyARPin.id) {
+      if (arOverlayPinIdRef.current !== nearbyARPin.id) {
         arOverlayPinIdRef.current = nearbyARPin.id;
         setArOverlayVisible(true);
       }
@@ -114,7 +114,7 @@ export default function HomeScreen() {
       arOverlayPinIdRef.current = null;
       setArOverlayVisible(false);
     }
-  }, [nearbyARPin, nearbyARDistance, arOverlayVisible]);
+  }, [nearbyARPin, nearbyARDistance]);
 
   // If coming back from AR screens, select & autoplay pin
   useEffect(() => {

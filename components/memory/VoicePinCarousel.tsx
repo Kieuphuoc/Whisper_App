@@ -22,8 +22,8 @@ const { width } = Dimensions.get('window');
 // width = 24 + 1.25 * cardWidth + cardSpacing
 // cardWidth = (width - 24 - cardSpacing) / 1.25
 export const PAGE_PADDING = 24;
-export const DEFAULT_CARD_SPACING = 12;
-export const DEFAULT_CARD_WIDTH = (width - PAGE_PADDING - DEFAULT_CARD_SPACING) / 1.25;
+export const DEFAULT_CARD_SPACING = 2;
+export const DEFAULT_CARD_WIDTH = (width - PAGE_PADDING - DEFAULT_CARD_SPACING) / 1.5;
 
 // --- Main Carousel Component ---
 interface VoicePinCarouselProps {
@@ -85,15 +85,15 @@ export default function VoicePinCarousel({
     return (
       <View style={styles.emptyContainer}>
         <View style={styles.header}>
-            <View style={styles.titleRow}>
-                <View style={[styles.iconDot, { backgroundColor: iconColor + '18' }]}>
-                    <Ionicons name={icon} size={16} color={iconColor} />
-                </View>
-                <Text style={[styles.title, { color: currentTheme.colors.text }]}>{title}</Text>
+          <View style={styles.titleRow}>
+            <View style={[styles.iconDot, { backgroundColor: iconColor + '18' }]}>
+              <Ionicons name={icon} size={16} color={iconColor} />
             </View>
+            <Text style={[styles.title, { color: currentTheme.colors.text }]}>{title}</Text>
+          </View>
         </View>
         <View style={styles.emptyContent}>
-           <Text style={{ color: currentTheme.colors.icon, fontSize: 14 }}>{emptyText}</Text>
+          <Text style={{ color: currentTheme.colors.icon, fontSize: 14 }}>{emptyText}</Text>
         </View>
       </View>
     );
@@ -124,10 +124,10 @@ export default function VoicePinCarousel({
         horizontal
         keyExtractor={p => String(p.id)}
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ 
-            paddingHorizontal: PAGE_PADDING,
-            paddingTop: 12,
-            paddingBottom: 20 
+        contentContainerStyle={{
+          paddingHorizontal: PAGE_PADDING,
+          paddingTop: 12,
+          paddingBottom: 20
         }}
         snapToOffsets={snapToOffsets}
         decelerationRate="fast"
@@ -135,11 +135,11 @@ export default function VoicePinCarousel({
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         renderItem={({ item, index }) => (
-          <VoicePinCarouselCard 
-            pin={item} 
-            onPress={() => onSelectPin(item)} 
-            index={index} 
-            scrollX={scrollX} 
+          <VoicePinCarouselCard
+            pin={item}
+            onPress={() => onSelectPin(item)}
+            index={index}
+            scrollX={scrollX}
             currentTheme={currentTheme}
             cardWidth={cardWidth}
             cardSpacing={cardSpacing}
@@ -151,7 +151,7 @@ export default function VoicePinCarousel({
 }
 
 const subtitleStyles = StyleSheet.create({
-    text: { fontSize: 13, fontWeight: '500', marginTop: 1 }
+  text: { fontSize: 13, fontWeight: '500', marginTop: 1 }
 });
 
 const styles = StyleSheet.create({

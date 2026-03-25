@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 
-export const BASE_URL = "http://10.5.1.102:5000";
+export const BASE_URL = "http://10.5.1.100:5000";
 
 export const endpoints = {
   // Auth
