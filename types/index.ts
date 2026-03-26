@@ -26,6 +26,7 @@ export interface User {
     email?: string;
     displayName?: string;
     avatar?: string;
+    cover?: string;
     bio?: string;
     level?: number;
     xp?: number;
@@ -40,6 +41,7 @@ export interface UserBasic {
     displayName?: string;
     username?: string;
     avatar?: string;
+    cover?: string;
 }
 
 export type UserAction =

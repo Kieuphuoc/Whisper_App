@@ -5,30 +5,49 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
     ActivityIndicator,
     Dimensions,
     Image,
     RefreshControl,
-    ScrollView,
     StatusBar,
     StyleSheet,
-    Text,
     TouchableOpacity,
     View,
     Alert,
     useColorScheme,
+    Platform,
 } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import VoicePinCarousel from '@/components/memory/VoicePinCarousel';
+import { Text } from '@/components/ui/text';
+import Animated, { 
+    FadeInDown, 
+    useAnimatedScrollHandler, 
+    useAnimatedStyle, 
+    useSharedValue, 
+    interpolate, 
+    Extrapolate 
+} from 'react-native-reanimated';
+import { MotiView } from 'moti';
 
 const { width, height } = Dimensions.get('window');
+const HEADER_HEIGHT = height * 0.45;
+
+const formatDate = (dateStr: string | Date) => {
+    try {
+        const d = dateStr instanceof Date ? dateStr : new Date(dateStr);
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        return `${pad(d.getHours())}:${pad(d.getMinutes())} - ${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+    } catch (e) {
+        return typeof dateStr === 'string' ? dateStr : '';
+    }
+};
 
 type FriendshipStatus = 'none' | 'pending_sent' | 'pending_received' | 'friends' | 'blocked_by_you' | 'blocked' | 'rejected' | 'self';
 
 export default function UserProfileScreen() {
     const colorScheme = useColorScheme() || 'light';
+    const isDark = colorScheme === 'dark';
     const currentTheme = theme[colorScheme];
     const { id } = useLocalSearchParams();
     const router = useRouter();
@@ -40,6 +59,8 @@ export default function UserProfileScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
+
+    const scrollY = useSharedValue(0);
 
     const fetchData = async (isRefresh = false) => {
         isRefresh ? setRefreshing(true) : setLoading(true);
@@ -71,6 +92,36 @@ export default function UserProfileScreen() {
     useEffect(() => {
         if (id) fetchData();
     }, [id]);
+
+    const onScroll = useAnimatedScrollHandler({
+        onScroll: (event) => {
+            scrollY.value = event.contentOffset.y;
+        },
+    });
+
+    const headerStyle = useAnimatedStyle(() => {
+        return {
+            transform: [
+                {
+                    translateY: interpolate(scrollY.value, [-HEADER_HEIGHT, 0, HEADER_HEIGHT], [-HEADER_HEIGHT / 2, 0, 0], Extrapolate.CLAMP),
+                },
+                {
+                    scale: interpolate(scrollY.value, [-HEADER_HEIGHT, 0], [2, 1], Extrapolate.CLAMP),
+                },
+            ],
+        };
+    });
+
+    const avatarStyle = useAnimatedStyle(() => {
+        return {
+            opacity: interpolate(scrollY.value, [0, HEADER_HEIGHT * 0.5], [1, 0], Extrapolate.CLAMP),
+            transform: [
+                {
+                    scale: interpolate(scrollY.value, [0, HEADER_HEIGHT * 0.5], [1, 0.8], Extrapolate.CLAMP),
+                },
+            ],
+        };
+    });
 
     const handleFriendAction = async (action: 'request' | 'accept' | 'reject' | 'cancel' | 'remove') => {
         setActionLoading(true);
@@ -109,11 +160,17 @@ export default function UserProfileScreen() {
         }
     };
 
-    const getAvatarUri = (avatar?: string) => {
-        if (!avatar) return 'https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg';
-        if (avatar.startsWith('http')) return avatar;
-        return `${BASE_URL}${avatar.startsWith('/') ? '' : '/'}${avatar}`;
-    };
+    const avatarUri = useMemo(() => {
+        if (!profile?.avatar) return 'https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg';
+        if (profile.avatar.startsWith('http')) return profile.avatar;
+        return `${BASE_URL}${profile.avatar.startsWith('/') ? '' : '/'}${profile.avatar}`;
+    }, [profile]);
+
+    const coverUri = useMemo(() => {
+        if (!profile?.cover) return null;
+        if (profile.cover.startsWith('http')) return profile.cover;
+        return `${BASE_URL}${profile.cover.startsWith('/') ? '' : '/'}${profile.cover}`;
+    }, [profile]);
 
     if (loading && !refreshing) {
         return (
@@ -134,18 +191,28 @@ export default function UserProfileScreen() {
         );
     }
 
-    const avatarUri = getAvatarUri(profile.avatar);
     const displayName = profile.displayName || profile.username || 'User';
     const bio = profile.bio || 'Chưa có tiểu sử';
     const level = profile.level || 1;
 
     const renderFriendButton = () => {
-        if (friendship.status === 'self') return null;
+        if (friendship.status === 'self') {
+            return (
+                <TouchableOpacity 
+                    onPress={() => router.push('/(tabs)/profile/edit-profile')}
+                    style={[styles.actionButton, { backgroundColor: currentTheme.colors.primary }]}
+                >
+                    <Ionicons name="create-outline" size={20} color="#fff" />
+                    <Text style={styles.actionButtonText}>Chỉnh sửa hồ sơ</Text>
+                </TouchableOpacity>
+            );
+        }
 
         if (actionLoading) {
             return (
-                <View style={[styles.followButton, { opacity: 0.7, backgroundColor: currentTheme.colors.icon + '10' }]}>
+                <View style={[styles.actionButton, { opacity: 0.7, backgroundColor: currentTheme.colors.icon + '20' }]}>
                     <ActivityIndicator size="small" color={currentTheme.colors.primary} />
+                    <Text style={[styles.actionButtonText, { color: currentTheme.colors.primary }]}>Đang xử lý...</Text>
                 </View>
             );
         }
@@ -155,59 +222,61 @@ export default function UserProfileScreen() {
             case 'rejected':
                 return (
                     <TouchableOpacity
-                        style={[styles.followButton, { backgroundColor: currentTheme.colors.primary, borderRadius: currentTheme.radius.full }]}
+                        style={[styles.actionButton, { backgroundColor: currentTheme.colors.primary }]}
                         onPress={() => handleFriendAction('request')}
                     >
-                        <Text style={[styles.followButtonText, { color: '#fff' }]}>Kết bạn +</Text>
+                        <Ionicons name="person-add-outline" size={20} color="#fff" />
+                        <Text style={styles.actionButtonText}>Kết bạn</Text>
                     </TouchableOpacity>
                 );
             case 'pending_sent':
                 return (
                     <TouchableOpacity
-                        style={[styles.followButton, { backgroundColor: currentTheme.colors.primary + '20', borderRadius: currentTheme.radius.full }]}
+                        style={[styles.actionButton, { backgroundColor: currentTheme.colors.icon + '20' }]}
                         onPress={() => handleFriendAction('cancel')}
                     >
-                        <Text style={[styles.followButtonText, { color: currentTheme.colors.primary }]}>Hủy yêu cầu</Text>
+                        <Ionicons name="close-circle-outline" size={20} color={currentTheme.colors.text} />
+                        <Text style={[styles.actionButtonText, { color: currentTheme.colors.text }]}>Hủy yêu cầu</Text>
                     </TouchableOpacity>
                 );
             case 'pending_received':
                 return (
                     <View style={{ flexDirection: 'row', gap: 10 }}>
                         <TouchableOpacity
-                            style={[styles.followButton, { backgroundColor: '#10b981', borderRadius: currentTheme.radius.full }]}
+                            style={[styles.actionButton, { backgroundColor: '#10b981', flex: 1.5 }]}
                             onPress={() => handleFriendAction('accept')}
                         >
-                            <Text style={[styles.followButtonText, { color: '#fff' }]}>Chấp nhận</Text>
+                            <Text style={styles.actionButtonText}>Chấp nhận</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={[styles.followButton, { backgroundColor: currentTheme.colors.primary + '20', borderRadius: currentTheme.radius.full }]}
+                            style={[styles.actionButton, { backgroundColor: currentTheme.colors.icon + '20', flex: 1 }]}
                             onPress={() => handleFriendAction('reject')}
                         >
-                            <Text style={[styles.followButtonText, { color: currentTheme.colors.primary }]}>Từ chối</Text>
+                            <Text style={[styles.actionButtonText, { color: currentTheme.colors.text }]}>Từ chối</Text>
                         </TouchableOpacity>
                     </View>
                 );
             case 'friends':
                 return (
-                    <TouchableOpacity
-                        style={[styles.followButton, { backgroundColor: currentTheme.colors.icon + '10', borderRadius: currentTheme.radius.full }]}
-                        onPress={() => {
-                            Alert.alert('Hủy kết bạn', `Bạn có chắc chắn muốn hủy kết bạn với ${displayName}?`, [
-                                { text: 'Hủy', style: 'cancel' },
-                                { text: 'Xóa bạn', style: 'destructive', onPress: () => handleFriendAction('remove') }
-                            ]);
-                        }}
-                    >
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                            <Ionicons name="checkmark-circle" size={18} color="#10b981" />
-                            <Text style={[styles.followButtonText, { color: currentTheme.colors.text }]}>Bạn bè</Text>
-                        </View>
-                    </TouchableOpacity>
-                );
-            case 'blocked_by_you':
-                return (
-                    <View style={[styles.followButton, { backgroundColor: currentTheme.colors.text, borderRadius: currentTheme.radius.full }]}>
-                        <Text style={[styles.followButtonText, { color: currentTheme.colors.background }]}>Đã chặn</Text>
+                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                        <TouchableOpacity
+                            style={[styles.actionButton, { backgroundColor: '#10b981', flex: 1.5 }]}
+                            onPress={() => {
+                                Alert.alert('Hủy kết bạn', `Bạn có chắc chắn muốn hủy kết bạn với ${displayName}?`, [
+                                    { text: 'Hủy', style: 'cancel' },
+                                    { text: 'Xóa bạn', style: 'destructive', onPress: () => handleFriendAction('remove') }
+                                ]);
+                            }}
+                        >
+                            <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                            <Text style={styles.actionButtonText}>Bạn bè</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.actionButton, { backgroundColor: currentTheme.colors.icon + '20', flex: 1 }]}
+                            onPress={() => Alert.alert('Tính năng', 'Tính năng nhắn tin đang phát triển')}
+                        >
+                            <Ionicons name="chatbubble-outline" size={20} color={currentTheme.colors.text} />
+                        </TouchableOpacity>
                     </View>
                 );
             default:
@@ -217,93 +286,126 @@ export default function UserProfileScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: currentTheme.colors.background }]}>
-            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
 
-            <ScrollView
+            {/* Dynamic Header */}
+            <Animated.View style={[styles.header, headerStyle]}>
+                <Image
+                    source={{ uri: coverUri || avatarUri }}
+                    style={styles.headerImage}
+                    blurRadius={coverUri ? 0 : (Platform.OS === 'ios' ? 0 : 10)}
+                />
+                <LinearGradient
+                    colors={['rgba(0,0,0,0.4)', 'transparent', isDark ? currentTheme.colors.background : 'rgba(255,255,255,0.9)', currentTheme.colors.background]}
+                    style={StyleSheet.absoluteFill}
+                />
+            </Animated.View>
+
+            <Animated.ScrollView
+                onScroll={onScroll}
+                scrollEventThrottle={16}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={() => fetchData(true)} tintColor={currentTheme.colors.primary} />
                 }
                 contentContainerStyle={styles.scrollContent}
-                bounces={false}
             >
-                {/* Hero Section */}
-                <View style={[styles.heroContainer, { backgroundColor: currentTheme.colors.icon + '10' }]}>
-                    <Image source={{ uri: avatarUri }} style={styles.heroImage} resizeMode="cover" />
+                <View style={styles.topSpace} />
 
-                    <View style={styles.topIconsRow}>
-                        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                            <Ionicons name="chevron-back" size={24} color="#fff" />
-                        </TouchableOpacity>
-                        <View style={[styles.levelBadge, { backgroundColor: currentTheme.colors.primary, borderRadius: currentTheme.radius.full }]}>
+                {/* Profile Card */}
+                <Animated.View entering={FadeInDown.delay(200).duration(800).springify()} style={styles.profileCard}>
+                    {/* Back Button Overlay */}
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                        <Ionicons name="chevron-back" size={24} color={currentTheme.colors.text} />
+                    </TouchableOpacity>
+
+                    {/* Avatar Container */}
+                    <Animated.View style={[styles.avatarContainer, avatarStyle]}>
+                        <Image source={{ uri: avatarUri }} style={styles.avatar} />
+                        <View style={[styles.levelBadge, { backgroundColor: currentTheme.colors.primary }]}>
                             <Text style={styles.levelText}>Lv.{level}</Text>
                         </View>
-                    </View>
+                    </Animated.View>
 
-                    <LinearGradient
-                        colors={['transparent', currentTheme.colors.background + 'B3', currentTheme.colors.background]}
-                        style={styles.gradientOverlay}
-                    >
-                        <Animated.View entering={FadeInDown.duration(600).springify()} style={styles.infoContent}>
-                            <View style={styles.nameRow}>
-                                <Text style={[styles.nameText, { color: currentTheme.colors.text, fontSize: 28 }]} numberOfLines={1}>
-                                    {displayName}
-                                </Text>
-                                <View style={[styles.verifiedBadge, { backgroundColor: '#10b981', borderRadius: currentTheme.radius.full }]}>
-                                    <Ionicons name="checkmark" size={12} color="#fff" />
-                                </View>
-                            </View>
-
-                             <Text style={[styles.bioText, { color: currentTheme.colors.icon, fontSize: 14 }]}>
-                                 {bio}
-                             </Text>
-
-                            <View style={styles.cardBottomRow}>
-                                <View style={styles.statsInline}>
-                                     <View style={styles.statInlineItem}>
-                                         <Ionicons name="person-outline" size={20} color={currentTheme.colors.icon} />
-                                         <Text style={[styles.statInlineValue, { color: currentTheme.colors.text, fontSize: 20 }]}>{stats?.friendCount || 0}</Text>
-                                     </View>
-                                     <View style={styles.statInlineItem}>
-                                         <Ionicons name="mic-outline" size={20} color={currentTheme.colors.icon} />
-                                         <Text style={[styles.statInlineValue, { color: currentTheme.colors.text, fontSize: 20 }]}>{stats?.voicePinCount || 0}</Text>
-                                     </View>
-                                </View>
-
-                                {renderFriendButton()}
-                            </View>
-                        </Animated.View>
-                    </LinearGradient>
-                </View>
-
-                {/* Public Voice Pins Feed */}
-                <VoicePinCarousel
-                  title="Ký ức công khai"
-                  subtitle={`${publicPins.length} khoảnh khắc`}
-                  pins={publicPins}
-                  onSelectPin={(pin) => router.push({ pathname: '/(tabs)/home/voiceDetail', params: { id: pin.id } })}
-                  currentTheme={currentTheme}
-                  limit={5}
-                  emptyText="Chưa có ký ức công khai nào"
-                />
-
-                <View style={[styles.extraSection, { paddingHorizontal: currentTheme.spacing.lg, marginTop: 10 }]}>
-                    <View style={[styles.extraStatsRow, { backgroundColor: currentTheme.colors.icon + '08', borderRadius: currentTheme.radius.xl }]}>
-                        <View style={styles.extraStatBox}>
-                             <Text style={[styles.extraStatValue, { color: currentTheme.colors.text, fontSize: 24 }]}>{stats?.totalListens || 0}</Text>
-                             <Text style={[styles.extraStatLabel, { color: currentTheme.colors.icon, fontSize: 14 }]}>Lượt nghe</Text>
+                    <View style={styles.mainInfo}>
+                        <View style={styles.nameSection}>
+                            <Text style={[styles.nameText, { color: currentTheme.colors.text }]}>{displayName}</Text>
+                            <Ionicons name="checkmark-circle" size={20} color="#10b981" style={{ marginLeft: 6 }} />
                         </View>
-                        <View style={[styles.extraStatBox, { borderLeftWidth: 1, borderRightWidth: 1, borderColor: currentTheme.colors.icon + '10' }]}>
-                             <Text style={[styles.extraStatValue, { color: currentTheme.colors.text, fontSize: 24 }]}>{stats?.achievementCount || 0}</Text>
-                             <Text style={[styles.extraStatLabel, { color: currentTheme.colors.icon, fontSize: 14 }]}>Thành tựu</Text>
+                        <Text style={[styles.usernameText, { color: currentTheme.colors.icon }]}>@{profile.username}</Text>
+                        
+                        <Text style={[styles.bioText, { color: currentTheme.colors.text }]} numberOfLines={3}>
+                            {bio}
+                        </Text>
+
+                        {/* Stats Row */}
+                        <View style={styles.statsRow}>
+                            <View style={styles.statItem}>
+                                <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>{stats?.voicePinCount || 0}</Text>
+                                <Text style={[styles.statLabel, { color: currentTheme.colors.icon }]}>Voices</Text>
+                            </View>
+                            <View style={styles.statDivider} />
+                            <View style={styles.statItem}>
+                                <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>{stats?.totalListens || 0}</Text>
+                                <Text style={[styles.statLabel, { color: currentTheme.colors.icon }]}>Listens</Text>
+                            </View>
+                            <View style={styles.statDivider} />
+                            <View style={styles.statItem}>
+                                <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>{stats?.friendCount || 0}</Text>
+                                <Text style={[styles.statLabel, { color: currentTheme.colors.icon }]}>Friends</Text>
+                            </View>
                         </View>
-                        <View style={styles.extraStatBox}>
-                             <Text style={[styles.extraStatValue, { color: currentTheme.colors.text, fontSize: 24 }]}>{stats?.discoveredVoicesCount || 0}</Text>
-                             <Text style={[styles.extraStatLabel, { color: currentTheme.colors.icon, fontSize: 14 }]}>Khám phá</Text>
+
+                        {/* Action Buttons */}
+                        <View style={styles.actionRow}>
+                            {renderFriendButton()}
                         </View>
                     </View>
+                </Animated.View>
+
+                {/* Recent Activities Section */}
+                <View style={styles.contentSection}>
+                    <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>Ký ức công khai</Text>
+                    
+                    {publicPins && publicPins.length > 0 ? (
+                        <View style={styles.activityList}>
+                            {publicPins.map((pin, index) => (
+                                <MotiView
+                                    key={pin.id}
+                                    from={{ opacity: 0, translateY: 20 }}
+                                    animate={{ opacity: 1, translateY: 0 }}
+                                    transition={{ delay: 400 + index * 100 }}
+                                >
+                                    <TouchableOpacity 
+                                        onPress={() => router.push({ pathname: '/(tabs)/home/voiceDetail', params: { id: pin.id.toString() } })}
+                                        style={[styles.activityCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
+                                    >
+                                        <View style={[styles.activityIcon, { backgroundColor: currentTheme.colors.primary + '20' }]}>
+                                            <Ionicons name="mic" size={24} color={currentTheme.colors.primary} />
+                                        </View>
+                                        <View style={{ flex: 1, marginLeft: 16, justifyContent: 'center' }}>
+                                            <Text style={[styles.activityTitle, { color: currentTheme.colors.text }]} numberOfLines={1}>
+                                                {pin.content || 'Bản ghi không lời'}
+                                            </Text>
+                                            <Text style={[styles.activityTime, { color: currentTheme.colors.icon }]}>
+                                                {formatDate(pin.createdAt)}
+                                            </Text>
+                                        </View>
+                                        <Ionicons name="chevron-forward" size={20} color={currentTheme.colors.icon} />
+                                    </TouchableOpacity>
+                                </MotiView>
+                            ))}
+                        </View>
+                    ) : (
+                        <View style={styles.emptyActivity}>
+                            <Ionicons name="mic-off-outline" size={48} color={currentTheme.colors.icon + '40'} />
+                            <Text style={[styles.emptyText, { color: currentTheme.colors.icon }]}>Chưa có ký ức công khai nào</Text>
+                        </View>
+                    )}
                 </View>
-            </ScrollView>
+
+                <View style={{ height: 100 }} />
+            </Animated.ScrollView>
         </View>
     );
 }
@@ -311,89 +413,119 @@ export default function UserProfileScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    scrollContent: { paddingBottom: 40 },
-    heroContainer: { width, height: height * 0.9 },
-    heroImage: { width: '100%', height: '100%' },
-    topIconsRow: {
+    header: {
         position: 'absolute',
-        top: 50,
-        left: 20,
-        right: 20,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        zIndex: 10,
+        top: 0,
+        left: 0,
+        right: 0,
+        height: HEADER_HEIGHT,
+        zIndex: 0,
+    },
+    headerImage: {
+        width: '100%',
+        height: '100%',
+        resizeMode: 'cover',
+    },
+    scrollContent: { paddingBottom: 40 },
+    topSpace: { height: HEADER_HEIGHT * 0.4 },
+    profileCard: {
+        backgroundColor: 'transparent',
+        paddingHorizontal: 24,
+        paddingBottom: 24,
     },
     backButton: {
+        position: 'absolute',
+        top: -30,
+        left: 20,
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: 'rgba(0,0,0,0.3)',
+        backgroundColor: 'rgba(255,255,255,0.2)',
         justifyContent: 'center',
         alignItems: 'center',
+        zIndex: 100,
     },
+    avatarContainer: {
+        width: 130,
+        height: 130,
+        borderRadius: 65,
+        borderWidth: 4,
+        borderColor: '#fff',
+        backgroundColor: '#eee',
+        marginBottom: 20,
+        position: 'relative',
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+    },
+    avatar: { width: '100%', height: '100%', borderRadius: 65 },
     levelBadge: {
-        paddingHorizontal: 14,
-        paddingVertical: 6,
+        position: 'absolute',
+        bottom: -5,
+        right: -5,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
         borderWidth: 2,
         borderColor: '#fff',
     },
-    levelText: { color: '#fff', fontSize: 13, fontWeight: '800' },
-    gradientOverlay: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 500,
-        justifyContent: 'flex-end',
-        paddingBottom: 40,
-        paddingHorizontal: 30,
-    },
-    infoContent: { width: '100%' },
-    nameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-    nameText: { fontWeight: '800', marginRight: 10 },
-    verifiedBadge: {
-        width: 24,
-        height: 24,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    bioText: { lineHeight: 22, marginBottom: 25 },
-    cardBottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    statsInline: { flexDirection: 'row', gap: 20 },
-    statInlineItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    statInlineValue: { fontSize: 18, fontWeight: '700' },
-    followButton: {
-        paddingHorizontal: 20,
-        paddingVertical: 12,
-        justifyContent: 'center',
-        alignItems: 'center',
-        minWidth: 100,
-    },
-     followButtonText: { fontSize: 17, fontWeight: '800' },
-    feedSection: { marginTop: 20 },
-    sectionHeader: {
+    levelText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+    mainInfo: { width: '100%' },
+    nameSection: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+    nameText: { fontSize: 32, fontWeight: '900', letterSpacing: -0.5 },
+    usernameText: { fontSize: 16, fontWeight: '500', marginBottom: 16 },
+    bioText: { fontSize: 15, lineHeight: 22, marginBottom: 24, opacity: 0.8 },
+    statsRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 25,
-        marginBottom: 15
+        paddingVertical: 20,
+        borderTopWidth: 1,
+        borderBottomWidth: 1,
+        borderColor: 'rgba(0,0,0,0.05)',
+        marginBottom: 24,
     },
-    sectionTitle: { fontWeight: '800' },
-    sectionCount: {
-        fontWeight: '700',
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 12
-    },
-    emptyFeed: { padding: 40, alignItems: 'center', justifyContent: 'center' },
-    emptyText: { marginTop: 10, fontWeight: '500' },
-    extraSection: { marginTop: 10 },
-    extraStatsRow: {
+    statItem: { flex: 1, alignItems: 'center' },
+    statValue: { fontSize: 20, fontWeight: '800' },
+    statLabel: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginTop: 4 },
+    statDivider: { width: 1, height: 24, backgroundColor: 'rgba(0,0,0,0.1)' },
+    actionRow: { width: '100%' },
+    actionButton: {
+        height: 54,
+        borderRadius: 27,
         flexDirection: 'row',
-        paddingVertical: 25,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingHorizontal: 20,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
     },
-    extraStatBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-    extraStatValue: { fontSize: 22, fontWeight: '800', marginBottom: 5 },
-    extraStatLabel: { fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 },
+    actionButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+    contentSection: { paddingHorizontal: 24, marginTop: 32 },
+    sectionTitle: { fontSize: 20, fontWeight: '800', marginBottom: 20 },
+    activityList: { gap: 12 },
+    activityCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        borderRadius: 20,
+        borderWidth: 1,
+    },
+    activityIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    activityTitle: { fontSize: 16, fontWeight: '700' },
+    activityTime: { fontSize: 13, marginTop: 2 },
+    emptyActivity: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40, opacity: 0.5 },
+    emptyText: { marginTop: 12, fontSize: 15, fontWeight: '500' },
 });
