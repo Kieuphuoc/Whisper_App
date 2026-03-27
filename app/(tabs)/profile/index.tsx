@@ -1,6 +1,6 @@
 import { authApis, BASE_URL, endpoints } from '@/configs/Apis';
 import { theme } from '@/constants/Theme';
-import { User, VoicePin } from '@/types';
+import { User } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,32 +17,27 @@ import {
     View,
     Alert,
     useColorScheme,
-    Platform,
 } from 'react-native';
 import { Text } from '@/components/ui/text';
-import Animated, { 
-    FadeInDown, 
-    useAnimatedScrollHandler, 
-    useAnimatedStyle, 
-    useSharedValue, 
-    interpolate, 
+import Animated, {
+    useAnimatedScrollHandler,
+    useAnimatedStyle,
+    useSharedValue,
+    interpolate,
     Extrapolate,
+    withRepeat,
+    withTiming,
+    withSequence,
+    withDelay,
+    Easing,
 } from 'react-native-reanimated';
-import { MotiView, MotiText } from 'moti';
+import { MotiView } from 'moti';
 import * as ImagePicker from 'expo-image-picker';
+import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
-const BANNER_HEIGHT = height * 0.4;
+const BANNER_HEIGHT = height * (2 / 3);
 
-const formatDate = (dateStr: string | Date) => {
-    try {
-        const d = dateStr instanceof Date ? dateStr : new Date(dateStr);
-        const pad = (n: number) => n.toString().padStart(2, '0');
-        return `${pad(d.getHours())}:${pad(d.getMinutes())} - ${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
-    } catch (e) {
-        return typeof dateStr === 'string' ? dateStr : '';
-    }
-};
 
 export default function ProfileScreen() {
     const colorScheme = useColorScheme() || 'light';
@@ -54,29 +49,54 @@ export default function ProfileScreen() {
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [publicPins, setPublicPins] = useState<VoicePin[]>([]);
     const [updatingImage, setUpdatingImage] = useState(false);
 
     const scrollY = useSharedValue(0);
+    const shimmerProgress = useSharedValue(0);
+    const buttonGlow = useSharedValue(0);
+
+
+    const MOCK_STATS = {
+        totalListens: 256,
+        voicePinCount: 4,
+        friendCount: 18,
+        discoveredVoicesCount: 7,
+    };
+
+    const MOCK_USER: User = {
+        id: 1,
+        username: "Wanderer",
+        displayName: "The Silent Wanderer",
+        level: 15,
+        xp: 1250,
+        createdAt: new Date('2024-01-01').toISOString(),
+        updatedAt: new Date().toISOString(),
+        bio: "Đang dò tìm những tần số lạc lối giữa thực tại.",
+        avatar: "https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg",
+    };
 
     const fetchData = async (isRefresh = false) => {
         isRefresh ? setRefreshing(true) : setLoading(true);
         try {
             const token = await AsyncStorage.getItem('token');
-            if (!token) return;
+            if (!token) {
+                setStats(MOCK_STATS);
+                setUser(MOCK_USER);
+                return;
+            }
             const api = authApis(token);
 
-            const [uRes, sRes, vRes] = await Promise.all([
-                api.get(endpoints.userMe),
-                api.get(endpoints.meStats),
-                api.get(endpoints.voicePublicByUser('me')).catch(() => ({ data: { data: [] } })),
+            const [uRes, sRes] = await Promise.all([
+                api.get(endpoints.userMe).catch(() => ({ data: { data: MOCK_USER } })),
+                api.get(endpoints.meStats).catch(() => ({ data: { data: MOCK_STATS } })),
             ]);
 
-            setUser(uRes.data?.data);
-            setStats(sRes.data?.data);
-            setPublicPins(vRes.data?.data || []);
+            setUser(uRes.data?.data || MOCK_USER);
+            setStats(sRes.data?.data || MOCK_STATS);
         } catch (e) {
             console.error('Fetch profile error:', e);
+            setStats(MOCK_STATS);
+            setUser(MOCK_USER);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -85,7 +105,40 @@ export default function ProfileScreen() {
 
     useEffect(() => {
         fetchData();
+
+        // Start the periodic shimmer animation (every 6 seconds)
+        shimmerProgress.value = withRepeat(
+            withSequence(
+                withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.quad) }),
+                withDelay(4500, withTiming(0, { duration: 0 }))
+            ),
+            -1,
+            false
+        );
+
+        // Start a subtle periodic glow (every 10 seconds)
+        buttonGlow.value = withRepeat(
+            withSequence(
+                withDelay(8000, withTiming(1, { duration: 1000 })),
+                withTiming(0, { duration: 1000 })
+            ),
+            -1,
+            false
+        );
     }, []);
+
+    const shimmerStyle = useAnimatedStyle(() => ({
+        transform: [
+            { translateX: interpolate(shimmerProgress.value, [0, 1], [-200, 400]) },
+            { skewX: '-20deg' }
+        ],
+        opacity: interpolate(shimmerProgress.value, [0, 0.1, 0.9, 1], [0, 1, 1, 0])
+    }));
+
+    const glowStyle = useAnimatedStyle(() => ({
+        opacity: buttonGlow.value * 0.5,
+        transform: [{ scale: interpolate(buttonGlow.value, [0, 1], [1, 1.05]) }]
+    }));
 
     const onScroll = useAnimatedScrollHandler({
         onScroll: (event) => {
@@ -149,27 +202,6 @@ export default function ProfileScreen() {
         return `${BASE_URL}${user.cover.startsWith('/') ? '' : '/'}${user.cover}`;
     }, [user]);
 
-    const signatureVibe = useMemo(() => {
-        if (!publicPins || publicPins.length === 0) return 'Tần số lặng';
-        const emotions = publicPins.map(p => p.emotionLabel).filter(Boolean);
-        if (emotions.length === 0) return 'Tần số lặng';
-        const counts = emotions.reduce((acc: any, curr) => {
-            acc[curr] = (acc[curr] || 0) + 1;
-            return acc;
-        }, {});
-        const dominant = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
-        
-        const labels: any = {
-            'HAPPY': 'Rạng rỡ',
-            'SAD': 'U sầu',
-            'LOVE': 'Nồng nàn',
-            'ANGRY': 'Bùng nổ',
-            'WOW': 'Kinh ngạc',
-            'LAUGH': 'Hân hoan',
-            'NEUTRAL': 'Bình thản'
-        };
-        return labels[dominant.toUpperCase()] || dominant;
-    }, [publicPins]);
 
     const joinDate = useMemo(() => {
         if (!user?.createdAt) return 'Vô định';
@@ -214,45 +246,46 @@ export default function ProfileScreen() {
         <View style={[styles.container, { backgroundColor: currentTheme.colors.background }]}>
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
 
-            {/* ASYMMETRIC BANNER */}
-            <Animated.View style={[styles.bannerContainer, bannerAnim]}>
+            {/* FULL SCREEN BACKGROUND IMAGE */}
+            <View style={StyleSheet.absoluteFill}>
                 {coverUri ? (
-                    <Image source={{ uri: coverUri }} style={styles.bannerImage} />
+                    <Image source={{ uri: coverUri }} style={styles.fullscreenBackground} />
                 ) : (
                     <LinearGradient
-                        colors={[currentTheme.colors.primary, currentTheme.colors.icon + '40', currentTheme.colors.background]}
-                        style={styles.bannerPlaceholder}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                    >
-                        <MotiView
-                            from={{ opacity: 0.3, scale: 0.8 }}
-                            animate={{ opacity: 0.6, scale: 1.2 }}
-                            transition={{ loop: true, duration: 4000, type: 'timing' }}
-                            style={styles.nebula}
-                        />
-                    </LinearGradient>
+                        colors={[currentTheme.colors.primary, currentTheme.colors.background]}
+                        style={styles.fullscreenBackground}
+                    />
                 )}
-                
+                {/* Overlay to ensure readability */}
                 <LinearGradient
-                    colors={['rgba(0,0,0,0.3)', 'transparent', isDark ? currentTheme.colors.background : 'rgba(255,255,255,0.9)', currentTheme.colors.background]}
+                    colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.8)']}
+                    locations={[0, 0.4, 0.7, 1]}
                     style={StyleSheet.absoluteFill}
                 />
-            </Animated.View>
+            </View>
 
-            {/* FLOATING ACTION BUTTON FOR COVER - MOVED ABOVE SCROLLVIEW FOR CLICKABILITY */}
-            <TouchableOpacity 
+            {/* FLOATING ACTION BUTTON FOR COVER */}
+            <TouchableOpacity
                 onPress={() => handleUpdateImage('cover')}
-                style={[styles.bannerEditIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)' }]}
+                style={styles.floatingEditAura}
+                activeOpacity={0.8}
             >
-                <Ionicons name="sparkles-outline" size={20} color={isDark ? "#fff" : currentTheme.colors.text} />
-                <MotiText 
-                    from={{ opacity: 0, translateX: 10 }}
-                    animate={{ opacity: 1, translateX: 0 }}
-                    style={[styles.bannerEditText, { color: isDark ? "#fff" : currentTheme.colors.text }]}
+                <MotiView
+                    from={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 1000, type: 'spring' }}
                 >
-                    Đổi Aura
-                </MotiText>
+                    <BlurView intensity={30} tint="light" style={styles.editAuraBlur}>
+                        <LinearGradient
+                            colors={['rgba(255,255,255,0.2)', 'transparent']}
+                            style={StyleSheet.absoluteFill}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                        />
+                        <Ionicons name="sparkles" size={16} color="#fff" />
+                        <Text style={styles.editAuraText}>Đổi Aura</Text>
+                    </BlurView>
+                </MotiView>
             </TouchableOpacity>
 
             <Animated.ScrollView
@@ -264,7 +297,7 @@ export default function ProfileScreen() {
                 }
                 contentContainerStyle={styles.scrollContent}
             >
-                <View style={styles.topGap} />
+                <View style={styles.topEmptyGap} />
 
                 {/* AVATAR & ASYMMETRIC NAME PANEL */}
                 <Animated.View style={[styles.profileContent, contentAnim]}>
@@ -272,14 +305,19 @@ export default function ProfileScreen() {
                         <MotiView
                             from={{ scale: 0, rotate: '-15deg' }}
                             animate={{ scale: 1, rotate: '0deg' }}
-                            transition={{ type: 'spring', delay: 100 }}
-                            style={styles.avatarOuter}
+                            transition={{ type: 'spring', damping: 15 }}
+                            style={[styles.avatarOuter, { borderColor: isDark ? '#1a1a1a' : '#fff' }]}
                         >
-                            <TouchableOpacity onPress={() => handleUpdateImage('avatar')}>
+                            <TouchableOpacity onPress={() => handleUpdateImage('avatar')} activeOpacity={0.9}>
                                 <Image source={{ uri: avatarUri }} style={styles.avatar} />
-                                <View style={[styles.levelCapsule, { backgroundColor: currentTheme.colors.primary }]}>
-                                    <Text style={styles.levelText}>Lvl.{user.level || 1}</Text>
-                                </View>
+                                <MotiView
+                                    from={{ rotate: '-45deg', scale: 0 }}
+                                    animate={{ rotate: '-15deg', scale: 1 }}
+                                    transition={{ delay: 500, type: 'spring' }}
+                                    style={[styles.levelCapsule, { backgroundColor: currentTheme.colors.primary }]}
+                                >
+                                    <Text style={styles.levelText}>XP {user.level || 1}</Text>
+                                </MotiView>
                             </TouchableOpacity>
                         </MotiView>
 
@@ -289,148 +327,173 @@ export default function ProfileScreen() {
                                 from={{ scale: 0, translateX: 20 }}
                                 animate={{ scale: 1, translateX: 0 }}
                                 transition={{ delay: 300 }}
-                                style={[styles.statBubble, styles.bubbleLarge, { backgroundColor: currentTheme.colors.primary + '30' }]}
+                                style={[styles.statBubble, styles.bubbleLarge]}
                             >
-                                <Text style={[styles.bubbleValue, { color: currentTheme.colors.text }]}>{stats?.totalListens || 0}</Text>
-                                <Text style={[styles.bubbleLabel, { color: currentTheme.colors.icon }]}>Listens</Text>
+                                <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFill, { backgroundColor: currentTheme.colors.primary + '50' }]} />
+                                <Text style={styles.bubbleValue}>{stats?.totalListens || 0}</Text>
+                                <Text style={styles.bubbleLabel}>Listens</Text>
                             </MotiView>
-                            
+
                             <MotiView
                                 from={{ scale: 0, translateY: 20 }}
                                 animate={{ scale: 1, translateY: 0 }}
                                 transition={{ delay: 450 }}
-                                style={[styles.statBubble, styles.bubbleMedium, { backgroundColor: currentTheme.colors.secondary + '30', bottom: -10, left: -40 }]}
+                                style={[styles.statBubble, styles.bubbleMedium, { bottom: -5, left: -35 }]}
                             >
-                                <Text style={[styles.bubbleValueSmall, { color: currentTheme.colors.text }]}>{stats?.voicePinCount || 0}</Text>
-                                <Text style={[styles.bubbleLabelSmall, { color: currentTheme.colors.icon }]}>Voices</Text>
+                                <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFill, { backgroundColor: currentTheme.colors.secondary + '50' }]} />
+                                <Text style={styles.bubbleValueMedium}>{stats?.voicePinCount || 0}</Text>
+                                <Text style={styles.bubbleLabelMedium}>Voices</Text>
                             </MotiView>
 
                             <MotiView
                                 from={{ scale: 0, translateY: -20 }}
                                 animate={{ scale: 1, translateY: 0 }}
                                 transition={{ delay: 600 }}
-                                style={[styles.statBubble, styles.bubbleSmall, { backgroundColor: '#10b98130', right: -15, top: -20 }]}
+                                style={[styles.statBubble, styles.bubbleSmall, { right: -10, top: -35 }]}
                             >
-                                <Text style={[styles.bubbleValueSmall, { color: currentTheme.colors.text }]}>{stats?.friendCount || 0}</Text>
-                                <Text style={[styles.bubbleLabelSmall, { color: currentTheme.colors.icon }]}>Friends</Text>
+                                <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFill, { backgroundColor: '#10b98150' }]} />
+                                <Text style={styles.bubbleValueSmall}>{stats?.friendCount || 0}</Text>
+                                <Text style={styles.bubbleLabelSmall}>Friends</Text>
                             </MotiView>
                         </View>
                     </View>
 
-                    {/* STRANGE NEW SECTIONS 4, 5, 7 */}
-                    <View style={styles.unconventionalRow}>
-                        <MotiView 
-                            from={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 700 }}
-                            style={[styles.strangeCard, { backgroundColor: currentTheme.colors.primary + '15' }]}
-                        >
-                            <Ionicons name="search" size={16} color={currentTheme.colors.primary} />
-                            <Text style={[styles.strangeText, { color: currentTheme.colors.text }]}>
-                                {stats?.discoveredVoicesCount || 0} Dị thường
-                            </Text>
-                        </MotiView>
-                        
-                        <MotiView 
-                            from={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 850 }}
-                            style={[styles.strangeCard, { backgroundColor: currentTheme.colors.secondary + '15' }]}
-                        >
-                            <Ionicons name="pulse" size={16} color={currentTheme.colors.secondary} />
-                            <Text style={[styles.strangeText, { color: currentTheme.colors.text }]}>
-                                Vibe: {signatureVibe}
-                            </Text>
-                        </MotiView>
-
-                        <MotiView 
-                            from={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 1000 }}
-                            style={[styles.strangeCard, { backgroundColor: currentTheme.colors.icon + '15' }]}
-                        >
-                            <Ionicons name="time-outline" size={16} color={currentTheme.colors.icon} />
-                            <Text style={[styles.strangeText, { color: currentTheme.colors.icon }]}>
-                                {joinDate}
-                            </Text>
-                        </MotiView>
+                    {/* GLASS VIBE SECTION */}
+                    <View style={styles.glassRow}>
+                        {[
+                            { icon: "search", label: `${stats?.discoveredVoicesCount || 0} Dị thường` },
+                            { icon: "time-outline", label: joinDate }
+                        ].map((item, i) => (
+                            <MotiView
+                                key={i}
+                                from={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 700 + i * 150 }}
+                                style={styles.glassStrangeCard}
+                            >
+                                <BlurView intensity={25} tint="light" style={StyleSheet.absoluteFill} />
+                                <Ionicons name={item.icon as any} size={14} color="#fff" />
+                                <Text style={styles.glassStrangeText}>{item.label}</Text>
+                            </MotiView>
+                        ))}
                     </View>
 
-                    {/* TILTED NAME CARD */}
-                    <MotiView 
-                        from={{ opacity: 0, translateX: -50 }}
-                        animate={{ opacity: 1, translateX: 0 }}
-                        transition={{ delay: 200 }}
-                        style={[styles.nameCard, { transform: [{ rotate: '-1.5deg' }], backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }]}
+                    {/* MAIN PROFILE CARD */}
+                    <MotiView
+                        from={{ opacity: 0, translateY: 40 }}
+                        animate={{ opacity: 1, translateY: 0 }}
+                        transition={{ delay: 300 }}
+                        style={styles.mainGlassCard}
                     >
-                        <Text style={[styles.displayName, { color: currentTheme.colors.text }]}>{user.displayName || user.username}</Text>
-                        <Text style={[styles.username, { color: currentTheme.colors.icon }]}>@{user.username}</Text>
-                        
+                        <BlurView intensity={10} tint="light" style={StyleSheet.absoluteFill} />
+                        <View style={styles.nameHeader}>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.glassDisplayName}>
+                                    {user.displayName || user.username}
+                                </Text>
+                                <Text style={styles.glassUsername}>@{user.username}</Text>
+                            </View>
+                            <TouchableOpacity
+                                onPress={() => router.push('/(tabs)/profile/edit-profile')}
+                                activeOpacity={0.7}
+                            >
+                                <MotiView
+                                    from={{ opacity: 0, scale: 0.8 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ delay: 900, type: 'spring' }}
+                                    style={styles.glassEditButton}
+                                >
+                                    <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFill} />
+                                    <LinearGradient
+                                        colors={['rgba(255,255,255,0.4)', 'rgba(255,255,255,0.1)']}
+                                        style={StyleSheet.absoluteFill}
+                                    />
+                                    <Ionicons name="pencil-outline" size={18} color="#fff" />
+                                </MotiView>
+                            </TouchableOpacity>
+                        </View>
+
                         <View style={styles.bioBox}>
-                            <Text style={[styles.bioText, { color: currentTheme.colors.text }]}>
-                                {user.bio || 'Tìm kiếm giai điệu của tâm hồn trong từng tần số âm thanh.'}
+                            <Text style={styles.glassBioText}>
+                                {user.bio || 'Khám phá thế giới qua những âm thanh ẩn giấu.'}
                             </Text>
                         </View>
 
                         <View style={styles.actionGrid}>
-                            <TouchableOpacity 
-                                onPress={() => router.push('/(tabs)/profile/edit-profile')}
-                                style={[styles.pillButton, { backgroundColor: currentTheme.colors.primary }]}
+                            <TouchableOpacity
+                                style={styles.glassMainButton}
+                                activeOpacity={0.9}
                             >
-                                <Ionicons name="options-outline" size={20} color="#fff" />
-                                <Text style={styles.pillButtonText}>Tinh chỉnh</Text>
+                                {/* PERIODIC GLOW EFFECT */}
+                                <Animated.View
+                                    style={[
+                                        StyleSheet.absoluteFill,
+                                        glowStyle,
+                                        {
+                                            backgroundColor: currentTheme.colors.primary,
+                                            borderRadius: 20,
+                                            filter: 'blur(15px)'
+                                        } as any
+                                    ]}
+                                />
+
+                                <LinearGradient
+                                    colors={['#7c3aed', '#4338ca']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                    style={StyleSheet.absoluteFill}
+                                />
+
+                                {/* PERIODIC SHIMMER FLASH */}
+                                <Animated.View
+                                    style={[
+                                        {
+                                            position: 'absolute',
+                                            top: 0,
+                                            bottom: 0,
+                                            width: 100,
+                                            backgroundColor: 'rgba(255,255,255,0.4)',
+                                        },
+                                        shimmerStyle
+                                    ]}
+                                >
+                                    <LinearGradient
+                                        colors={['transparent', 'rgba(255,255,255,0.6)', 'transparent']}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 0 }}
+                                        style={StyleSheet.absoluteFill}
+                                    />
+                                </Animated.View>
+
+                                <View style={styles.buttonInner}>
+                                    <MotiView
+                                        from={{ scale: 0.8 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ type: 'spring', damping: 10 }}
+                                        style={{ flexDirection: 'row', alignItems: 'center' }}
+                                    >
+                                        <Ionicons name="person-add" size={20} color="#fff" style={{ marginRight: 10 }} />
+                                        <Text style={styles.mainActionText}>Theo dõi</Text>
+                                    </MotiView>
+                                </View>
                             </TouchableOpacity>
-                            <TouchableOpacity 
+
+                            <TouchableOpacity
                                 onPress={() => router.push('/(tabs)/profile/settings')}
-                                style={[styles.pillButton, { borderColor: currentTheme.colors.icon + '40', borderWidth: 1 }]}
+                                style={styles.glassSettingsButton}
+                                activeOpacity={0.7}
                             >
-                                <Ionicons name="settings-outline" size={20} color={currentTheme.colors.icon} />
+                                <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFill} />
+                                <LinearGradient
+                                    colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.05)']}
+                                    style={StyleSheet.absoluteFill}
+                                />
+                                <Ionicons name="settings-outline" size={20} color="#fff" />
                             </TouchableOpacity>
                         </View>
                     </MotiView>
                 </Animated.View>
 
-                {/* BRUTALIST LIST OF ACTIVITIES */}
-                <View style={styles.activitySection}>
-                    <Text style={[styles.sectionHeading, { color: currentTheme.colors.text }]}>Tần số rò rỉ</Text>
-                    
-                    {publicPins && publicPins.length > 0 ? (
-                        <View style={styles.listContainer}>
-                            {publicPins.map((pin, index) => (
-                                <MotiView
-                                    key={pin.id}
-                                    from={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ delay: 800 + index * 100 }}
-                                    style={[styles.brutalistCard, { borderColor: currentTheme.colors.icon + '20', backgroundColor: currentTheme.colors.background }]}
-                                >
-                                    <TouchableOpacity 
-                                        onPress={() => router.push({ pathname: '/(tabs)/home/voiceDetail', params: { id: pin.id.toString() } })}
-                                        style={styles.cardInner}
-                                    >
-                                        <View style={[styles.typeBadge, { backgroundColor: currentTheme.colors.primary }]}>
-                                            <Text style={styles.badgeText}>PIN</Text>
-                                        </View>
-                                        <View style={{ flex: 1 }}>
-                                            <Text style={[styles.pinContent, { color: currentTheme.colors.text }]} numberOfLines={1}>
-                                                {pin.content || 'Hidden Frequencies'}
-                                            </Text>
-                                            <Text style={[styles.pinMeta, { color: currentTheme.colors.icon }]}>
-                                                {formatDate(pin.createdAt)}
-                                            </Text>
-                                        </View>
-                                        <Ionicons name="play-circle-outline" size={32} color={currentTheme.colors.primary} />
-                                    </TouchableOpacity>
-                                </MotiView>
-                            ))}
-                        </View>
-                    ) : (
-                        <MotiView style={styles.emptyState}>
-                            <Ionicons name="pulse" size={48} color={currentTheme.colors.icon + '20'} />
-                            <Text style={{ color: currentTheme.colors.icon, marginTop: 12 }}>Chưa có dao động nào được ghi lại</Text>
-                        </MotiView>
-                    )}
-                </View>
 
                 <View style={{ height: 120 }} />
             </Animated.ScrollView>
@@ -448,141 +511,166 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    bannerContainer: {
-        width,
-        height: BANNER_HEIGHT,
-        position: 'absolute',
-        top: 0,
-        zIndex: 0,
-    },
-    bannerImage: {
+    fullscreenBackground: {
+        ...StyleSheet.absoluteFillObject,
         width: '100%',
         height: '100%',
-        resizeMode: 'cover',
     },
-    bannerPlaceholder: {
-        width: '100%',
-        height: '100%',
-        overflow: 'hidden',
-    },
-    nebula: {
-        position: 'absolute',
-        width: 300,
-        height: 300,
-        borderRadius: 150,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        top: -50,
-        left: -50,
-    },
-    bannerEditIcon: {
+    floatingEditAura: {
         position: 'absolute',
         top: 60,
         right: 20,
+        zIndex: 1000,
+        overflow: 'hidden',
+        borderRadius: 20,
+    },
+    editAuraBlur: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 10,
         paddingHorizontal: 16,
-        borderRadius: 25,
+        gap: 8,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.3)',
-        zIndex: 1000,
-        elevation: 10,
     },
-    bannerEditText: { fontSize: 13, fontWeight: '700', marginLeft: 8 },
-    scrollContent: { paddingBottom: 40 },
-    topGap: { height: BANNER_HEIGHT * 0.7 },
-    profileContent: { paddingHorizontal: 24, zIndex: 10 },
-    avatarRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 20 },
+    editAuraText: { color: '#fff', fontSize: 13, fontWeight: '800', letterSpacing: 0.3 },
+    scrollContent: { paddingBottom: 100 },
+    topEmptyGap: { height: height * 0.25 },
+    profileContent: { paddingHorizontal: 20, zIndex: 10 },
+    avatarRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 25 },
     avatarOuter: {
-        width: 130,
-        height: 130,
-        borderRadius: 40,
-        borderWidth: 6,
-        borderColor: '#fff',
-        backgroundColor: '#eee',
+        width: 120,
+        height: 120,
+        borderRadius: 36,
+        borderWidth: 4,
+        elevation: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.1)',
         overflow: 'visible',
     },
-    avatar: { width: '100%', height: '100%', borderRadius: 34 },
+    avatar: { width: '100%', height: '100%', borderRadius: 32 },
     levelCapsule: {
         position: 'absolute',
-        top: -10,
-        left: -10,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 12,
-        transform: [{ rotate: '-10deg' }],
+        top: -8,
+        right: -15,
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 8,
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
     },
-    levelText: { color: '#fff', fontWeight: '900', fontSize: 12 },
-    bubblesContainer: { width: 150, height: 120, position: 'relative' },
+    levelText: { color: '#fff', fontWeight: '900', fontSize: 13, letterSpacing: 0.5 },
+    bubblesContainer: { width: 140, height: 110, position: 'relative' },
     statBubble: {
         position: 'absolute',
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: 100,
         overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
     },
     bubbleLarge: { width: 85, height: 85, right: 0, top: 0 },
-    bubbleMedium: { width: 65, height: 65 },
-    bubbleSmall: { width: 45, height: 45 },
-    bubbleValue: { fontSize: 20, fontWeight: '900' },
-    bubbleLabel: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase' },
-    bubbleValueSmall: { fontSize: 14, fontWeight: '900' },
-    bubbleLabelSmall: { fontSize: 8, fontWeight: '600' },
-    unconventionalRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
-    strangeCard: {
+    bubbleMedium: { width: 70, height: 70 },
+    bubbleSmall: { width: 65, height: 65 },
+    bubbleValue: { fontSize: 20, fontWeight: '900', color: '#fff', textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
+    bubbleLabel: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', color: '#fff', opacity: 0.9 },
+    bubbleValueMedium: { fontSize: 18, fontWeight: '900', color: '#fff', textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
+    bubbleLabelMedium: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', color: '#fff', opacity: 0.9 },
+    bubbleValueSmall: { fontSize: 16, fontWeight: '900', color: '#fff', textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
+    bubbleLabelSmall: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', color: '#fff', opacity: 0.9 },
+    glassRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24, paddingHorizontal: 4 },
+    glassStrangeCard: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 16,
-        gap: 6,
+        paddingHorizontal: 15,
+        borderRadius: 20,
+        gap: 8,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
-    strangeText: { fontSize: 12, fontWeight: '700' },
-    nameCard: {
+    glassStrangeText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+    mainGlassCard: {
         padding: 24,
         borderRadius: 32,
-        marginBottom: 40,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
+        marginBottom: 35,
+        overflow: 'hidden',
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,255,255,0.25)',
+        backgroundColor: 'rgba(0,0,0,0.2)',
     },
-    displayName: { fontSize: 36, fontWeight: '900', letterSpacing: -1.5 },
-    username: { fontSize: 18, fontWeight: '600', marginBottom: 20, opacity: 0.6 },
-    bioBox: { marginBottom: 24 },
-    bioText: { fontSize: 16, lineHeight: 24, fontWeight: '500', fontStyle: 'italic' },
+    nameHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 15 },
+    glassDisplayName: { fontSize: 32, fontWeight: '900', color: '#fff', letterSpacing: -1 },
+    glassUsername: { fontSize: 16, fontWeight: '600', color: 'rgba(255,255,255,0.6)', marginTop: 2 },
+    glassEditButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,255,255,0.4)',
+        elevation: 10,
+        shadowColor: 'rgba(255,255,255,0.3)',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+    },
+    bioBox: { marginBottom: 25 },
+    glassBioText: { fontSize: 15, lineHeight: 22, fontWeight: '500', color: 'rgba(255,255,255,0.9)' },
     actionGrid: { flexDirection: 'row', gap: 12 },
-    pillButton: {
-        height: 52,
-        borderRadius: 26,
-        paddingHorizontal: 24,
+    glassMainButton: {
+        flex: 1,
+        height: 60,
+        borderRadius: 20,
+        overflow: 'hidden',
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 15,
+        shadowColor: '#7c3aed',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.4,
+        shadowRadius: 15,
+        position: 'relative',
+    },
+    buttonInner: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 8,
+        width: '100%',
+        height: '100%',
+        backgroundColor: 'transparent',
     },
-    pillButtonText: { color: '#fff', fontWeight: '800', fontSize: 15 },
-    activitySection: { paddingHorizontal: 24 },
-    sectionHeading: { fontSize: 24, fontWeight: '900', marginBottom: 24, textTransform: 'uppercase', letterSpacing: 2 },
-    listContainer: { gap: 16 },
-    brutalistCard: {
-        borderWidth: 2,
-        borderRadius: 24,
-        overflow: 'hidden',
+    mainActionText: {
+        color: '#fff',
+        fontWeight: '900',
+        fontSize: 18,
+        letterSpacing: 1,
+        textShadowColor: 'rgba(0,0,0,0.3)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
     },
-    cardInner: { flexDirection: 'row', alignItems: 'center', padding: 20 },
-    typeBadge: {
-        width: 48,
-        height: 48,
-        borderRadius: 12,
+    glassSettingsButton: {
+        width: 56,
+        height: 56,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.1)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 16,
+        overflow: 'hidden',
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,255,255,0.3)',
     },
-    badgeText: { color: '#fff', fontSize: 12, fontWeight: '900' },
-    pinContent: { fontSize: 17, fontWeight: '700' },
-    pinMeta: { fontSize: 13, marginTop: 4, fontWeight: '500' },
-    emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60, opacity: 0.4 },
     overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)' },
     absCenter: { position: 'absolute', top: '50%', left: '50%', transform: [{ translateX: -15 }, { translateY: -15 }] },
 });

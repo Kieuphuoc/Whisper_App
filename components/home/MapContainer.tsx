@@ -10,6 +10,8 @@ import VoicePinCard from "./VoicePinCard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from '@react-navigation/native';
 import ClusterMarker from "./ClusterMarker";
+import { BASE_URL } from "@/configs/Apis";
+import { Image } from "react-native";
 
 import RadarOverlay from "../discovery/RadarOverlay";
 import SpawnedVoicePin from "../discovery/SpawnedVoicePin";
@@ -126,6 +128,14 @@ const MapSection = forwardRef<MapView, Props>(({
       >
         {pins.map((pin) => {
           const isAR = pin.type === VoiceType.HIDDEN_AR;
+          
+          const avatarUri = (() => {
+            const userAvatar = pin.user?.avatar;
+            if (!userAvatar) return 'https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg';
+            if (userAvatar.startsWith('http')) return userAvatar;
+            return `${BASE_URL}${userAvatar.startsWith('/') ? '' : '/'}${userAvatar}`;
+          })();
+
           return (
             <Marker
               key={pin.id}
@@ -137,11 +147,18 @@ const MapSection = forwardRef<MapView, Props>(({
               {/* Custom pin marker */}
               <View style={styles.markerWrap}>
                 <View style={[styles.markerBubble, isAR && styles.markerBubbleAR]}>
-                  <Ionicons
-                    name={isAR ? "sparkles-outline" : "mic-outline"}
-                    size={16}
-                    color="#fff"
+                  <Image 
+                    source={{ uri: avatarUri }} 
+                    style={styles.markerAvatar} 
                   />
+                  {/* Small icon overlay to indicate type */}
+                  <View style={[styles.typeIndicator, { backgroundColor: isAR ? "#8b5cf6" : "#ef4444" }]}>
+                    <Ionicons
+                      name={isAR ? "sparkles" : "mic"}
+                      size={8}
+                      color="#fff"
+                    />
+                  </View>
                 </View>
                 <View style={[styles.markerTail, isAR && styles.markerTailAR]} />
               </View>
@@ -238,30 +255,48 @@ const styles = StyleSheet.create({
   // ── Marker ───────────────────────────────
   markerWrap: { alignItems: "center" },
   markerBubble: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#ef4444",
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 2.5,
+    borderWidth: 2,
     borderColor: "#fff",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 6,
+    overflow: 'visible',
   },
-  markerBubbleAR: { backgroundColor: "#8b5cf6" },
+  markerAvatar: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+  },
+  typeIndicator: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  markerBubbleAR: { borderColor: "#8b5cf6" },
   markerTail: {
     width: 0,
     height: 0,
-    borderLeftWidth: 5,
-    borderRightWidth: 5,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
     borderTopWidth: 8,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
-    borderTopColor: "#ef4444",
+    borderTopColor: "#fff",
     marginTop: -1,
   },
   markerTailAR: { borderTopColor: "#8b5cf6" },

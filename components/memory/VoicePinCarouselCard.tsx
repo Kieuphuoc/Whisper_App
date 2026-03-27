@@ -6,10 +6,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   View,
+  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { Text } from '@/components/ui/text';
+import { MotiView } from 'moti';
 import Animated, {
   Extrapolation,
   SharedValue,
@@ -19,34 +22,33 @@ import Animated, {
   withSpring,
   useDerivedValue,
 } from 'react-native-reanimated';
-
-
-
+import { BASE_URL } from '@/configs/Apis';
 
 const { width } = Dimensions.get('window');
 const PAGE_PADDING = 24;
 
-// --- Emotion meta ---
-const EMOTION_META: Record<string, { color: string; gradient: string; icon: keyof typeof Ionicons.glyphMap; vi: string }> = {
-  Happy: { color: '#facc15', gradient: '#fef9c3', icon: 'sunny-outline', vi: 'Vui vẻ' },
-  Sad: { color: '#60a5fa', gradient: '#eff6ff', icon: 'rainy-outline', vi: 'Buồn bã' },
-  Calm: { color: '#34d399', gradient: '#ecfdf5', icon: 'leaf-outline', vi: 'Bình yên' },
-  Nostalgic: { color: '#f472b6', gradient: '#fdf2f8', icon: 'hourglass-outline', vi: 'Nhớ nhung' },
-  Romantic: { color: '#fb7185', gradient: '#fff1f2', icon: 'heart-outline', vi: 'Lãng mạn' },
-  Curious: { color: '#a78bfa', gradient: '#f5f3ff', icon: 'telescope-outline', vi: 'Tò mò' },
-  Angry: { color: '#f87171', gradient: '#fef2f2', icon: 'flame-outline', vi: 'Bực bội' },
+const EMOTION_META: Record<string, { color: string; gradient: string[]; icon: keyof typeof Ionicons.glyphMap; vi: string }> = {
+  Happy: { color: '#FFD700', gradient: ['#FFD700', '#FFA500'], icon: 'sunny', vi: 'Vui vẻ' },
+  Sad: { color: '#00BFFF', gradient: ['#00BFFF', '#1E90FF'], icon: 'rainy', vi: 'Buồn bã' },
+  Calm: { color: '#00FA9A', gradient: ['#00FA9A', '#3CB371'], icon: 'leaf', vi: 'Bình yên' },
+  Nostalgic: { color: '#FF69B4', gradient: ['#FF69B4', '#DA70D6'], icon: 'hourglass', vi: 'Nhớ nhung' },
+  Romantic: { color: '#FF1493', gradient: ['#FF1493', '#C71585'], icon: 'heart', vi: 'Lãng mạn' },
+  Curious: { color: '#9370DB', gradient: ['#9370DB', '#8A2BE2'], icon: 'telescope', vi: 'Tò mò' },
+  Angry: { color: '#FF4500', gradient: ['#FF4500', '#DC143C'], icon: 'flame', vi: 'Bực bội' },
 };
-const DEFAULT_META = { color: '#8b5cf6', gradient: '#f5f3ff', icon: 'mic-outline' as keyof typeof Ionicons.glyphMap, vi: 'Khác' };
+
+const DEFAULT_META = { color: '#A855F7', gradient: ['#A855F7', '#7C3AED'], icon: 'mic' as any, vi: 'Cảm xúc' };
 
 function getMeta(label?: string) {
   return label ? (EMOTION_META[label] ?? DEFAULT_META) : DEFAULT_META;
 }
 
-function getPinImage(pin: VoicePin): string | undefined {
-  return pin.images?.[0]?.imageUrl ?? pin.imageUrl;
+function resolveAsset(path?: string) {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    return `${BASE_URL}/${cleanPath}`;
 }
-
-
 
 export interface VoicePinCarouselCardProps {
   pin: VoicePin;
@@ -70,21 +72,24 @@ export function VoicePinCarouselCard({
   isGrid = false,
 }: VoicePinCarouselCardProps) {
   const isHidden = pin.isAnonymous || pin.type === 'HIDDEN_AR';
-  const meta = isHidden ? { color: '#6A5ACD', icon: 'sparkles' as any, vi: 'Bí ẩn' } : getMeta(pin.emotionLabel);
-  const imgUrl = getPinImage(pin);
+  const meta = isHidden ? { color: '#C084FC', icon: 'sparkles' as any, vi: 'Bí ẩn', gradient: ['#C084FC', '#9333EA'] } : getMeta(pin.emotionLabel);
+  
+  const imgUrl = useMemo(() => {
+     const raw = pin.images?.[0]?.imageUrl ?? pin.imageUrl;
+     return resolveAsset(raw);
+  }, [pin]);
+
   const pressedScale = useSharedValue(1);
 
   const handlePressIn = () => {
-    // Bouncier spring for press effect
-    pressedScale.value = withSpring(0.92, { damping: 10, stiffness: 200 });
+    pressedScale.value = withSpring(0.95, { damping: 15, stiffness: 300 });
   };
   const handlePressOut = () => {
-    pressedScale.value = withSpring(1, { damping: 10, stiffness: 200 });
+    pressedScale.value = withSpring(1, { damping: 15, stiffness: 300 });
   };
 
   const ITEM_SIZE = cardWidth + cardSpacing;
 
-  // Track distance for blur calculation
   const distanceVal = useDerivedValue(() => {
     if (index === undefined || scrollX === undefined) return 0;
     const cardCenter = PAGE_PADDING + index * ITEM_SIZE + cardWidth / 2;
@@ -95,65 +100,32 @@ export function VoicePinCarouselCard({
   const animatedStyle = useAnimatedStyle(() => {
     let targetScale = 1;
     let targetOpacity = 1;
-    let targetTranslateY = 0;
+    let targetRotate = 0;
 
     if (index !== undefined && scrollX !== undefined) {
       const distance = distanceVal.value;
-      const range = cardWidth;
+      const range = cardWidth * 1.5;
 
-      targetScale = interpolate(
-        distance,
-        [0, range],
-        [1, 0.82], // Smaller side cards as requested (was 0.92)
-        Extrapolation.CLAMP
-      );
-
-      targetOpacity = interpolate(
-        distance,
-        [0, range],
-        [1, 0.8], // Even more solid
-        Extrapolation.CLAMP
-      );
-
-      // Subtle lift - reduced from -10 to -6 to avoid clipping
-      targetTranslateY = interpolate(
-        distance,
-        [0, range],
-        [-6, 0],
-        Extrapolation.CLAMP
-      );
+      targetScale = interpolate(distance, [0, range], [1, 0.85], Extrapolation.CLAMP);
+      targetOpacity = interpolate(distance, [0, range], [1, 0.7], Extrapolation.CLAMP);
+      targetRotate = interpolate(distance, [-range, 0, range], [-5, 0, 5], Extrapolation.CLAMP);
     }
 
     return {
       transform: [
-        {
-          scale: withSpring(targetScale * pressedScale.value, {
-            damping: 18,
-            stiffness: 150,
-          })
-        },
-        {
-          translateY: withSpring(targetTranslateY, {
-            damping: 18,
-            stiffness: 150,
-          })
-        }
+        { scale: withSpring(targetScale * pressedScale.value) },
+        { rotateZ: `${targetRotate}deg` }
       ],
       opacity: targetOpacity,
     };
   });
-
-
-
 
   const dateStr = new Date(pin.createdAt).toLocaleDateString('vi-VN', {
     day: '2-digit',
     month: 'short',
   });
 
-  const isDark = currentTheme.colors.background === '#111118';
-
-  const cardHeight = cardWidth * 1.2;
+  const cardHeight = cardWidth * 1.35;
 
   return (
     <Animated.View style={[{ width: cardWidth, marginRight: cardSpacing }, animatedStyle]}>
@@ -163,205 +135,253 @@ export function VoicePinCarouselCard({
         onPressOut={handlePressOut}
         activeOpacity={1}
         style={[
-          cardStyles.container,
-          {
-            height: cardHeight,
-            // Adjust styles for grid view (smaller cards)
-            ...(isGrid && {
-              borderRadius: 16,
-            })
-          }
+          styles.container,
+          { height: cardHeight, borderRadius: isGrid ? 20 : 32 }
         ]}
       >
-        {/* Background Image */}
-        {imgUrl ? (
-          <Image source={imgUrl} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
-        ) : (
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: meta.color + '10', justifyContent: 'center', alignItems: 'center' }]}>
-            <Ionicons name="mic-outline" size={60} color={meta.color + '30'} />
-          </View>
-        )}
+        {/* Glow Effect Background */}
+        <MotiView
+          from={{ opacity: 0.3, scale: 0.9 }}
+          animate={{ opacity: 0.6, scale: 1.1 }}
+          transition={{ loop: true, type: 'timing', duration: 3000 }}
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: meta.color, opacity: 0.1, borderRadius: 40, transform: [{ scale: 1.1 }] },
+          ]}
+        />
 
-        {/* Top Mood Badge */}
-        <View style={[cardStyles.moodBadge, {
-          backgroundColor: 'rgba(255,255,255,0.9)',
-          top: isGrid ? 8 : 16,
-          left: isGrid ? 8 : 16,
-          paddingHorizontal: isGrid ? 8 : 12,
-          paddingVertical: isGrid ? 4 : 6,
-        }]}>
-          <Ionicons name={meta.icon} size={isGrid ? 10 : 14} color={meta.color} />
-          {!isHidden && (
-            <Text style={[cardStyles.moodBadgeText, { color: '#334155', fontSize: isGrid ? 10 : 12 }]}>{meta.vi}</Text>
+        {/* Main Content Area */}
+        <View style={[styles.cardInner, { borderRadius: isGrid ? 20 : 32 }]}>
+          {/* Background Image/Fallback */}
+          {imgUrl ? (
+            <Image source={imgUrl} style={StyleSheet.absoluteFill} contentFit="cover" transition={400} />
+          ) : (
+            <LinearGradient
+              colors={['#1A1A2E', '#16213E']}
+              style={StyleSheet.absoluteFill}
+            />
           )}
-        </View>
 
-        {/* Bottom Info Gradient Overlay */}
-        <View style={cardStyles.infoContainer}>
+          {/* Aesthetic Overlay */}
           <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.8)', 'rgba(0,0,0,0.95)']}
-            locations={[0, 0.3, 0.6, 1]}
+            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.8)', '#000000']}
+            locations={[0, 0.3, 0.7, 1]}
             style={StyleSheet.absoluteFill}
           />
 
-          <View style={[cardStyles.infoContent, isGrid && { padding: 12 }]}>
-            <View style={cardStyles.mainInfo}>
-              <Text style={[cardStyles.contentTitle, { color: '#FFFFFF', fontSize: isGrid ? 14 : 20 }]} numberOfLines={1}>
-                {pin.content || 'Ghi âm mới'}
-              </Text>
-              <Text style={[cardStyles.locationText, { color: 'rgba(255,255,255,0.7)', fontSize: isGrid ? 10 : 12 }]} numberOfLines={2}>
-                {pin.address ?? 'Không rõ địa điểm'}
-              </Text>
+          {/* Top Header Section */}
+          <View style={styles.topSection}>
+            <BlurView intensity={30} tint="dark" style={styles.moodBadge}>
+               <MotiView
+                  from={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  transition={{ loop: true, type: 'spring' }}
+               >
+                  <Ionicons name={meta.icon} size={isGrid ? 12 : 16} color={meta.color} />
+               </MotiView>
+               {!isGrid && <Text style={[styles.moodText, { color: '#FFF' }]}>{meta.vi}</Text>}
+            </BlurView>
+
+            <View style={styles.dateBadge}>
+                <Text style={styles.dateText}>{dateStr}</Text>
+            </View>
+          </View>
+
+          {/* Bottom Info Section */}
+          <View style={styles.bottomSection}>
+            <View style={styles.contentRow}>
+                <Text style={[styles.title, { fontSize: isGrid ? 16 : 22 }]} numberOfLines={1}>
+                    {pin.content || 'Memory Echo'}
+                </Text>
+                <View style={styles.locationContainer}>
+                    <Ionicons name="location-sharp" size={10} color="rgba(255,255,255,0.6)" />
+                    <Text style={styles.locationText} numberOfLines={1}>
+                        {pin.address?.split(',')[0] || 'Unknown Aura'}
+                    </Text>
+                </View>
             </View>
 
             {!isGrid && (
-              <View style={cardStyles.statsContainer}>
-                <View style={cardStyles.statBox}>
-                  <View style={cardStyles.statIconRow}>
-                    <Ionicons name="play-circle-outline" size={16} color="rgba(255,255,255,0.6)" />
-                    <Text style={[cardStyles.statLabel, { color: 'rgba(255,255,255,0.5)' }]}>Lượt nghe</Text>
-                  </View>
-                  <Text style={[cardStyles.statValue, { color: '#FFFFFF' }]}>{pin.listensCount ?? 0}</Text>
+                <View style={styles.statsRow}>
+                    <View style={styles.statItem}>
+                        <Ionicons name="mic-outline" size={14} color={meta.color} />
+                        <Text style={styles.statText}>{pin.audioDuration ?? 0}s</Text>
+                    </View>
+                    <View style={styles.statDivider} />
+                    <View style={styles.statItem}>
+                        <Ionicons name="headset-outline" size={14} color="rgba(255,255,255,0.6)" />
+                        <Text style={styles.statText}>{pin.listensCount ?? 0}</Text>
+                    </View>
+                    <View style={styles.statDivider} />
+                    <View style={styles.statItem}>
+                        <Ionicons name="heart-outline" size={14} color="rgba(255,255,255,0.6)" />
+                        <Text style={styles.statText}>{pin.reactionsCount ?? 0}</Text>
+                    </View>
                 </View>
-
-                <View style={cardStyles.statDivider} />
-
-                <View style={cardStyles.statBox}>
-                  <View style={cardStyles.statIconRow}>
-                    <Ionicons name="heart-outline" size={16} color="rgba(255,255,255,0.6)" />
-                    <Text style={[cardStyles.statLabel, { color: 'rgba(255,255,255,0.5)' }]}>Cảm xúc</Text>
-                  </View>
-                  <Text style={[cardStyles.statValue, { color: '#FFFFFF' }]}>{pin.reactionsCount ?? 0}</Text>
-                </View>
-              </View>
             )}
-          </View>
 
-          {!isGrid && (
-            <View style={cardStyles.footer}>
-              {!isHidden && (
-                <View style={[cardStyles.authorAvatar, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                  {pin.user?.avatar ? (
-                    <Image source={pin.user.avatar} style={cardStyles.avatarImg} contentFit="cover" />
-                  ) : (
-                    <Ionicons name="person-circle-outline" size={14} color="rgba(255,255,255,0.6)" />
-                  )}
-                </View>
-              )}
-              <Text style={[cardStyles.footerText, { color: 'rgba(255,255,255,0.4)' }]}>
-                {isHidden ? dateStr : `${pin.user?.displayName || 'Whisper'} • ${dateStr}`}
-              </Text>
-            </View>
-          )}
+            {/* Premium Border Bottom Glow */}
+            <View style={[styles.bottomGlow, { backgroundColor: meta.color }]} />
+          </View>
         </View>
+
+        {/* Author Avatar Floating (Only in Carousel) */}
+        {!isGrid && pin.user && (
+            <MotiView
+                from={{ translateY: 20, opacity: 0 }}
+                animate={{ translateY: 0, opacity: 1 }}
+                transition={{ delay: 300 }}
+                style={styles.avatarContainer}
+            >
+                <BlurView intensity={40} tint="light" style={styles.avatarBlur}>
+                    <Image 
+                        source={resolveAsset(pin.user.avatar) || undefined} 
+                        style={styles.avatarImg} 
+                    />
+                </BlurView>
+            </MotiView>
+        )}
       </TouchableOpacity>
     </Animated.View>
   );
 }
 
-const cardStyles = StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
-    borderRadius: 25,
+    backgroundColor: '#000',
     overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 15 },
+        shadowOpacity: 0.4,
+        shadowRadius: 20,
+      },
+      android: {
+        elevation: 10,
+      },
+    }),
+  },
+  cardInner: {
+    flex: 1,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  topSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    zIndex: 10,
   },
   moodBadge: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 20,
-    gap: 4,
+    borderRadius: 14,
+    gap: 6,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
-  moodBadgeText: {
+  moodText: {
     fontSize: 12,
     fontWeight: '700',
+    letterSpacing: 0.5,
   },
-  infoContainer: {
+  dateBadge: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  dateText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: '600',
+    opacity: 0.8,
+  },
+  bottomSection: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: '52%', // Increased height for better gradient transition
-    justifyContent: 'flex-end',
-    overflow: 'hidden',
-  },
-  infoContent: {
     padding: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    paddingBottom: 24,
   },
-  mainInfo: {
-    flex: 1,
-    paddingRight: 12,
+  contentRow: {
+    marginBottom: 12,
   },
-  contentTitle: {
-    fontSize: 20,
+  title: {
+    color: '#FFF',
     fontWeight: '800',
     letterSpacing: -0.5,
     marginBottom: 4,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   locationText: {
-    fontSize: 12,
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 11,
     fontWeight: '500',
-    lineHeight: 16,
   },
-  statsContainer: {
+  statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  statBox: {
-    alignItems: 'center',
-  },
-  statIconRow: {
+  statItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginBottom: 2,
   },
-  statLabel: {
-    fontSize: 10,
+  statText: {
+    color: '#FFF',
+    fontSize: 12,
     fontWeight: '600',
-    textTransform: 'uppercase',
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: '700',
+    opacity: 0.9,
   },
   statDivider: {
     width: 1,
-    height: 30,
-    backgroundColor: 'rgba(150,150,150,0.2)',
+    height: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
-  footer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    marginTop: -10,
-    flexDirection: 'row',
-    alignItems: 'center',
+  bottomGlow: {
+    position: 'absolute',
+    bottom: 0,
+    left: 20,
+    right: 20,
+    height: 3,
+    borderRadius: 2,
+    opacity: 0.6,
+    shadowRadius: 10,
+    shadowColor: '#FFF',
   },
-  footerText: {
-    fontSize: 11,
-    fontWeight: '500',
+  avatarContainer: {
+    position: 'absolute',
+    top: 45,
+    right: -10,
+    zIndex: 20,
   },
-  authorAvatar: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    marginRight: 8,
+  avatarBlur: {
+    padding: 4,
+    borderRadius: 20,
     overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   avatarImg: {
-    width: '100%',
-    height: '100%',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#333',
   },
 });

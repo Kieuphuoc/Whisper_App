@@ -17,6 +17,19 @@ import { authApis, endpoints } from '../../configs/Apis';
 import { Visibility, VISIBILITY_LABEL, VISIBILITY_LIST } from '../../types';
 import { theme } from '@/constants/Theme';
 import { Colors } from '@/constants/Colors';
+import { MotiView, AnimatePresence } from 'moti';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withTiming,
+    withSequence,
+    withDelay,
+    Easing,
+    interpolate,
+} from 'react-native-reanimated';
 
 const VISIBILITY_ICON: Record<Visibility, keyof typeof Ionicons.glyphMap> = {
     PUBLIC: 'earth-outline',
@@ -45,8 +58,70 @@ export default function VoiceUploadSheet({
 }: Props) {
     const colorScheme = useColorScheme() || 'light';
     const currentTheme = theme[colorScheme];
+    const isDark = colorScheme === 'dark';
     const [selectedVisibility, setSelectedVisibility] = useState<Visibility>(visibility);
     const [uploading, setUploading] = useState(false);
+
+    const scanAnim = useSharedValue(0);
+    const shimmerProgress = useSharedValue(0);
+    const buttonGlow = useSharedValue(0);
+
+    React.useEffect(() => {
+        if (visible) {
+            // Start the periodic shimmer animation (every 5 seconds)
+            shimmerProgress.value = withRepeat(
+                withSequence(
+                    withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.quad) }),
+                    withDelay(3500, withTiming(0, { duration: 0 }))
+                ),
+                -1,
+                false
+            );
+
+            // Start a subtle periodic glow (every 8 seconds)
+            buttonGlow.value = withRepeat(
+                withSequence(
+                    withDelay(6000, withTiming(1, { duration: 1000 })),
+                    withTiming(0, { duration: 1000 })
+                ),
+                -1,
+                false
+            );
+        }
+    }, [visible]);
+
+    React.useEffect(() => {
+        if (uploading) {
+            scanAnim.value = withRepeat(
+                withSequence(
+                    withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.quad) }),
+                    withTiming(0, { duration: 1500, easing: Easing.inOut(Easing.quad) })
+                ),
+                -1,
+                true
+            );
+        } else {
+            scanAnim.value = 0;
+        }
+    }, [uploading]);
+
+    const shimmerStyle = useAnimatedStyle(() => ({
+        transform: [
+            { translateX: interpolate(shimmerProgress.value, [0, 1], [-200, 400]) },
+            { skewX: '-20deg' }
+        ],
+        opacity: interpolate(shimmerProgress.value, [0, 0.1, 0.9, 1], [0, 1, 1, 0])
+    }));
+
+    const glowStyle = useAnimatedStyle(() => ({
+        opacity: buttonGlow.value * 0.5,
+        transform: [{ scale: interpolate(buttonGlow.value, [0, 1], [1, 1.1]) }]
+    }));
+
+    const scanStyle = useAnimatedStyle(() => ({
+        transform: [{ translateY: interpolate(scanAnim.value, [0, 1], [-20, 100]) }],
+        opacity: interpolate(scanAnim.value, [0, 0.1, 0.9, 1], [0, 1, 1, 0]),
+    }));
 
     const handleUpload = async () => {
         if (!audioUri || !location) {
@@ -74,12 +149,10 @@ export default function VoiceUploadSheet({
                     addressStr = parts.join(', ');
                 }
             } catch {
-                // optional, bỏ qua lỗi
+                // optional
             }
 
             const formData = new FormData();
-
-            // File âm thanh
             formData.append('file', {
                 uri: audioUri,
                 name: `voice_${Date.now()}.m4a`,
@@ -116,99 +189,271 @@ export default function VoiceUploadSheet({
     };
 
     return (
-        <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+        <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
             <View style={styles.overlay}>
-                <View style={[styles.sheet, { backgroundColor: currentTheme.colors.background, borderTopLeftRadius: currentTheme.radius.xl + 4, borderTopRightRadius: currentTheme.radius.xl + 4 }]}>
-                    {/* Handle */}
+                {/* Background Aura */}
+                <MotiView
+                    from={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 0.3, scale: 1.5 }}
+                    transition={{ duration: 1000, type: 'timing' }}
+                    style={StyleSheet.absoluteFill}
+                >
+                    <LinearGradient
+                        colors={[currentTheme.colors.primary, 'transparent']}
+                        style={{ width: '100%', height: '100%', position: 'absolute', top: '50%', left: 0 }}
+                    />
+                </MotiView>
+
+                <TouchableOpacity
+                    activeOpacity={1}
+                    style={StyleSheet.absoluteFill}
+                    onPress={onClose}
+                />
+                
+                <MotiView
+                    from={{ translateY: 500, opacity: 0 }}
+                    animate={{ translateY: 0, opacity: 1 }}
+                    exit={{ translateY: 500, opacity: 0 }}
+                    transition={{ type: 'spring', damping: 20, stiffness: 90 }}
+                    style={[
+                        styles.sheet,
+                        {
+                            backgroundColor: isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(255, 255, 255, 0.6)',
+                        }
+                    ]}
+                >
+                    <BlurView intensity={isDark ? 50 : 70} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+                    
+                    {/* Inner Gradient for better glass look */}
+                    <LinearGradient
+                        colors={['rgba(255,255,255,0.15)', 'transparent']}
+                        style={StyleSheet.absoluteFill}
+                    />
+
                     <View style={styles.handle} />
 
-                    {/* Header */}
+                    {/* Header Section */}
                     <View style={styles.header}>
-                        <View style={styles.headerLeft}>
-                            <Ionicons name="mic" size={20} color={currentTheme.colors.primary} />
-                            <Text style={[styles.title, { color: currentTheme.colors.text }]}>Đăng Giọng Nói</Text>
-                        </View>
+                        <MotiView
+                            from={{ translateX: -30, opacity: 0 }}
+                            animate={{ translateX: 0, opacity: 1 }}
+                            transition={{ delay: 200, type: 'spring' }}
+                            style={styles.headerLeft}
+                        >
+                            <LinearGradient
+                                colors={['#7c3aed', '#4338ca']}
+                                style={styles.titleIconBg}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                            >
+                                <Ionicons name="radio" size={20} color="#fff" />
+                            </LinearGradient>
+                            <View>
+                                <Text style={[styles.headerSub, { color: currentTheme.colors.primary }]}>NEW FREQUENCY</Text>
+                                <Text style={[styles.title, { color: currentTheme.colors.text }]}>Phát Tín Hiệu</Text>
+                            </View>
+                        </MotiView>
+                        
                         <TouchableOpacity onPress={onClose} style={styles.closeBtn} disabled={uploading}>
-                            <Ionicons name="close" size={22} color={currentTheme.colors.icon} />
+                            <BlurView intensity={30} tint="light" style={styles.closeBlur}>
+                                <Ionicons name="close" size={22} color={isDark ? "#fff" : "#000"} />
+                            </BlurView>
                         </TouchableOpacity>
                     </View>
 
-                    {/* Photo preview (if taken) */}
+                    {/* Photo Preview - Ultra Modern Floating Style */}
                     {!!photoUri && (
-                        <View style={[styles.photoRow, { borderRadius: currentTheme.radius.md, backgroundColor: currentTheme.colors.surfaceAlt, borderColor: currentTheme.colors.success + '33' }]}>
-                            <Image source={{ uri: photoUri }} style={[styles.photoThumb, { borderRadius: currentTheme.radius.sm }]} />
-                            <View style={styles.photoInfo}>
-                                <Ionicons name="image-outline" size={16} color={currentTheme.colors.success} />
-                                <Text style={[styles.photoLabel, { color: currentTheme.colors.success }]}>Đã đính kèm ảnh kỷ niệm</Text>
-                            </View>
-                        </View>
+                        <MotiView
+                            from={{ scale: 0.9, rotate: '10deg', opacity: 0, translateY: 20 }}
+                            animate={{ scale: 1, rotate: '0deg', opacity: 1, translateY: 0 }}
+                            transition={{ delay: 400, type: 'spring', damping: 12 }}
+                            style={[
+                                styles.photoContainer,
+                                { 
+                                    borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
+                                    shadowColor: currentTheme.colors.primary,
+                                }
+                            ]}
+                        >
+                            <Image source={{ uri: photoUri }} style={styles.photoFull} />
+                            <BlurView intensity={40} tint="dark" style={styles.photoOverlay}>
+                                <MotiView
+                                    animate={{ scale: [1, 1.2, 1] }}
+                                    transition={{ repeat: Infinity, duration: 2000 }}
+                                >
+                                    <Ionicons name="sparkles" size={14} color="#A78BFA" />
+                                </MotiView>
+                                <Text style={styles.photoOverlayText}>Khoảnh khắc đã sẵn sàng</Text>
+                            </BlurView>
+                        </MotiView>
                     )}
 
-                    {/* Audio ready indicator */}
-                    <View style={[styles.audioReady, { borderRadius: currentTheme.radius.md, backgroundColor: currentTheme.colors.success + '15' }]}>
-                        <Ionicons name="checkmark-circle" size={20} color={currentTheme.colors.success} />
-                        <Text style={[styles.audioReadyText, { color: currentTheme.colors.success }]}>Bản ghi sẵn sàng để đăng</Text>
-                    </View>
+                    {/* Status Badge */}
+                    <MotiView
+                        from={{ opacity: 0, translateX: 50 }}
+                        animate={{ opacity: 1, translateX: 0 }}
+                        transition={{ delay: 300 }}
+                        style={[styles.statusBadge, { backgroundColor: currentTheme.colors.primary + '20' }]}
+                    >
+                        <MotiView
+                            animate={{ opacity: [0.4, 1, 0.4] }}
+                            transition={{ repeat: Infinity, duration: 1500 }}
+                            style={[styles.pulseDot, { backgroundColor: currentTheme.colors.primary }]}
+                        />
+                        <Text style={[styles.statusText, { color: currentTheme.colors.primary }]}>Đồng bộ tín hiệu thành công</Text>
+                    </MotiView>
 
-                    {/* Visibility picker */}
-                    <Text style={[styles.label, { color: currentTheme.colors.icon }]}>Ai có thể nghe?</Text>
+                    {/* Visibility Picker - Avant Garde Asymmetric */}
+                    <Text style={[styles.label, { color: currentTheme.colors.text }]}>Ai có thể nhận tín hiệu này?</Text>
                     <View style={styles.visibilityRow}>
-                        {VISIBILITY_LIST.map((v) => (
+                        {VISIBILITY_LIST.map((v, i) => (
                             <TouchableOpacity
                                 key={v}
-                                style={[
-                                    styles.visBtn,
-                                    { borderRadius: currentTheme.radius.md, backgroundColor: currentTheme.colors.icon + '05', borderColor: currentTheme.colors.icon + '20' },
-                                    selectedVisibility === v && { backgroundColor: currentTheme.colors.primary, borderColor: currentTheme.colors.primary }
-                                ]}
+                                style={styles.visBtnContainer}
                                 onPress={() => setSelectedVisibility(v)}
+                                disabled={uploading}
+                                activeOpacity={0.8}
                             >
-                                <Ionicons
-                                    name={VISIBILITY_ICON[v]}
-                                    size={18}
-                                    color={selectedVisibility === v ? Colors.white : currentTheme.colors.icon}
-                                />
-                                <Text style={[styles.visBtnText, { color: currentTheme.colors.icon }, selectedVisibility === v && { color: Colors.white }]}>
-                                    {VISIBILITY_LABEL[v]}
-                                </Text>
+                                <MotiView
+                                    animate={{
+                                        scale: selectedVisibility === v ? 1.05 : 0.95,
+                                        translateY: selectedVisibility === v ? -5 : 0,
+                                    }}
+                                    transition={{ type: 'spring', damping: 15 }}
+                                    style={[
+                                        styles.visBtnGlass,
+                                        {
+                                            backgroundColor: selectedVisibility === v 
+                                                ? currentTheme.colors.primary 
+                                                : isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                                            borderColor: selectedVisibility === v 
+                                                ? currentTheme.colors.primary 
+                                                : 'rgba(255,255,255,0.15)',
+                                            // ASYMMETRIC RADIUS based on profile style
+                                            borderTopLeftRadius: i === 0 ? 32 : 12,
+                                            borderTopRightRadius: i === 1 ? 32 : 12,
+                                            borderBottomLeftRadius: i === 2 ? 32 : 12,
+                                            borderBottomRightRadius: 20,
+                                        }
+                                    ]}
+                                >
+                                    {selectedVisibility === v && (
+                                        <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFill} />
+                                    )}
+                                    <Ionicons
+                                        name={VISIBILITY_ICON[v]}
+                                        size={22}
+                                        color={selectedVisibility === v ? '#fff' : isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)'}
+                                    />
+                                    <Text style={[
+                                        styles.visBtnText,
+                                        { 
+                                            color: selectedVisibility === v ? '#fff' : isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)',
+                                            fontWeight: selectedVisibility === v ? '900' : '700'
+                                        }
+                                    ]}>
+                                        {VISIBILITY_LABEL[v]}
+                                    </Text>
+                                </MotiView>
                             </TouchableOpacity>
                         ))}
                     </View>
 
-                    {/* Actions / AI Analysis Skeleton */}
-                    {uploading ? (
-                        <View style={styles.skeletonContainer}>
-                            <ActivityIndicator size="large" color={currentTheme.colors.primary} />
-                            <Text style={[styles.skeletonText, { color: currentTheme.colors.primary, marginTop: 16 }]}>
-                                AI đang phân tích và tải lên...
-                            </Text>
-                            <Text style={[styles.skeletonSubText, { color: currentTheme.colors.icon, marginTop: 4 }]}>
-                                Hệ thống đang nhận diện cảm xúc từ giọng nói của bạn
-                            </Text>
-                        </View>
-                    ) : (
-                        <View style={styles.actions}>
-                            <TouchableOpacity
-                                style={[styles.discardBtn, { borderRadius: currentTheme.radius.lg, borderColor: currentTheme.colors.icon + '20' }]}
-                                onPress={onClose}
-                                disabled={uploading}
+                    {/* Footer Actions */}
+                    <AnimatePresence>
+                        {uploading ? (
+                            <MotiView
+                                from={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                style={styles.uploadingContainer}
                             >
-                                <Text style={[styles.discardText, { color: currentTheme.colors.icon }]}>Hủy</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[
-                                    styles.uploadBtn,
-                                    { borderRadius: currentTheme.radius.lg, backgroundColor: currentTheme.colors.primary, shadowColor: currentTheme.colors.primary }
-                                ]}
-                                onPress={handleUpload}
-                                disabled={uploading}
+                                <View style={styles.scanTrack}>
+                                    <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
+                                    <Animated.View style={[styles.scanLine, { backgroundColor: currentTheme.colors.primary }, scanStyle]} />
+                                    <ActivityIndicator size="large" color={currentTheme.colors.primary} />
+                                </View>
+                                <Text style={[styles.uploadingText, { color: currentTheme.colors.text }]}>
+                                    Đang truyền sóng...
+                                </Text>
+                                <Text style={[styles.uploadingSubText, { color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)' }]}>
+                                    Mã hóa tọa độ và giọng nói vào Aura
+                                </Text>
+                            </MotiView>
+                        ) : (
+                            <MotiView
+                                from={{ opacity: 0, translateY: 30 }}
+                                animate={{ opacity: 1, translateY: 0 }}
+                                transition={{ delay: 500, type: 'spring' }}
+                                style={styles.actions}
                             >
-                                <Ionicons name="cloud-upload-outline" size={18} color="white" />
-                                <Text style={styles.uploadText}>Đăng lên bản đồ</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-                </View>
+                                <TouchableOpacity
+                                    style={[styles.discardBtn, { borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)' }]}
+                                    onPress={onClose}
+                                >
+                                    <BlurView intensity={10} tint={isDark ? "light" : "dark"} style={StyleSheet.absoluteFill} />
+                                    <Text style={[styles.discardText, { color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)' }]}>Hủy bản thảo</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.uploadBtnContainer}
+                                    onPress={handleUpload}
+                                    activeOpacity={0.9}
+                                >
+                                    {/* PERIODIC GLOW EFFECT */}
+                                    <Animated.View
+                                        style={[
+                                            StyleSheet.absoluteFill,
+                                            glowStyle,
+                                            {
+                                                backgroundColor: '#7c3aed',
+                                                borderRadius: 24,
+                                                shadowColor: '#7c3aed',
+                                                shadowOpacity: 0.8,
+                                                shadowRadius: 20,
+                                            } as any
+                                        ]}
+                                    />
+
+                                    <LinearGradient
+                                        colors={['#7c3aed', '#4338ca']}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 1 }}
+                                        style={styles.uploadGradient}
+                                    >
+                                        <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFill} />
+                                        
+                                        {/* PERIODIC SHIMMER FLASH */}
+                                        <Animated.View
+                                            style={[
+                                                {
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    bottom: 0,
+                                                    width: 120,
+                                                    backgroundColor: 'rgba(255,255,255,0.4)',
+                                                },
+                                                shimmerStyle
+                                            ]}
+                                        >
+                                            <LinearGradient
+                                                colors={['transparent', 'rgba(255,255,255,0.6)', 'transparent']}
+                                                start={{ x: 0, y: 0 }}
+                                                end={{ x: 1, y: 0 }}
+                                                style={StyleSheet.absoluteFill}
+                                            />
+                                        </Animated.View>
+
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, zIndex: 10 }}>
+                                            <Ionicons name="send" size={20} color="#fff" />
+                                            <Text style={styles.uploadText}>Phát Tín Hiệu</Text>
+                                        </View>
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                            </MotiView>
+                        )}
+                    </AnimatePresence>
+                </MotiView>
             </View>
         </Modal>
     );
@@ -218,147 +463,240 @@ const styles = StyleSheet.create({
     overlay: {
         flex: 1,
         justifyContent: 'flex-end',
-        backgroundColor: 'rgba(0,0,0,0.4)',
+        backgroundColor: 'rgba(0,0,0,0.6)',
     },
     sheet: {
-        paddingHorizontal: 24,
-        paddingBottom: 44,
-        paddingTop: 12,
-        ...theme.light.shadows.lg,
+        paddingHorizontal: 28,
+        paddingBottom: 50,
+        paddingTop: 10,
+        overflow: 'hidden',
+        borderTopLeftRadius: 48,
+        borderTopRightRadius: 16,
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,255,255,0.25)',
     },
     handle: {
         width: 40,
-        height: 4,
-        borderRadius: 2,
-        backgroundColor: '#e5e7eb',
+        height: 5,
+        borderRadius: 10,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
         alignSelf: 'center',
-        marginBottom: 16,
+        marginBottom: 20,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 20,
+        alignItems: 'flex-start',
+        marginBottom: 28,
     },
     headerLeft: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        gap: 15,
+    },
+    headerSub: {
+        fontSize: 10,
+        fontWeight: '900',
+        letterSpacing: 2,
+        marginBottom: -2,
+    },
+    titleIconBg: {
+        width: 48,
+        height: 48,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 10,
+        shadowColor: '#7c3aed',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
     },
     title: {
-        fontSize: 24,
-        fontWeight: '700',
+        fontSize: 30,
+        fontWeight: '900',
+        letterSpacing: -1,
     },
     closeBtn: {
-        padding: 4,
-    },
-    photoRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        marginBottom: 16,
-        padding: 10,
+        borderRadius: 16,
+        overflow: 'hidden',
         borderWidth: 1,
-        borderColor: '#bbf7d0',
+        borderColor: 'rgba(255,255,255,0.2)',
     },
-    photoThumb: {
-        width: 56,
-        height: 56,
-        backgroundColor: '#d1d5db',
+    closeBlur: {
+        width: 44,
+        height: 44,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.1)',
     },
-    photoInfo: {
+    statusBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        alignSelf: 'flex-end',
+        paddingHorizontal: 15,
+        paddingVertical: 8,
+        borderRadius: 30,
+        gap: 10,
+        marginBottom: 30,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
-    photoLabel: {
-        color: '#10b981',
-        fontWeight: '600',
-        fontSize: 14,
+    pulseDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
     },
-    audioReady: {
+    statusText: {
+        fontSize: 11,
+        fontWeight: '900',
+        textTransform: 'uppercase',
+        letterSpacing: 0.8,
+    },
+    photoContainer: {
+        width: '100%',
+        height: 200,
+        borderRadius: 32,
+        overflow: 'hidden',
+        marginBottom: 30,
+        borderWidth: 1,
+        elevation: 20,
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.4,
+        shadowRadius: 16,
+        backgroundColor: 'rgba(0,0,0,0.1)',
+    },
+    photoFull: {
+        width: '100%',
+        height: '100%',
+    },
+    photoOverlay: {
+        position: 'absolute',
+        top: 15,
+        right: 15,
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 10,
-        marginBottom: 24,
         gap: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 16,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
     },
-    audioReadyText: {
-        fontSize: 14,
-        color: '#10b981',
-        fontWeight: '500',
+    photoOverlayText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '800',
     },
     label: {
-        fontSize: 14,
-        fontWeight: '600',
-        marginBottom: 10,
+        fontSize: 13,
+        fontWeight: '900',
+        marginBottom: 15,
         textTransform: 'uppercase',
-        letterSpacing: 0.5,
+        letterSpacing: 1.2,
+        opacity: 0.7,
     },
     visibilityRow: {
         flexDirection: 'row',
-        gap: 10,
-        marginBottom: 28,
+        gap: 12,
+        marginBottom: 40,
     },
-    visBtn: {
+    visBtnContainer: {
         flex: 1,
-        paddingVertical: 12,
-        paddingHorizontal: 6,
-        borderWidth: 1.5,
+    },
+    visBtnGlass: {
+        paddingVertical: 18,
         alignItems: 'center',
-        gap: 5,
+        gap: 8,
+        borderWidth: 1.5,
+        overflow: 'hidden',
     },
     visBtnText: {
-        fontSize: 14,
-        fontWeight: '600',
-        textAlign: 'center',
-    },
-    visBtnTextActive: {
-        color: '#ffffff',
+        fontSize: 12,
+        letterSpacing: 0.3,
     },
     actions: {
         flexDirection: 'row',
-        gap: 12,
+        gap: 15,
     },
     discardBtn: {
         flex: 1,
-        paddingVertical: 16,
+        height: 68,
+        borderRadius: 24,
         borderWidth: 1.5,
+        justifyContent: 'center',
         alignItems: 'center',
+        overflow: 'hidden',
     },
     discardText: {
-        fontSize: 17,
-        fontWeight: '600',
+        fontSize: 15,
+        fontWeight: '900',
+        letterSpacing: 0.5,
     },
-    uploadBtn: {
+    uploadBtnContainer: {
         flex: 2,
+        height: 68,
+        borderRadius: 24,
+        overflow: 'visible',
+        position: 'relative',
+    },
+    uploadGradient: {
+        flex: 1,
+        borderRadius: 24,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 16,
-        gap: 8,
-    },
-    uploadBtnDisabled: {
-        opacity: 0.6,
+        gap: 10,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.3)',
     },
     uploadText: {
-        fontSize: 17,
-        fontWeight: '700',
-        color: '#ffffff',
+        fontSize: 19,
+        fontWeight: '900',
+        color: '#fff',
+        letterSpacing: 1,
+        textShadowColor: 'rgba(0,0,0,0.3)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
     },
-    skeletonContainer: {
+    uploadingContainer: {
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 20,
+        paddingVertical: 15,
     },
-    skeletonText: {
-        fontSize: 16,
+    scanTrack: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 25,
+        position: 'relative',
+        overflow: 'hidden',
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,255,255,0.2)',
+    },
+    scanLine: {
+        position: 'absolute',
+        width: '100%',
+        height: 3,
+        zIndex: 1,
+        filter: 'blur(1px)'
+    },
+    uploadingText: {
+        fontSize: 24,
+        fontWeight: '900',
+        textAlign: 'center',
+        marginBottom: 8,
+        letterSpacing: -0.5,
+    },
+    uploadingSubText: {
+        fontSize: 14,
         fontWeight: '600',
         textAlign: 'center',
-    },
-    skeletonSubText: {
-        fontSize: 13,
-        textAlign: 'center',
-        opacity: 0.8,
+        maxWidth: '80%',
+        lineHeight: 20,
     },
 });

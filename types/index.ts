@@ -93,7 +93,8 @@ export interface VoicePin {
     listensCount: number;
     reactionsCount: number;
     commentsCount: number;
-    duration?: number;          // seconds
+    audioDuration?: number;     // seconds
+    audioSize?: number;         // bytes
 
     // --- Relations ---
     userId?: number;
