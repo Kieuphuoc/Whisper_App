@@ -128,7 +128,7 @@ const MapSection = forwardRef<MapView, Props>(({
       >
         {pins.map((pin) => {
           const isAR = pin.type === VoiceType.HIDDEN_AR;
-          
+
           const avatarUri = (() => {
             const userAvatar = pin.user?.avatar;
             if (!userAvatar) return 'https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg';
@@ -147,9 +147,9 @@ const MapSection = forwardRef<MapView, Props>(({
               {/* Custom pin marker */}
               <View style={styles.markerWrap}>
                 <View style={[styles.markerBubble, isAR && styles.markerBubbleAR]}>
-                  <Image 
-                    source={{ uri: avatarUri }} 
-                    style={styles.markerAvatar} 
+                  <Image
+                    source={{ uri: avatarUri }}
+                    style={styles.markerAvatar}
                   />
                   {/* Small icon overlay to indicate type */}
                   <View style={[styles.typeIndicator, { backgroundColor: isAR ? "#8b5cf6" : "#ef4444" }]}>

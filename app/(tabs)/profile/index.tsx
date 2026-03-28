@@ -5,7 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useContext } from 'react';
+import { MyDispatchContext } from '@/configs/Context';
 import {
     ActivityIndicator,
     Dimensions,
@@ -44,6 +45,7 @@ export default function ProfileScreen() {
     const isDark = colorScheme === 'dark';
     const currentTheme = theme[colorScheme];
     const router = useRouter();
+    const dispatch = useContext(MyDispatchContext);
 
     const [user, setUser] = useState<User | null>(null);
     const [stats, setStats] = useState<any>(null);
@@ -91,8 +93,14 @@ export default function ProfileScreen() {
                 api.get(endpoints.meStats).catch(() => ({ data: { data: MOCK_STATS } })),
             ]);
 
-            setUser(uRes.data?.data || MOCK_USER);
+            const userData = uRes.data?.data || MOCK_USER;
+            setUser(userData);
             setStats(sRes.data?.data || MOCK_STATS);
+
+            if (dispatch) {
+                dispatch({ type: 'SET_USER', payload: userData });
+                await AsyncStorage.setItem('user', JSON.stringify(userData));
+            }
         } catch (e) {
             console.error('Fetch profile error:', e);
             setStats(MOCK_STATS);
@@ -258,7 +266,9 @@ export default function ProfileScreen() {
                 )}
                 {/* Overlay to ensure readability */}
                 <LinearGradient
-                    colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.8)']}
+                    colors={isDark ?
+                        ['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.8)'] :
+                        ['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.2)', 'rgba(255,255,255,0.4)', 'rgba(255,255,255,0.7)']}
                     locations={[0, 0.4, 0.7, 1]}
                     style={StyleSheet.absoluteFill}
                 />
@@ -275,15 +285,15 @@ export default function ProfileScreen() {
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ delay: 1000, type: 'spring' }}
                 >
-                    <BlurView intensity={30} tint="light" style={styles.editAuraBlur}>
+                    <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={[styles.editAuraBlur, { borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]}>
                         <LinearGradient
-                            colors={['rgba(255,255,255,0.2)', 'transparent']}
+                            colors={isDark ? ['rgba(255,255,255,0.1)', 'transparent'] : ['rgba(0,0,0,0.05)', 'transparent']}
                             style={StyleSheet.absoluteFill}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 1 }}
                         />
-                        <Ionicons name="sparkles" size={16} color="#fff" />
-                        <Text style={styles.editAuraText}>Đổi Aura</Text>
+                        <Ionicons name="sparkles" size={16} color={isDark ? "#fff" : currentTheme.colors.primary} />
+                        <Text style={[styles.editAuraText, { color: isDark ? "#fff" : currentTheme.colors.text }]}>Đổi Aura</Text>
                     </BlurView>
                 </MotiView>
             </TouchableOpacity>
@@ -306,13 +316,13 @@ export default function ProfileScreen() {
                             from={{ scale: 0, rotate: '-15deg' }}
                             animate={{ scale: 1, rotate: '0deg' }}
                             transition={{ type: 'spring', damping: 15 }}
-                            style={[styles.avatarOuter, { borderColor: isDark ? '#1a1a1a' : '#fff' }]}
+                            style={[styles.avatarOuter, { borderColor: isDark ? '#fff' : '#1a1a1a' }]}
                         >
                             <TouchableOpacity onPress={() => handleUpdateImage('avatar')} activeOpacity={0.9}>
                                 <Image source={{ uri: avatarUri }} style={styles.avatar} />
                                 <MotiView
-                                    from={{ rotate: '-45deg', scale: 0 }}
-                                    animate={{ rotate: '-15deg', scale: 1 }}
+                                    from={{ rotate: '45deg', scale: 0 }}
+                                    animate={{ rotate: '-35deg', scale: 1 }}
                                     transition={{ delay: 500, type: 'spring' }}
                                     style={[styles.levelCapsule, { backgroundColor: currentTheme.colors.primary }]}
                                 >
@@ -329,9 +339,9 @@ export default function ProfileScreen() {
                                 transition={{ delay: 300 }}
                                 style={[styles.statBubble, styles.bubbleLarge]}
                             >
-                                <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFill, { backgroundColor: currentTheme.colors.primary + '50' }]} />
-                                <Text style={styles.bubbleValue}>{stats?.totalListens || 0}</Text>
-                                <Text style={styles.bubbleLabel}>Listens</Text>
+                                <BlurView intensity={40} tint={isDark ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: currentTheme.colors.primary + (isDark ? '50' : '20') }]} />
+                                <Text style={[styles.bubbleValue, { color: isDark ? '#fff' : currentTheme.colors.primary }]}>{stats?.totalListens || 0}</Text>
+                                <Text style={[styles.bubbleLabel, { color: isDark ? '#fff' : currentTheme.colors.textMuted }]}>Listens</Text>
                             </MotiView>
 
                             <MotiView
@@ -340,9 +350,9 @@ export default function ProfileScreen() {
                                 transition={{ delay: 450 }}
                                 style={[styles.statBubble, styles.bubbleMedium, { bottom: -5, left: -35 }]}
                             >
-                                <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFill, { backgroundColor: currentTheme.colors.secondary + '50' }]} />
-                                <Text style={styles.bubbleValueMedium}>{stats?.voicePinCount || 0}</Text>
-                                <Text style={styles.bubbleLabelMedium}>Voices</Text>
+                                <BlurView intensity={40} tint={isDark ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: currentTheme.colors.secondary + (isDark ? '50' : '20') }]} />
+                                <Text style={[styles.bubbleValueMedium, { color: isDark ? '#fff' : currentTheme.colors.secondary }]}>{stats?.voicePinCount || 0}</Text>
+                                <Text style={[styles.bubbleLabelMedium, { color: isDark ? '#fff' : currentTheme.colors.textMuted }]}>Voices</Text>
                             </MotiView>
 
                             <MotiView
@@ -351,9 +361,9 @@ export default function ProfileScreen() {
                                 transition={{ delay: 600 }}
                                 style={[styles.statBubble, styles.bubbleSmall, { right: -10, top: -35 }]}
                             >
-                                <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFill, { backgroundColor: '#10b98150' }]} />
-                                <Text style={styles.bubbleValueSmall}>{stats?.friendCount || 0}</Text>
-                                <Text style={styles.bubbleLabelSmall}>Friends</Text>
+                                <BlurView intensity={40} tint={isDark ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: '#10b981' + (isDark ? '50' : '20') }]} />
+                                <Text style={[styles.bubbleValueSmall, { color: isDark ? '#fff' : '#059669' }]}>{stats?.friendCount || 0}</Text>
+                                <Text style={[styles.bubbleLabelSmall, { color: isDark ? '#fff' : currentTheme.colors.textMuted }]}>Friends</Text>
                             </MotiView>
                         </View>
                     </View>
@@ -369,11 +379,11 @@ export default function ProfileScreen() {
                                 from={{ opacity: 0, scale: 0.8 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: 700 + i * 150 }}
-                                style={styles.glassStrangeCard}
+                                style={[styles.glassStrangeCard, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
                             >
-                                <BlurView intensity={25} tint="light" style={StyleSheet.absoluteFill} />
-                                <Ionicons name={item.icon as any} size={14} color="#fff" />
-                                <Text style={styles.glassStrangeText}>{item.label}</Text>
+                                <BlurView intensity={25} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+                                <Ionicons name={item.icon as any} size={14} color={isDark ? "#fff" : currentTheme.colors.primary} />
+                                <Text style={[styles.glassStrangeText, { color: isDark ? "#fff" : currentTheme.colors.text }]}>{item.label}</Text>
                             </MotiView>
                         ))}
                     </View>
@@ -383,15 +393,18 @@ export default function ProfileScreen() {
                         from={{ opacity: 0, translateY: 40 }}
                         animate={{ opacity: 1, translateY: 0 }}
                         transition={{ delay: 300 }}
-                        style={styles.mainGlassCard}
+                        style={[styles.mainGlassCard, {
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.7)',
+                            borderColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.1)'
+                        }]}
                     >
-                        <BlurView intensity={10} tint="light" style={StyleSheet.absoluteFill} />
+                        <BlurView intensity={isDark ? 10 : 5} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
                         <View style={styles.nameHeader}>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.glassDisplayName}>
+                                <Text style={[styles.glassDisplayName, { color: isDark ? '#fff' : currentTheme.colors.text }]}>
                                     {user.displayName || user.username}
                                 </Text>
-                                <Text style={styles.glassUsername}>@{user.username}</Text>
+                                <Text style={[styles.glassUsername, { color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)' }]}>@{user.username}</Text>
                             </View>
                             <TouchableOpacity
                                 onPress={() => router.push('/(tabs)/profile/edit-profile')}
@@ -401,20 +414,20 @@ export default function ProfileScreen() {
                                     from={{ opacity: 0, scale: 0.8 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     transition={{ delay: 900, type: 'spring' }}
-                                    style={styles.glassEditButton}
+                                    style={[styles.glassEditButton, { borderColor: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.1)' }]}
                                 >
-                                    <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFill} />
+                                    <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
                                     <LinearGradient
-                                        colors={['rgba(255,255,255,0.4)', 'rgba(255,255,255,0.1)']}
+                                        colors={isDark ? ['rgba(255,255,255,0.4)', 'rgba(255,255,255,0.1)'] : ['rgba(0,0,0,0.05)', 'transparent']}
                                         style={StyleSheet.absoluteFill}
                                     />
-                                    <Ionicons name="pencil-outline" size={18} color="#fff" />
+                                    <Ionicons name="pencil-outline" size={18} color={isDark ? "#fff" : currentTheme.colors.text} />
                                 </MotiView>
                             </TouchableOpacity>
                         </View>
 
                         <View style={styles.bioBox}>
-                            <Text style={styles.glassBioText}>
+                            <Text style={[styles.glassBioText, { color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.7)' }]}>
                                 {user.bio || 'Khám phá thế giới qua những âm thanh ẩn giấu.'}
                             </Text>
                         </View>
@@ -480,15 +493,15 @@ export default function ProfileScreen() {
 
                             <TouchableOpacity
                                 onPress={() => router.push('/(tabs)/profile/settings')}
-                                style={styles.glassSettingsButton}
+                                style={[styles.glassSettingsButton, { borderColor: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)' }]}
                                 activeOpacity={0.7}
                             >
-                                <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFill} />
+                                <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
                                 <LinearGradient
-                                    colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.05)']}
+                                    colors={isDark ? ['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.05)'] : ['rgba(0,0,0,0.05)', 'transparent']}
                                     style={StyleSheet.absoluteFill}
                                 />
-                                <Ionicons name="settings-outline" size={20} color="#fff" />
+                                <Ionicons name="settings-outline" size={20} color={isDark ? "#fff" : currentTheme.colors.text} />
                             </TouchableOpacity>
                         </View>
                     </MotiView>
@@ -542,7 +555,7 @@ const styles = StyleSheet.create({
         width: 120,
         height: 120,
         borderRadius: 36,
-        borderWidth: 4,
+        borderWidth: 3,
         elevation: 20,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 12 },
@@ -555,7 +568,7 @@ const styles = StyleSheet.create({
     levelCapsule: {
         position: 'absolute',
         top: -8,
-        right: -15,
+        left: -15,
         paddingHorizontal: 12,
         paddingVertical: 4,
         borderRadius: 8,
