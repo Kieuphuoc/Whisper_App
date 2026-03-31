@@ -1,12 +1,63 @@
 import { MyUserContext } from '@/configs/Context';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
-import React, { useContext } from 'react';
-import { View } from 'react-native';
+import React, { useContext, useEffect, useState, useCallback } from 'react';
 import { BlurView } from 'expo-blur';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authApis, endpoints } from '@/configs/Apis';
+
+/*
+- [x] Frontend: Install `socket.io-client`, `expo-notifications`
+- [/] Frontend: Implement `useSocket` and `notificationService` (In progress)
+*/
+import { useSocket } from '@/hooks/useSocket';
+import { Alert, View } from 'react-native';
+import { registerForPushNotificationsAsync } from '@/services/notificationService';
+
 
 export default function TabLayout() {
     const user = useContext(MyUserContext);
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    const fetchUnreadCount = useCallback(async () => {
+        try {
+            const token = await AsyncStorage.getItem('token');
+            if (!token) return;
+            const api = authApis(token);
+            const res = await api.get(endpoints.notificationsUnread);
+            setUnreadCount(res.data?.unreadCount || 0);
+        } catch (e) {
+            console.error('Fetch unread count error in TabLayout:', e);
+        }
+    }, []);
+
+    const { on, off } = useSocket(user?.id);
+
+    useEffect(() => {
+        if (user) {
+            // Initialize Push Notifications
+            AsyncStorage.getItem('token').then((token: string | null) => {
+                if (token) registerForPushNotificationsAsync(token);
+            });
+
+
+            fetchUnreadCount();
+            const interval = setInterval(fetchUnreadCount, 30000); // 30s
+
+            // Listen for real-time messages to update badge
+            on('new_message', (message) => {
+                console.log('Global message received:', message);
+                fetchUnreadCount();
+                // Optional: Show in-app toast if not in chat screen
+            });
+
+            return () => {
+                clearInterval(interval);
+                off('new_message');
+            };
+        }
+    }, [user, fetchUnreadCount, on, off]);
+
 
     if (!user) return <Redirect href="/login" />;
 
@@ -15,7 +66,7 @@ export default function TabLayout() {
             screenOptions={{
                 headerShown: false,
                 tabBarShowLabel: false,
-                tabBarActiveTintColor: '#7c3aed',
+                tabBarActiveTintColor: '#000000',
                 tabBarInactiveTintColor: '#9ca3af',
                 tabBarStyle: {
                     position: 'absolute',
@@ -44,7 +95,7 @@ export default function TabLayout() {
                 }}
             />
 
-            <Tabs.Screen name="home/index"
+            <Tabs.Screen name="home"
                 options={{
                     title: 'Bản đồ',
                     tabBarIcon: ({ focused }) => (
@@ -68,17 +119,24 @@ export default function TabLayout() {
                 }}
             />
 
-            <Tabs.Screen name="notification/index"
-                options={{
-                    title: 'Tín hiệu',
-                    tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? "notifications" : "notifications-outline"} size={26} color={color} />,
-                }}
-            />
-
-            <Tabs.Screen name="profile/index"
+            <Tabs.Screen name="profile"
                 options={{
                     title: 'Hồ sơ',
                     tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? "person" : "person-outline"} size={26} color={color} />,
+                    tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+                    tabBarBadgeStyle: {
+                        backgroundColor: '#ef4444',
+                        color: '#fff',
+                        fontSize: 10,
+                        fontWeight: 'bold',
+                        marginTop: 2,
+                    }
+                }}
+            />
+
+            <Tabs.Screen name="notification/index"
+                options={{
+                    href: null,
                 }}
             />
         </Tabs>

@@ -303,15 +303,19 @@ export default function HomeScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Notification button */}
-      {/* <TouchableOpacity
-        style={[styles.notifButton, { backgroundColor: currentTheme.colors.background }]}
-        onPress={() => router.push("/(tabs)/notification")}
-      >
-        <Ionicons name="notifications-outline" size={22} color="#f59e0b" />
-      </TouchableOpacity> */}
+      {/* Chat button */}
+      {user && (
+        <TouchableOpacity
+          style={[styles.chatButton, { backgroundColor: currentTheme.colors.background }]}
+          onPress={() => router.push("/(tabs)/home/chat")}
+        >
+          <Ionicons name="chatbubble-ellipses-outline" size={22} color={currentTheme.colors.primary} />
+          {/* Badge for unread chat messages could go here */}
+        </TouchableOpacity>
+      )}
 
       <FilterToggle value={visibility} onChange={setVisibility} />
+
       <StatsBento voicePins={accumulatedPins} />
       <QuickActions
         onExplore={() => {
@@ -422,6 +426,17 @@ const styles = StyleSheet.create({
     ...theme.light.shadows.md,
     zIndex: 1000,
   },
+  chatButton: {
+    position: "absolute" as const,
+    top: 120,
+    right: 25,
+    padding: theme.light.spacing.sm + 2,
+    borderRadius: theme.light.radius.full,
+    ...theme.light.shadows.md,
+    zIndex: 1000,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
   loginButton: {
     position: "absolute" as const,
     top: 60,
@@ -431,6 +446,7 @@ const styles = StyleSheet.create({
     ...theme.light.shadows.md,
     zIndex: 1000,
   },
+
   recenterButton: {
     position: "absolute",
     bottom: 122, // Vertically centered with VoiceButton (110 + 75/2 - 50/2)

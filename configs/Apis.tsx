@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 
-export const BASE_URL = "http://10.5.1.190:5000";
+export const BASE_URL = "http://10.5.1.155:5000";
 
 export const endpoints = {
   // Auth
@@ -16,6 +16,8 @@ export const endpoints = {
   changePassword: "/user/me/password",
   userAvatar: "/user/me/avatar",
   userCover: "/user/me/cover",
+  updateFcmToken: "/user/me/fcm-token",
+
 
   // Voice Pins
   voice: "/voice/",
@@ -59,7 +61,14 @@ export const endpoints = {
   friendCancel: (id: string | number) => `/friend/request/${id}`,
   friendRemove: "/friend/remove",
   friendStatus: (userId: string | number) => `/friend/status/${userId}`,
+
+  // Chat
+  chatRooms: "/chat/rooms",
+  chatMessages: (roomId: string | number) => `/chat/rooms/${roomId}/messages`,
+  chatSend: (roomId: string | number) => `/chat/rooms/${roomId}/send`,
+  chatPrivate: (targetUserId: string | number) => `/chat/private/${targetUserId}`,
 };
+
 
 export const authApis = (token: string): AxiosInstance => {
   return axios.create({

@@ -4,8 +4,8 @@ import { User } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState, useMemo, useContext } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import React, { useEffect, useState, useMemo, useContext, useCallback } from 'react';
 import { MyDispatchContext } from '@/configs/Context';
 import {
     ActivityIndicator,
@@ -52,6 +52,7 @@ export default function ProfileScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [updatingImage, setUpdatingImage] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     const scrollY = useSharedValue(0);
     const shimmerProgress = useSharedValue(0);
@@ -110,6 +111,24 @@ export default function ProfileScreen() {
             setRefreshing(false);
         }
     };
+
+    const fetchUnreadCount = async () => {
+        try {
+            const token = await AsyncStorage.getItem('token');
+            if (!token) return;
+            const api = authApis(token);
+            const res = await api.get(endpoints.notificationsUnread);
+            setUnreadCount(res.data?.unreadCount || 0);
+        } catch (e) {
+            console.error('Fetch unread count error:', e);
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchUnreadCount();
+        }, [])
+    );
 
     useEffect(() => {
         fetchData();
@@ -294,6 +313,37 @@ export default function ProfileScreen() {
                         />
                         <Ionicons name="sparkles" size={16} color={isDark ? "#fff" : currentTheme.colors.primary} />
                         <Text style={[styles.editAuraText, { color: isDark ? "#fff" : currentTheme.colors.text }]}>Đổi Aura</Text>
+                    </BlurView>
+                </MotiView>
+            </TouchableOpacity>
+
+            {/* FLOATING NOTIFICATION BUTTON */}
+            <TouchableOpacity
+                onPress={() => router.push('/(tabs)/notification')}
+                style={styles.floatingNotification}
+                activeOpacity={0.8}
+            >
+                <MotiView
+                    from={{ scale: 0.9, opacity: 0, translateX: -20 }}
+                    animate={{ scale: 1, opacity: 1, translateX: 0 }}
+                    transition={{ delay: 1100, type: 'spring' }}
+                >
+                    <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={[styles.notiBlur, { borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]}>
+                        <LinearGradient
+                            colors={isDark ? ['rgba(255,255,255,0.1)', 'transparent'] : ['rgba(255,255,255,0.5)', 'transparent']}
+                            style={StyleSheet.absoluteFill}
+                        />
+                        <Ionicons name="notifications-outline" size={22} color={isDark ? "#fff" : currentTheme.colors.primary} />
+                       
+                        {unreadCount > 0 && (
+                            <MotiView
+                                from={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                style={styles.badge}
+                            >
+                                <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                            </MotiView>
+                        )}
                     </BlurView>
                 </MotiView>
             </TouchableOpacity>
@@ -547,6 +597,40 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255,255,255,0.3)',
     },
     editAuraText: { color: '#fff', fontSize: 13, fontWeight: '800', letterSpacing: 0.3 },
+    floatingNotification: {
+        position: 'absolute',
+        top: 60,
+        left: 20,
+        zIndex: 1000,
+    },
+    notiBlur: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        overflow: 'hidden',
+    },
+    badge: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        backgroundColor: '#ef4444',
+        minWidth: 20,
+        height: 20,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 4,
+        borderWidth: 2,
+        borderColor: 'rgba(255,255,255,0.8)',
+    },
+    badgeText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: 'bold',
+    },
     scrollContent: { paddingBottom: 100 },
     topEmptyGap: { height: height * 0.25 },
     profileContent: { paddingHorizontal: 20, zIndex: 10 },
