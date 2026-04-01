@@ -32,7 +32,7 @@ const { width } = Dimensions.get("window");
 function formatDuration(secs?: number): string {
   if (!secs) return "--:--";
   const m = Math.floor(secs / 60);
-  const s = secs % 60;
+  const s = Math.floor(secs % 60);
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
@@ -448,8 +448,7 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: { 
           style={[
             styles.turntableBody,
             {
-              backgroundColor: currentTheme.colors.surface,
-              borderColor: currentTheme.colors.border,
+              backgroundColor: '#FFFFFF',
               transform: [{ translateY: cardTranslateY }, { scale: cardScale }],
             },
           ]}
@@ -457,66 +456,33 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: { 
 
           {/* ── TOP BAR ─────────────────────────────────── */}
           <View style={styles.topBar}>
-            <View style={styles.topLeft}>
-              {isHidden ? (
-                <View style={[styles.emotionBadge, { backgroundColor: '#6A5ACD33', borderColor: '#6A5ACD88', paddingHorizontal: 8 }]}>
-                  <Ionicons name="sparkles" size={14} color="#6A5ACD" />
-                </View>
-              ) : (
-                !!pin.emotionLabel && (
-                  <View style={[styles.emotionBadge, { backgroundColor: emotionColor + "33", borderColor: emotionColor + "88" }]}>
-                    <Text style={[styles.emotionBadgeText, { color: emotionColor }]}>
-                      {pin.emotionLabel}
-                    </Text>
-                  </View>
-                )
-              )}
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              {/* Report flag button */}
-              {!pin.isAnonymous && (
-                <TouchableOpacity
-                  onPress={() => hasReported ? Alert.alert('Đã báo cáo', 'Bạn đã báo cáo bài đăng này rồi.') : setShowReportModal(true)}
-                  hitSlop={10}
-                  style={[styles.reportBtn, { backgroundColor: hasReported ? '#ef444422' : currentTheme.colors.surfaceAlt }]}
-                >
-                  <Ionicons
-                    name={hasReported ? 'flag' : 'flag-outline'}
-                    size={16}
-                    color={hasReported ? '#ef4444' : currentTheme.colors.textMuted}
-                  />
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity onPress={handleClose} hitSlop={15} style={[styles.closeBtn, { backgroundColor: currentTheme.colors.surfaceAlt }]}>
-                <Ionicons name="close" size={20} color={currentTheme.colors.text} />
-              </TouchableOpacity>
-            </View>
+            <View style={styles.topLeft} />
+            {/* <TouchableOpacity onPress={handleClose} hitSlop={15} style={styles.closeBtn}>
+              <Ionicons name="close" size={20} color="#000" />
+            </TouchableOpacity> */}
           </View>
 
           {/* ── VINYL RECORD ─────────────────────────────── */}
-          <View style={[styles.playerContainer, { backgroundColor: currentTheme.colors.surfaceAlt, borderRadius: currentTheme.borderRadius.xl, overflow: 'visible' }]}>
+          <View style={styles.playerContainer}>
+            <View style={styles.levelIndicatorLeft}>
+              <View style={styles.levelBar} />
+            </View>
+
             <TouchableOpacity activeOpacity={0.9} onPress={() => playing ? player.pause() : player.play()} style={{ zIndex: 1 }}>
-              <View style={{
-                shadowColor: emotionColor,
-                shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.8,
-                shadowRadius: 20,
-                elevation: 15,
-              }}>
-                <Animated.View style={[styles.vinylPlate, { transform: [{ rotate: spin }], borderColor: currentTheme.colors.border }]}>
+              <Animated.View style={[styles.vinylPlate, { transform: [{ rotate: spin }] }]}>
+                <View style={styles.vinylBlackDisk}>
                   <Image
                     source={{ uri: pin.images?.[0]?.imageUrl ?? pin.imageUrl ?? 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&q=80' }}
                     style={styles.recordImage}
                     resizeMode="cover"
                   />
-                  <View style={styles.vinylCenterContainer}>
-                    <View style={styles.vinylCenterRing2} />
-                    <View style={styles.vinylCenterRing3} />
-                    <View style={styles.vinylCenterHole} />
-                  </View>
-                </Animated.View>
-              </View>
+                </View>
+              </Animated.View>
             </TouchableOpacity>
+
+            <View style={styles.levelIndicatorRight}>
+              <View style={styles.levelBar} />
+            </View>
 
             <Animated.View
               pointerEvents="none"
@@ -527,124 +493,189 @@ export default function VoicePinTurntable({ pin, onClose, autoPlay = false }: { 
                 style={styles.tonearmImage}
               />
             </Animated.View>
+
+            {/* Transcription Toggle moved to the 'W' spot */}
+            <TouchableOpacity
+              onPress={handleToggleTranscription}
+              style={styles.vinylTopButton}
+              activeOpacity={0.7}
+            >
+              {isThinking ? (
+                <MotiView
+                  from={{ rotate: '0deg' }}
+                  animate={{ rotate: '360deg' }}
+                  transition={{ loop: true, duration: 1000, type: 'timing', easing: ReanimatedEasing.linear }}
+                >
+                  <Ionicons name="sparkles" size={26} color="#CBD5E1" />
+                </MotiView>
+              ) : (
+                <View style={styles.vinylTopButtonContent}>
+                  <Ionicons name={showTranscription ? "eye-off-outline" : "language-outline"} size={26} color="#CBD5E1" />
+                  <Text style={styles.vinylTopButtonLetter}>W</Text>
+                </View>
+              )}
+            </TouchableOpacity>
           </View>
 
           {/* ── INFO + PLAY BUTTON ───────────────────────── */}
           <View style={styles.infoRow}>
             <View style={styles.infoLeft}>
-              {!isHidden && (
-                <TouchableOpacity onPress={navigateToProfile} style={styles.authorRow}>
-                  <View style={[styles.authorAvatar, { backgroundColor: currentTheme.colors.surfaceAlt }]}>
-                    {pin.user?.avatar ? (
-                      <Image source={{ uri: pin.user.avatar }} style={styles.avatarImg} />
-                    ) : (
-                      <Ionicons name="person-circle-outline" size={18} color={currentTheme.colors.textMuted} />
-                    )}
-                  </View>
-                  <Text style={[styles.authorText, { color: currentTheme.colors.textMuted }]}>{authorLabel}</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity onPress={navigateToProfile} style={styles.authorRow}>
+                <View style={styles.authorAvatar}>
+                  {pin.user?.avatar ? (
+                    <Image source={{ uri: pin.user.avatar }} style={styles.avatarImg} />
+                  ) : (
+                    <Ionicons name="person-circle" size={20} color="#CBD5E1" />
+                  )}
+                </View>
+                <Text style={styles.authorText}>{authorLabel.toUpperCase()}</Text>
+              </TouchableOpacity>
 
-              <Text style={[styles.title, { color: currentTheme.colors.text }]} numberOfLines={2}>
-                {pin.content ?? (pin.isAnonymous ? "Ký ức thầm lặng" : `Bản ghi #${String(pin.id).slice(-4)}`)}
-              </Text>
-
-              {/* Transcription Button & Display */}
-              <View style={styles.transcriptionContainer}>
-                <TouchableOpacity
-                  onPress={handleToggleTranscription}
-                  style={[styles.transcriptionBtn, { backgroundColor: currentTheme.colors.surfaceAlt }]}
-                  activeOpacity={0.7}
-                >
-                  {isThinking ? (
+              {/* Transcription Box remains here if visible */}
+              {showTranscription && (
+                <View style={styles.transcriptionContainer}>
+                  {transcription ? (
                     <MotiView
-                      from={{ rotate: '0deg' }}
-                      animate={{ rotate: '360deg' }}
-                      transition={{ loop: true, duration: 1000, type: 'timing', easing: ReanimatedEasing.linear }}
+                      from={{ opacity: 0, translateY: 10 }}
+                      animate={{ opacity: 1, translateY: 0 }}
+                      style={[styles.transcriptionBox, { backgroundColor: '#F8FAFC', borderColor: '#7B61FF44' }]}
                     >
-                      <Ionicons name="sparkles" size={16} color={Colors.primary} />
+                      <Text style={[styles.transcriptionText, { color: '#1E293B' }]}>
+                        {transcription}
+                      </Text>
                     </MotiView>
                   ) : (
-                    <Ionicons name={showTranscription ? "eye-off-outline" : "language-outline"} size={16} color={currentTheme.colors.primary} />
+                    <MotiView from={{ opacity: 0 }} animate={{ opacity: 1 }} style={styles.noTranscriptionBox}>
+                      <Text style={[styles.noTranscriptionText, { color: currentTheme.colors.textMuted }]}>
+                        Chưa có bản phiên âm.
+                      </Text>
+                    </MotiView>
                   )}
-                  <Text style={[styles.transcriptionBtnText, { color: currentTheme.colors.primary }]}>
-                    {isThinking ? "Đang suy nghĩ..." : showTranscription ? "Ẩn phiên âm" : "Xem phiên âm"}
-                  </Text>
-                </TouchableOpacity>
-
-                {showTranscription && transcription && (
-                  <MotiView
-                    from={{ opacity: 0, translateY: 10 }}
-                    animate={{ opacity: 1, translateY: 0 }}
-                    style={[styles.transcriptionBox, { backgroundColor: currentTheme.colors.surfaceAlt, borderColor: currentTheme.colors.primary + '44' }]}
-                  >
-                    <Text style={[styles.transcriptionText, { color: currentTheme.colors.text }]}>
-                      {transcription}
-                    </Text>
-                  </MotiView>
-                )}
-
-                {showTranscription && !transcription && (
-                  <MotiView
-                    from={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    style={styles.noTranscriptionBox}
-                  >
-                    <Text style={[styles.noTranscriptionText, { color: currentTheme.colors.textMuted }]}>
-                      Chưa có bản phiên âm cho âm thanh này.
-                    </Text>
-                  </MotiView>
-                )}
-              </View>
+                </View>
+              )}
 
               <View style={styles.metaRow}>
-                <Ionicons name="location-outline" size={12} color={currentTheme.colors.textMuted} />
-                <Text style={[styles.metaText, { color: currentTheme.colors.textMuted }]} numberOfLines={1}>
+                <Ionicons name="location-outline" size={14} color="#94A3B8" />
+                <Text style={styles.metaText} numberOfLines={1}>
                   {pin.address ?? "Không rõ vị trí"}
                 </Text>
               </View>
-              {/* <View style={styles.metaRow}>
-                <Ionicons name="time-outline" size={12} color={currentTheme.colors.textMuted} />
-                <Text style={[styles.metaText, { color: currentTheme.colors.textMuted }]}>{timeAgo(pin.createdAt)}</Text>
-              </View> */}
+
+              {/* Reaction & Stats Row */}
+              <View style={styles.statsRow}>
+                <View style={styles.statItem}>
+                  <Ionicons name="headset-outline" size={20} color="#94A3B8" />
+                  <Text style={styles.statValue}>{pin.listensCount ?? 0}</Text>
+                  <Text style={styles.statLabel}>Nghe</Text>
+                </View>
+
+                <View style={styles.statDivider} />
+
+                <TouchableOpacity
+                  onPress={() => handleReaction(userReaction ? null : 'LIKE')}
+                  onLongPress={toggleReactions}
+                  delayLongPress={300}
+                  style={styles.statItem}
+                >
+                  <MotiView
+                    animate={{ rotate: userReaction ? '0deg' : '0deg', scale: userReaction ? 1.2 : 1 }}
+                    transition={{ type: 'spring', damping: 10 }}
+                  >
+                    <Ionicons
+                      name={userReaction ? "heart" : "heart-outline"}
+                      size={20}
+                      color={userReaction ? "#EF4444" : "#94A3B8"}
+                    />
+                  </MotiView>
+                  <Text style={styles.statValue}>{reactionCount}</Text>
+                  <Text style={styles.statLabel}>Thích</Text>
+                </TouchableOpacity>
+
+                <View style={styles.statDivider} />
+
+                <View style={styles.statItem}>
+                  <Ionicons name="chatbubble-outline" size={19} color="#94A3B8" />
+                  <Text style={styles.statValue}>{pin.commentsCount ?? 0}</Text>
+                  <Text style={styles.statLabel}>Lời nhắn</Text>
+                </View>
+
+                <View style={styles.statDivider} />
+
+                <View style={styles.statItem}>
+                  <Ionicons name="timer-outline" size={20} color="#94A3B8" />
+                  <Text style={styles.statValue}>{formatDuration(player.duration)}</Text>
+                  <Text style={styles.statLabel}>Thời lượng</Text>
+                </View>
+              </View>
             </View>
           </View>
 
           {/* ── FOOTER: visibility + date ─────────────────── */}
           <View style={styles.footer}>
             <View style={styles.footerLeft}>
-              <Ionicons name={VISIBILITY_ICON[pin.visibility] ?? "earth-outline"} size={13} color={currentTheme.colors.textMuted} />
-              <Text style={[styles.visLabel, { color: currentTheme.colors.textMuted }]}>
+              <Ionicons name={VISIBILITY_ICON[pin.visibility] ?? "earth-outline"} size={14} color="#94A3B8" />
+              <Text style={styles.visLabel}>
                 {pin.visibility === 'PUBLIC' ? 'Công khai' : pin.visibility === 'FRIENDS' ? 'Bạn bè' : 'Riêng tư'}
               </Text>
             </View>
-            <Text style={[styles.dateText, { color: currentTheme.colors.textMuted }]}>{new Date(pin.createdAt).toLocaleDateString()}</Text>
+            <Text style={styles.dateText}>{new Date(pin.createdAt).toLocaleDateString()}</Text>
           </View>
-
-          {/* Reaction Picker Overlay */}
-          {showReactions && (
-            <Animated.View style={[styles.reactionPicker, {
-              transform: [
-                { scale: reactionAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) },
-                { translateY: reactionAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }
-              ],
-              opacity: reactionAnim,
-              backgroundColor: currentTheme.colors.background,
-              borderColor: currentTheme.colors.border,
-            }]}>
-              {REACTION_TYPES.map((r) => (
-                <TouchableOpacity
-                  key={r.type}
-                  onPress={() => { toggleReactions(); handleReaction(r.type); }}
-                  style={styles.reactionBtn}
-                  activeOpacity={0.6}
-                >
-                  <Text style={styles.reactionEmoji}>{r.emoji}</Text>
-                </TouchableOpacity>
-              ))}
-            </Animated.View>
-          )}
         </Animated.View>
+
+        {/* Floating Microphone Button */}
+        <TouchableOpacity
+          style={styles.micButtonContainer}
+          onPress={() => playing ? player.pause() : player.play()}
+          activeOpacity={0.8}
+        >
+          <View style={styles.micButtonInside}>
+            <Ionicons name="mic" size={28} color="#FFF" />
+          </View>
+        </TouchableOpacity>
+
+        {/* Reaction Picker Overlay */}
+        {showReactions && (
+          <Animated.View style={[styles.reactionPicker, {
+            transform: [
+              { scale: reactionAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) },
+              { translateY: reactionAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }
+            ],
+            opacity: reactionAnim,
+          }]}>
+            {REACTION_TYPES.map((r, index) => (
+              <TouchableOpacity
+                key={r.type}
+                onPress={() => { toggleReactions(); handleReaction(r.type); }}
+                style={styles.reactionBtn}
+                activeOpacity={0.6}
+              >
+                <MotiView
+                  from={{ scale: 0, translateY: 20 }}
+                  animate={{ scale: 1, translateY: 0 }}
+                  transition={{
+                    type: 'spring',
+                    delay: index * 50,
+                  }}
+                >
+                  <MotiView
+                    animate={{
+                      translateY: [0, -4, 0, -2, 0],
+                      scale: [1, 1.1, 1, 1.05, 1],
+                    }}
+                    transition={{
+                      loop: true,
+                      type: 'timing',
+                      duration: 2000,
+                      delay: index * 100,
+                    }}
+                  >
+                    <Text style={styles.reactionEmoji}>{r.emoji}</Text>
+                  </MotiView>
+                </MotiView>
+              </TouchableOpacity>
+            ))}
+          </Animated.View>
+        )}
       </Animated.View>
 
       {/* ── REPORT MODAL ─────────────────────────────── */}
@@ -706,118 +737,132 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.75)",
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 1000,
+    zIndex: 10000,
   },
   turntableBody: {
-    width: width * 0.90,
-    borderRadius: 36,
-    padding: 22,
-    borderWidth: 1,
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.6,
-    shadowRadius: 30,
-    elevation: 24,
+    width: width * 0.92,
+    borderRadius: 40,
+    padding: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 20,
+    backgroundColor: '#FFF',
   },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 18,
+    marginBottom: 20,
   },
   topLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-  },
-  topLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 0.5,
   },
   closeBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: '#F8FAFC',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   playerContainer: {
-    height: 330,
+    height: 320,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 32,
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
     marginBottom: 24,
   },
-  vinylShadow: {
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 12,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.4,
-    shadowRadius: 30,
-    elevation: 24,
-  },
   vinylPlate: {
-    width: 260,
-    height: 260,
-    borderRadius: 135,
-    overflow: "hidden",
-    borderWidth: 3,
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  vinylBlackDisk: {
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: '#121212',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333',
   },
   recordImage: {
-    width: "100%",
-    height: "100%",
-    opacity: 0.95,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    borderWidth: 2,
+    borderColor: '#FFF',
   },
-  vinylCenterContainer: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
-    alignItems: "center",
+  levelIndicatorLeft: {
+    position: 'absolute',
+    left: 20,
+    bottom: 30,
+    width: 20,
+    height: 60,
+    backgroundColor: '#CBD5E1',
+    borderRadius: 10,
+    justifyContent: 'flex-end',
+    padding: 3,
   },
-  vinylCenterRing2: {
-    position: "absolute",
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#4043486e", // Light gray
+  levelIndicatorRight: {
+    position: 'absolute',
+    right: 20,
+    bottom: 30,
+    width: 20,
+    height: 60,
+    backgroundColor: '#CBD5E1',
+    borderRadius: 10,
+    justifyContent: 'flex-end',
+    padding: 3,
   },
-  vinylCenterRing3: {
-    position: "absolute",
-    width: 15,
-    height: 15,
-    borderRadius: 16,
-    backgroundColor: "#000000", // Black
+  levelBar: {
+    width: '100%',
+    height: '60%',
+    backgroundColor: '#475569',
+    borderRadius: 7,
   },
-  vinylCenterHole: {
-    position: "absolute",
-    width: 7,
-    height: 7,
-    borderRadius: 5,
-    backgroundColor: "#4c4f56c2", // Gray
+  vinylTopButton: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    padding: 4,
   },
-  emotionBadge: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-    borderWidth: 1,
+  vinylTopButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  emotionBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.3,
+  vinylTopButtonLetter: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#CBD5E1',
+    marginTop: -2,
   },
   tonearmContainer: {
     position: "absolute",
-    top: -20,
-    right: 7,
-    height: 305,
-    width: 170,
+    top: -10,
+    right: 5,
+    height: 300,
+    width: 160,
     alignItems: "center",
     zIndex: 5,
     transformOrigin: ["50%", "0%", 0],
@@ -831,122 +876,151 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
-    marginBottom: 18,
+    marginBottom: 20,
     gap: 12,
   },
   infoLeft: {
     flex: 1,
-    gap: 5,
+    gap: 8,
   },
   authorRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 8,
   },
   authorAvatar: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
   },
   avatarImg: {
     width: "100%",
     height: "100%",
   },
   authorText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  arBadge: {
-    borderWidth: 1,
-    borderRadius: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-  },
-  arBadgeText: {
-    fontSize: 9,
-    fontWeight: "800",
+    color: '#94A3B8',
     letterSpacing: 0.5,
   },
   title: {
-    fontSize: 17,
-    fontWeight: "700",
-    lineHeight: 22,
+    fontSize: 20,
+    fontWeight: "800",
+    color: '#1E293B',
+    lineHeight: 28,
   },
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
+    marginBottom: 4,
   },
   metaText: {
-    fontSize: 11,
-    flex: 1,
+    fontSize: 13,
+    color: '#94A3B8',
+    fontWeight: '500',
   },
   statsRow: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    marginBottom: 14,
+    borderRadius: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 4,
+    marginTop: 16,
+    marginBottom: 16,
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   statItem: {
     flex: 1,
     alignItems: "center",
-    gap: 3,
+    gap: 2,
   },
   statValue: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "800",
+    color: '#1E293B',
   },
   statLabel: {
-    fontSize: 10,
-    fontWeight: "500",
+    fontSize: 9,
+    fontWeight: "700",
+    color: '#94A3B8',
     textTransform: "uppercase",
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
   statDivider: {
     width: 1,
     height: 30,
+    backgroundColor: '#E2E8F0',
   },
   footer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    paddingTop: 10,
   },
   footerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 6,
   },
   visLabel: {
-    fontSize: 12,
-    fontWeight: "500",
+    fontSize: 13,
+    fontWeight: "600",
+    color: '#94A3B8',
   },
   dateText: {
-    fontSize: 11,
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  micButtonContainer: {
+    position: 'absolute',
+    bottom: -35,
+    alignSelf: 'center',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 15,
+    elevation: 15,
+    zIndex: 1001,
+  },
+  micButtonInside: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: '#7B61FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: '#FFF',
   },
   reactionPicker: {
     position: "absolute",
-    bottom: 80,
+    bottom: 120,
     alignSelf: "center",
     flexDirection: "row",
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 30,
+    borderRadius: 35,
     borderWidth: 1,
     elevation: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
-    zIndex: 20,
+    zIndex: 2000,
     gap: 8,
+    backgroundColor: '#FFF',
+    borderColor: '#E2E8F0',
   },
   reactionBtn: {
     justifyContent: 'center',
@@ -955,16 +1029,6 @@ const styles = StyleSheet.create({
   },
   reactionEmoji: {
     fontSize: 26,
-  },
-  floatingOrigin: {
-    position: "absolute",
-    bottom: 20,
-    width: 20,
-    height: 20,
-    zIndex: 15,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "visible",
   },
   floatingEmoji: {
     position: "absolute",
@@ -985,21 +1049,8 @@ const styles = StyleSheet.create({
     borderWidth: 3,
   },
   transcriptionContainer: {
-    marginTop: 8,
+    marginTop: 4,
     marginBottom: 4,
-  },
-  transcriptionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
-  },
-  transcriptionBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   transcriptionBox: {
     marginTop: 8,
@@ -1021,7 +1072,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontStyle: 'italic',
   },
-  // ── Report button ─────────────────────────────────
   reportBtn: {
     width: 30,
     height: 30,
@@ -1029,7 +1079,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // ── Report modal ──────────────────────────────
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
