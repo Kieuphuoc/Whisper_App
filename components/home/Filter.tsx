@@ -1,7 +1,10 @@
 import { Visibility } from "@/types";
-import { View, StyleSheet, TouchableOpacity, useColorScheme } from "react-native";
+import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { Text } from "@/components/ui/text";
-import { theme } from "@/constants/Theme";
+
+const SEGMENT_PURPLE = "#8B5CF6";
+const SEGMENT_SURFACE = "#FFFFFF";
+const SEGMENT_INACTIVE_TEXT = "#171717";
 
 type FilterToggleProps = {
     value: Visibility;
@@ -18,15 +21,9 @@ const FilterToggle: React.FC<FilterToggleProps> = ({
     value,
     onChange,
 }) => {
-    const colorScheme = useColorScheme() || "light";
-    const currentTheme = theme[colorScheme];
-
     return (
         <View style={styles.filterContainer}>
-            <View style={[styles.filterBento, { 
-                backgroundColor: currentTheme.colors.background + 'F2', // 95% opacity
-                borderColor: currentTheme.colors.primary + '1A', // 10% opacity
-            }]}>
+            <View style={styles.filterBento}>
                 {OPTIONS.map((opt) => (
                     <TouchableOpacity
                         key={opt.value}
@@ -35,11 +32,12 @@ const FilterToggle: React.FC<FilterToggleProps> = ({
                             value === opt.value && styles.activeFilterButton,
                         ]}
                         onPress={() => onChange(opt.value)}
+                        activeOpacity={0.85}
                     >
                         <Text
                             style={[
                                 styles.filterText,
-                                { color: currentTheme.colors.textSecondary },
+                                { color: SEGMENT_INACTIVE_TEXT },
                                 value === opt.value && styles.activeFilterText,
                             ]}
                         >

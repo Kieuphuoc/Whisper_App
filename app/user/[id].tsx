@@ -174,6 +174,31 @@ export default function UserProfileScreen() {
         }
     };
 
+    const handleStartChat = async () => {
+        try {
+            const token = await AsyncStorage.getItem('token');
+            if (!token) {
+                Alert.alert('Lỗi', 'Bạn cần đăng nhập để nhắn tin');
+                return;
+            }
+
+            const api = authApis(token);
+            const res = await api.post(endpoints.chatPrivate(id as string));
+            const roomData = res.data?.data ?? res.data;
+            const roomId = roomData?.id ?? roomData?.roomId;
+
+            if (!roomId) {
+                Alert.alert('Lỗi', 'Không thể mở cuộc trò chuyện');
+                return;
+            }
+
+            router.push(`/(tabs)/home/chat/${roomId}`);
+        } catch (e: any) {
+            console.error('Start chat error:', e);
+            Alert.alert('Lỗi', e.response?.data?.message || 'Không thể bắt đầu cuộc trò chuyện');
+        }
+    };
+
     const avatarUri = useMemo(() => {
         if (!user?.avatar) return 'https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg';
         if (user.avatar.startsWith('http')) return user.avatar;
@@ -362,7 +387,7 @@ export default function UserProfileScreen() {
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.glassSettingsButton, { width: 60, height: 60, borderRadius: 20 }]}
-                            onPress={() => Alert.alert('Tính năng', 'Tính năng nhắn tin đang phát triển')}
+                            onPress={handleStartChat}
                         >
                             <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
                             <Ionicons name="chatbubble-outline" size={22} color={isDark ? "#fff" : currentTheme.colors.text} />

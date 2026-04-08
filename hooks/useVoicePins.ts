@@ -59,6 +59,7 @@ export function useVoicePins(visibility: Visibility, bbox?: BoundingBox) {
         },
         enabled: true, // queryFn handles all visibility/bbox combinations internally
         staleTime: 1000 * 60 * 5, // 5 minutes cache
+        gcTime: 1000 * 60 * 2, // drop inactive bbox queries sooner — many pan/zoom keys otherwise stay in memory
         placeholderData: keepPreviousData, // Maintain markers while loading
     });
 }

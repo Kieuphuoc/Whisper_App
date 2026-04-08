@@ -1,5 +1,30 @@
 export type LatLng = { latitude: number; longitude: number };
 
+/** Expand a bounding box around its center (factor 2 = twice the lat/lng span). */
+export function expandBoundingBox(
+  b: { minLat: number; maxLat: number; minLng: number; maxLng: number },
+  factor: number
+) {
+  const midLat = (b.minLat + b.maxLat) / 2;
+  const midLng = (b.minLng + b.maxLng) / 2;
+  const halfLat = ((b.maxLat - b.minLat) / 2) * factor;
+  const halfLng = ((b.maxLng - b.minLng) / 2) * factor;
+  return {
+    minLat: midLat - halfLat,
+    maxLat: midLat + halfLat,
+    minLng: midLng - halfLng,
+    maxLng: midLng + halfLng,
+  };
+}
+
+export function pointInBoundingBox(
+  lat: number,
+  lng: number,
+  box: { minLat: number; maxLat: number; minLng: number; maxLng: number }
+) {
+  return lat >= box.minLat && lat <= box.maxLat && lng >= box.minLng && lng <= box.maxLng;
+}
+
 const EARTH_RADIUS_M = 6371000;
 
 function toRad(deg: number) {

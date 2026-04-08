@@ -219,3 +219,24 @@ export type RootStackParamList = {
     '(tabs)': undefined;
     '(auth)': undefined;
 };
+
+// ============ Album ============
+
+export interface Album {
+    id: string;
+    name: string;
+    description?: string;
+    coverUri?: string;
+    coverGradient?: string[];
+    coverIcon?: string;
+    accentColor?: string;
+    pinCount: number;
+    pins?: VoicePin[];
+    pinIds?: number[];
+    sectionKey?: string;
+    type: 'smart' | 'user';
+    visibility?: Visibility;
+    createdAt?: string;
+    isShared?: boolean;
+    members?: UserBasic[];
+}

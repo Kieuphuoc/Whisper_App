@@ -334,7 +334,7 @@ export default function ProfileScreen() {
                             style={StyleSheet.absoluteFill}
                         />
                         <Ionicons name="notifications-outline" size={22} color={isDark ? "#fff" : currentTheme.colors.primary} />
-                       
+
                         {unreadCount > 0 && (
                             <MotiView
                                 from={{ scale: 0 }}

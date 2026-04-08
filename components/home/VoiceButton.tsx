@@ -112,6 +112,7 @@ export default function VoiceButton({ isRecording, onPress }: VoiceButtonProps) 
                     style={[
                         styles.button,
                         { borderRadius: currentTheme.radius.full },
+                        isRecording ? styles.recordingButton : currentTheme.shadows.lg,
                         isRecording && styles.recordingButton
                     ]}
                     onPress={onPress}
@@ -143,7 +144,6 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.primary,
         justifyContent: 'center',
         alignItems: 'center',
-        ...theme.light.shadows.lg,
         borderWidth: 4,
         borderColor: Colors.white,
     },

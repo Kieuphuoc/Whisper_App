@@ -1,5 +1,6 @@
 import "../global.css";
 import { MyDispatchContext, MyUserContext, userReducer } from "@/configs/Context";
+import { SocketProvider } from "@/configs/SocketContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect, useReducer, useState } from "react";
@@ -73,7 +74,9 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <MyUserContext.Provider value={user}>
         <MyDispatchContext.Provider value={dispatch}>
-          <RootLayoutNav user={user} />
+          <SocketProvider>
+            <RootLayoutNav user={user} />
+          </SocketProvider>
         </MyDispatchContext.Provider>
       </MyUserContext.Provider>
     </QueryClientProvider>
@@ -86,6 +89,11 @@ function RootLayoutNav({ user }: { user: any }) {
   const [isOnboardingChecked, setIsOnboardingChecked] = useState(false);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
 
+  // Check onboarding status ONCE on mount only, NOT on every segment change.
+  // Running this on segment changes caused a race condition: when segments changed
+  // (e.g. navigating to /home), isOnboardingChecked briefly reset to false, then
+  // back to true — triggering the guard while user context was still null from
+  // AsyncStorage, causing an incorrect redirect to /login within 3-4 seconds.
   useEffect(() => {
     const checkOnboarding = async () => {
       try {
@@ -98,7 +106,7 @@ function RootLayoutNav({ user }: { user: any }) {
       }
     };
     checkOnboarding();
-  }, [segments]);
+  }, []); // ← Chỉ chạy 1 lần khi mount
 
   useEffect(() => {
     if (!isOnboardingChecked) return;
@@ -107,16 +115,16 @@ function RootLayoutNav({ user }: { user: any }) {
     const inOnboarding = segments[0] === "onboarding";
 
     if (!hasCompletedOnboarding && !inOnboarding) {
-       router.replace("/onboarding");
-       return;
+      router.replace("/onboarding");
+      return;
     }
 
     if (hasCompletedOnboarding) {
-        if (!user && !inAuthGroup && !inOnboarding) {
-          router.replace("/login");
-        } else if (user && (inAuthGroup || inOnboarding || !segments[0])) {
-          router.replace("/home");
-        }
+      if (!user && !inAuthGroup && !inOnboarding) {
+        router.replace("/login");
+      } else if (user && (inAuthGroup || inOnboarding || !segments[0])) {
+        router.replace("/home");
+      }
     }
   }, [user, segments, isOnboardingChecked, hasCompletedOnboarding]);
 

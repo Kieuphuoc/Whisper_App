@@ -1,7 +1,7 @@
 import { VoicePin, VoiceType } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import { useState, useCallback, forwardRef } from "react";
+import { useState, useCallback, forwardRef, memo } from "react";
 import { StyleSheet, TouchableOpacity, View, useColorScheme } from "react-native";
 import { Text } from "@/components/ui/text";
 import MapView, { Callout, Marker, Region, MapType } from "react-native-maps";
@@ -22,6 +22,9 @@ const DEFAULT_DELTA = 0.01;
 const FALLBACK_LAT = 10.7769;
 const FALLBACK_LNG = 106.7009;
 
+/** Below this, skip SuperCluster — fewer native crashes with small datasets; clustering still runs when you have many pins. */
+const MIN_PINS_FOR_CLUSTERING = 55;
+
 type Props = {
   location: Location.LocationObject | null;
   pins: VoicePin[];
@@ -34,7 +37,32 @@ type Props = {
   onRegionChangeComplete?: (region: Region) => void;
 };
 
-const MapSection = forwardRef<MapView, Props>(({
+function mapContainerPropsAreEqual(prev: Readonly<Props>, next: Readonly<Props>): boolean {
+  if (prev.isScanning !== next.isScanning) return false;
+  if (prev.autoPlayPin !== next.autoPlayPin) return false;
+  if (prev.externalSelectedPin?.id !== next.externalSelectedPin?.id) return false;
+  if (prev.discoveredPin?.id !== next.discoveredPin?.id) return false;
+  if (prev.onRegionChangeComplete !== next.onRegionChangeComplete) return false;
+  if (prev.onSelectPin !== next.onSelectPin) return false;
+  if (prev.onPressDiscoveredPin !== next.onPressDiscoveredPin) return false;
+
+  const pc = prev.location?.coords;
+  const nc = next.location?.coords;
+  if (pc?.latitude !== nc?.latitude || pc?.longitude !== nc?.longitude) return false;
+
+  if (prev.pins.length !== next.pins.length) return false;
+  const sig = (pins: VoicePin[]) =>
+    [...pins]
+      .map((p) => p.id)
+      .sort((a, b) => Number(a) - Number(b))
+      .join(",");
+  if (sig(prev.pins) !== sig(next.pins)) return false;
+
+  return true;
+}
+
+const MapSection = forwardRef<MapView, Props>(function MapSection(
+  {
   location,
   pins,
   isScanning = false,
@@ -44,7 +72,9 @@ const MapSection = forwardRef<MapView, Props>(({
   onSelectPin,
   autoPlayPin = false,
   onRegionChangeComplete,
-}, ref) => {
+},
+  ref
+) {
   const [internalSelectedPin, setInternalSelectedPin] = useState<VoicePin | null>(null);
 
   const selectedPin = externalSelectedPin !== undefined ? externalSelectedPin : internalSelectedPin;
@@ -77,6 +107,30 @@ const MapSection = forwardRef<MapView, Props>(({
     }, [loadMapType])
   );
 
+  const renderCluster = useCallback(
+    (cluster: {
+      id: number;
+      geometry: { coordinates: [number, number] };
+      onPress: () => void;
+      properties: { point_count: number };
+    }) => {
+      const { id, geometry, onPress, properties } = cluster;
+      const count: number = properties.point_count;
+      const coord = {
+        latitude: geometry.coordinates[1],
+        longitude: geometry.coordinates[0],
+      };
+      const size = count < 5 ? 44 : count < 15 ? 52 : 62;
+      const bg = count < 5 ? "#ef4444" : count < 15 ? "#f97316" : "#8b5cf6";
+      return (
+        <ClusterMarker key={id} id={id} coordinate={coord} count={count} size={size} bg={bg} onPress={onPress} />
+      );
+    },
+    []
+  );
+
+  const clusteringEnabled = pins.length >= MIN_PINS_FOR_CLUSTERING;
+
   const initialRegion: Region = {
     latitude: location?.coords.latitude ?? FALLBACK_LAT,
     longitude: location?.coords.longitude ?? FALLBACK_LNG,
@@ -107,24 +161,13 @@ const MapSection = forwardRef<MapView, Props>(({
         customMapStyle={mapType === 'dark' ? darkMapStyle : []}
         userInterfaceStyle={mapType === 'dark' ? 'dark' : 'light'}
         onRegionChangeComplete={onRegionChangeComplete}
-        // Clustering config
-        radius={60}           // pixel radius of each cluster
-        minPoints={3}         // min pins before forming a cluster
+        clusteringEnabled={clusteringEnabled}
+        spiralEnabled={clusteringEnabled}
+        radius={60}
+        minPoints={3}
         extent={512}
         nodeSize={64}
-        // Custom cluster marker renderer
-        renderCluster={(cluster) => {
-          const { id, geometry, onPress, properties } = cluster;
-          const count: number = properties.point_count;
-          const coord = {
-            latitude: geometry.coordinates[1],
-            longitude: geometry.coordinates[0],
-          };
-          // Size grows with count
-          const size = count < 5 ? 44 : count < 15 ? 52 : 62;
-          const bg = count < 5 ? '#ef4444' : count < 15 ? '#f97316' : '#8b5cf6';
-          return <ClusterMarker id={id} coordinate={coord} count={count} size={size} bg={bg} onPress={onPress} />;
-        }}
+        renderCluster={renderCluster}
       >
         {pins.map((pin) => {
           const isAR = pin.type === VoiceType.HIDDEN_AR;
@@ -199,7 +242,8 @@ const MapSection = forwardRef<MapView, Props>(({
         })}
 
         {discoveredPin && (
-          <SpawnedVoicePin
+        <SpawnedVoicePin
+            key={`discovered-${discoveredPin.id}`}
             pin={discoveredPin}
             onPress={() => onPressDiscoveredPin?.()}
           />
@@ -223,7 +267,7 @@ const MapSection = forwardRef<MapView, Props>(({
 
 MapSection.displayName = "MapSection";
 
-export default MapSection;
+export default memo(MapSection, mapContainerPropsAreEqual);
 
 const styles = StyleSheet.create({
   map: { flex: 1 },

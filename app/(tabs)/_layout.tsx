@@ -1,55 +1,55 @@
 import { MyUserContext } from '@/configs/Context';
 import { Ionicons } from '@expo/vector-icons';
-import { Redirect, Tabs } from 'expo-router';
-import React, { useContext, useEffect, useState, useCallback } from 'react';
+import { Redirect, Tabs, useSegments } from 'expo-router';
+import React, { useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApis, endpoints } from '@/configs/Apis';
-
-/*
-- [x] Frontend: Install `socket.io-client`, `expo-notifications`
-- [/] Frontend: Implement `useSocket` and `notificationService` (In progress)
-*/
 import { useSocket } from '@/hooks/useSocket';
-import { Alert, View } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { registerForPushNotificationsAsync } from '@/services/notificationService';
-
 
 export default function TabLayout() {
     const user = useContext(MyUserContext);
+    const segments = useSegments();
     const [unreadCount, setUnreadCount] = useState(0);
+    const [isReady, setIsReady] = useState(false);
+    const isFetchingRef = useRef(false);
 
     const fetchUnreadCount = useCallback(async () => {
+        if (isFetchingRef.current) return;
         try {
+            isFetchingRef.current = true;
             const token = await AsyncStorage.getItem('token');
             if (!token) return;
             const api = authApis(token);
             const res = await api.get(endpoints.notificationsUnread);
             setUnreadCount(res.data?.unreadCount || 0);
-        } catch (e) {
-            console.error('Fetch unread count error in TabLayout:', e);
+        } catch (e: any) {
+            if (e.response?.status !== 401) {
+                console.error('Fetch unread count error in TabLayout:', e.message || e);
+            }
+        } finally {
+            isFetchingRef.current = false;
         }
+    }, []);
+
+    useEffect(() => {
+        AsyncStorage.getItem('token').then(() => setIsReady(true)).catch(() => setIsReady(true));
     }, []);
 
     const { on, off } = useSocket(user?.id);
 
     useEffect(() => {
         if (user) {
-            // Initialize Push Notifications
-            AsyncStorage.getItem('token').then((token: string | null) => {
+            AsyncStorage.getItem('token').then((token) => {
                 if (token) registerForPushNotificationsAsync(token);
             });
 
-
             fetchUnreadCount();
-            const interval = setInterval(fetchUnreadCount, 30000); // 30s
+            const interval = setInterval(fetchUnreadCount, 30000);
 
-            // Listen for real-time messages to update badge
-            on('new_message', (message) => {
-                console.log('Global message received:', message);
-                fetchUnreadCount();
-                // Optional: Show in-app toast if not in chat screen
-            });
+            on('new_message', () => fetchUnreadCount());
 
             return () => {
                 clearInterval(interval);
@@ -58,8 +58,10 @@ export default function TabLayout() {
         }
     }, [user, fetchUnreadCount, on, off]);
 
-
+    if (!isReady) return null;
     if (!user) return <Redirect href="/login" />;
+
+    const shouldHideTabBar = segments[0] === '(tabs)' && segments[1] === 'home' && segments[2] === 'chat';
 
     return (
         <Tabs
@@ -82,16 +84,28 @@ export default function TabLayout() {
                     shadowOffset: { width: 0, height: 10 },
                     shadowOpacity: 0.08,
                     shadowRadius: 20,
+                    display: shouldHideTabBar ? 'none' : 'flex',
                 },
                 tabBarBackground: () => (
-                    <BlurView tint="light" intensity={60} style={{ flex: 1, borderRadius: 36, overflow: 'hidden' }} />
+                    <BlurView tint="light" intensity={60} style={{ ...StyleSheet.absoluteFillObject, borderRadius: 36, overflow: 'hidden' }} />
                 ),
             }}
         >
             <Tabs.Screen name="memory"
                 options={{
                     title: 'Ký ức',
-                    tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? "heart" : "heart-outline"} size={26} color={color} />,
+                    tabBarIcon: ({ color, focused }) => (
+                        <Ionicons name={focused ? "planet" : "planet-outline"} size={26} color={color} />
+                    ),
+                }}
+            />
+
+            <Tabs.Screen name="album"
+                options={{
+                    title: 'Album',
+                    tabBarIcon: ({ color, focused }) => (
+                        <Ionicons name={focused ? "library" : "library-outline"} size={26} color={color} />
+                    ),
                 }}
             />
 
@@ -99,21 +113,8 @@ export default function TabLayout() {
                 options={{
                     title: 'Bản đồ',
                     tabBarIcon: ({ focused }) => (
-                        <View style={{
-                            width: 52,
-                            height: 52,
-                            borderRadius: 26,
-                            backgroundColor: '#000000',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            marginBottom: 4,
-                            shadowColor: '#000',
-                            shadowOffset: { width: 0, height: 6 },
-                            shadowOpacity: 0.2,
-                            shadowRadius: 12,
-                            elevation: 6,
-                        }}>
-                            <Ionicons name={focused ? "map" : "map-outline"} size={24} color="#ffffff" />
+                        <View style={styles.homeIconContainer}>
+                            <Ionicons name={focused ? "compass" : "compass-outline"} size={24} color="#ffffff" />
                         </View>
                     ),
                 }}
@@ -122,7 +123,9 @@ export default function TabLayout() {
             <Tabs.Screen name="profile"
                 options={{
                     title: 'Hồ sơ',
-                    tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? "person" : "person-outline"} size={26} color={color} />,
+                    tabBarIcon: ({ color, focused }) => (
+                        <Ionicons name={focused ? "search" : "search-outline"} size={26} color={color} />
+                    ),
                     tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
                     tabBarBadgeStyle: {
                         backgroundColor: '#ef4444',
@@ -135,10 +138,25 @@ export default function TabLayout() {
             />
 
             <Tabs.Screen name="notification/index"
-                options={{
-                    href: null,
-                }}
+                options={{ href: null }}
             />
         </Tabs>
     );
 }
+
+const styles = StyleSheet.create({
+    homeIconContainer: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        backgroundColor: '#000000',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: Platform.OS === 'ios' ? 15 : 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.2,
+        shadowRadius: 12,
+        elevation: 6,
+    },
+});

@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useContext, useState, useEffect, useRef } from "react";
+import { useContext, useState, useEffect, useRef, useCallback } from "react";
 import { StyleSheet, TouchableOpacity, View, Alert, useColorScheme } from "react-native";
 import MapView, { Region } from "react-native-maps";
 
@@ -31,6 +31,14 @@ import { Dimensions } from "react-native";
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 import { useFriends } from "@/hooks/useFriends";
+import { expandBoundingBox, haversineDistanceMeters, pointInBoundingBox } from "@/utils/geo";
+
+/** Padded viewport for pin retention (reduces churn at edges). */
+const VIEWPORT_RETAIN_FACTOR = 2.35;
+/** Keep pins near the user so AR proximity still works if the map is panned away. */
+const USER_PIN_RETAIN_RADIUS_M = 1600;
+/** Hard cap on markers in memory — native maps OOM if this grows without bound. */
+const MAX_ACCUMULATED_PINS = 450;
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme() || "light";
@@ -38,29 +46,81 @@ export default function HomeScreen() {
   const { location } = useLocation();
   const { visibility, setVisibility } = useVisibility("PUBLIC");
   const params = useLocalSearchParams<{ selectPinId?: string; autoPlay?: string }>();
-  
+
   // Bounding box state for map-based fetching
   const [bbox, setBbox] = useState<BoundingBox | undefined>(undefined);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Aligns with useVoicePins query key (4 decimals) — skip setState when viewport cell unchanged. */
+  const lastBboxKeyRef = useRef<string | null>(null);
 
-  const { data: latestPins = [], refetch } = useVoicePins(visibility, bbox);
+  const { data: latestPins = [], refetch, isFetching } = useVoicePins(visibility, bbox);
   const [accumulatedPins, setAccumulatedPins] = useState<VoicePin[]>([]);
 
   // Reset cache when changing filter
   useEffect(() => {
     setAccumulatedPins([]);
+    lastBboxKeyRef.current = null;
   }, [visibility]);
 
-  // Accumulate pins across different BBox queries
   useEffect(() => {
-    if (latestPins.length > 0) {
-      setAccumulatedPins((prev) => {
-        const pinMap = new Map(prev.map((p) => [p.id, p]));
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  // Merge bbox results, then evict pins far outside the padded viewport (and not near the user).
+  // Without eviction, every pan/zoom adds markers until the app runs out of native memory.
+  useEffect(() => {
+    setAccumulatedPins((prev) => {
+      const pinMap = new Map(prev.map((p) => [p.id, p]));
+      if (latestPins.length > 0) {
         latestPins.forEach((p) => pinMap.set(p.id, p));
-        return Array.from(pinMap.values());
-      });
-    }
-  }, [latestPins]);
+      }
+
+      let pins = Array.from(pinMap.values());
+
+      if (bbox) {
+        const expanded = expandBoundingBox(bbox, VIEWPORT_RETAIN_FACTOR);
+        const uLat = location?.coords.latitude;
+        const uLng = location?.coords.longitude;
+        pins = pins.filter((p) => {
+          if (pointInBoundingBox(p.latitude, p.longitude, expanded)) return true;
+          if (uLat != null && uLng != null) {
+            const d = haversineDistanceMeters(
+              { latitude: uLat, longitude: uLng },
+              { latitude: p.latitude, longitude: p.longitude }
+            );
+            if (d <= USER_PIN_RETAIN_RADIUS_M) return true;
+          }
+          return false;
+        });
+      }
+
+      if (pins.length > MAX_ACCUMULATED_PINS) {
+        const center = bbox
+          ? { latitude: (bbox.minLat + bbox.maxLat) / 2, longitude: (bbox.minLng + bbox.maxLng) / 2 }
+          : location
+            ? { latitude: location.coords.latitude, longitude: location.coords.longitude }
+            : { latitude: 0, longitude: 0 };
+        pins = [...pins]
+          .sort(
+            (a, b) =>
+              haversineDistanceMeters(center, { latitude: a.latitude, longitude: a.longitude }) -
+              haversineDistanceMeters(center, { latitude: b.latitude, longitude: b.longitude })
+          )
+          .slice(0, MAX_ACCUMULATED_PINS);
+      }
+
+      if (__DEV__) {
+        console.log(`[LazyLoad] New: ${latestPins.length}, Total (Memory): ${pins.length}`);
+      }
+
+      return pins;
+    });
+  }, [latestPins, bbox, location]);
   const dispatch = useContext(MyDispatchContext);
   const user = useContext(MyUserContext);
   const router = useRouter();
@@ -130,7 +190,7 @@ export default function HomeScreen() {
       }
     };
     if (user) {
-        checkWalkthrough();
+      checkWalkthrough();
     }
   }, [user]);
 
@@ -145,22 +205,22 @@ export default function HomeScreen() {
     }
   }, [error]);
 
-  // Debug: log current location & AR proximity state
+  // Debug: log current location & AR proximity state (Removed as per user request)
   useEffect(() => {
     if (!__DEV__) return;
     if (!arLocation) return;
-    const arCount = accumulatedPins.filter((p) => p.type?.toString?.() === "HIDDEN_AR").length;
-    console.log(
-      "[AR] location=",
-      arLocation.coords.latitude,
-      arLocation.coords.longitude,
-      "arPins=",
-      arCount,
-      "nearby=",
-      nearbyARPin?.id,
-      "d=",
-      nearbyARDistance
-    );
+    // const arCount = accumulatedPins.filter((p) => p.type?.toString?.() === "HIDDEN_AR").length;
+    // console.log(
+    //   "[AR] location=",
+    //   arLocation.coords.latitude,
+    //   arLocation.coords.longitude,
+    //   "arPins=",
+    //   arCount,
+    //   "nearby=",
+    //   nearbyARPin?.id,
+    //   "d=",
+    //   nearbyARDistance
+    // );
   }, [arLocation, accumulatedPins, nearbyARPin?.id, nearbyARDistance]);
 
   // Show AR overlay when entering 100m (anti-flicker)
@@ -237,13 +297,11 @@ export default function HomeScreen() {
     }
   };
 
-  const handleRegionChangeComplete = (region: Region) => {
-    // Clear any pending debounce
+  const handleRegionChangeComplete = useCallback((region: Region) => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
 
-    // Set 500ms debounce to prevent excessive backend requests
     debounceTimerRef.current = setTimeout(() => {
       const newBbox: BoundingBox = {
         minLat: region.latitude - region.latitudeDelta / 2,
@@ -251,9 +309,28 @@ export default function HomeScreen() {
         minLng: region.longitude - region.longitudeDelta / 2,
         maxLng: region.longitude + region.longitudeDelta / 2,
       };
+      const key = [
+        newBbox.minLat.toFixed(4),
+        newBbox.maxLat.toFixed(4),
+        newBbox.minLng.toFixed(4),
+        newBbox.maxLng.toFixed(4),
+      ].join("|");
+      if (lastBboxKeyRef.current === key) {
+        return;
+      }
+      lastBboxKeyRef.current = key;
       setBbox(newBbox);
-    }, 500);
-  };
+    }, 280);
+  }, []);
+
+  const handlePressDiscoveredPin = useCallback(() => {
+    setIsMiniCardOpen(true);
+  }, []);
+
+  const handleSelectMapPin = useCallback((pin: VoicePin | null) => {
+    setExternalSelectedPin(pin);
+    if (!pin) setAutoPlayPin(false);
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -262,23 +339,28 @@ export default function HomeScreen() {
         pins={accumulatedPins}
         isScanning={isScanning}
         discoveredPin={discoveredPin}
-        onPressDiscoveredPin={() => setIsMiniCardOpen(true)}
+        onPressDiscoveredPin={handlePressDiscoveredPin}
         externalSelectedPin={externalSelectedPin}
-        onSelectPin={(pin) => {
-          setExternalSelectedPin(pin);
-          if (!pin) setAutoPlayPin(false);
-        }}
+        onSelectPin={handleSelectMapPin}
         autoPlayPin={autoPlayPin}
         onRegionChangeComplete={handleRegionChangeComplete}
         ref={mapRef}
       />
 
+
+
       <VoiceButton
         isRecording={isRecording}
         onPress={isRecording ? stop : record}
       />
-      <TouchableOpacity 
-        style={[styles.recenterButton, { backgroundColor: currentTheme.colors.background }]}
+      <TouchableOpacity
+        style={[
+            styles.recenterButton, 
+            { 
+                backgroundColor: currentTheme.colors.surface,
+                ...currentTheme.shadow.lg 
+            }
+        ]}
         onPress={recenterMap}
         activeOpacity={0.7}
       >
@@ -296,7 +378,17 @@ export default function HomeScreen() {
       {/* Login button — chỉ hiện khi chưa đăng nhập */}
       {!user && (
         <TouchableOpacity
-          style={[styles.loginButton, { backgroundColor: currentTheme.colors.primary }]}
+          style={[
+            styles.absoluteButton, 
+            { 
+                top: 60, 
+                right: 25, 
+                backgroundColor: currentTheme.colors.primary,
+                padding: currentTheme.spacing.sm + 2,
+                borderRadius: currentTheme.borderRadius.full,
+                ...currentTheme.shadow.md,
+            }
+          ]}
           onPress={() => router.push("/(auth)/login")}
         >
           <Ionicons name="log-in-outline" size={22} color="#ffffff" />
@@ -306,7 +398,17 @@ export default function HomeScreen() {
       {/* Chat button */}
       {user && (
         <TouchableOpacity
-          style={[styles.chatButton, { backgroundColor: currentTheme.colors.background }]}
+          style={[
+            styles.absoluteButton, 
+            { 
+                top: 120, 
+                right: 25, 
+                backgroundColor: currentTheme.colors.surface,
+                padding: currentTheme.spacing.sm + 2,
+                borderRadius: currentTheme.borderRadius.full,
+                ...currentTheme.shadow.md,
+            }
+          ]}
           onPress={() => router.push("/(tabs)/home/chat")}
         >
           <Ionicons name="chatbubble-ellipses-outline" size={22} color={currentTheme.colors.primary} />
@@ -327,7 +429,7 @@ export default function HomeScreen() {
         }}
         onFriends={() => setFriendsVisible(true)}
         onTrending={() => {
-            Alert.alert("Trending", "Tính năng đang được phát triển");
+          Alert.alert("Trending", "Tính năng đang được phát triển");
         }}
         isScanning={isScanning}
         receivedCount={receivedCount}
@@ -388,10 +490,10 @@ export default function HomeScreen() {
         />
       )}
 
-      <WalkthroughOverlay 
-        visible={walkthroughVisible} 
-        steps={walkthroughSteps} 
-        onFinish={finishWalkthrough} 
+      <WalkthroughOverlay
+        visible={walkthroughVisible}
+        steps={walkthroughSteps}
+        onFinish={finishWalkthrough}
       />
     </View>
   );
@@ -399,54 +501,12 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  logoutButton: {
+  absoluteButton: {
     position: "absolute",
-    top: 60,
-    left: 25,
-    padding: theme.light.spacing.sm + 2,
-    borderRadius: theme.light.radius.full,
-    ...theme.light.shadows.md,
-    zIndex: 1000,
-  },
-  friendsButton: {
-    position: "absolute" as const,
-    top: 60,
-    right: 76,
-    padding: theme.light.spacing.sm + 2,
-    borderRadius: theme.light.radius.full,
-    ...theme.light.shadows.md,
-    zIndex: 1000,
-  },
-  notifButton: {
-    position: "absolute" as const,
-    top: 120,
-    left: 25,
-    padding: theme.light.spacing.sm + 2,
-    borderRadius: theme.light.radius.full,
-    ...theme.light.shadows.md,
-    zIndex: 1000,
-  },
-  chatButton: {
-    position: "absolute" as const,
-    top: 120,
-    right: 25,
-    padding: theme.light.spacing.sm + 2,
-    borderRadius: theme.light.radius.full,
-    ...theme.light.shadows.md,
     zIndex: 1000,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
   },
-  loginButton: {
-    position: "absolute" as const,
-    top: 60,
-    right: 25,
-    padding: theme.light.spacing.sm + 2,
-    borderRadius: theme.light.radius.full,
-    ...theme.light.shadows.md,
-    zIndex: 1000,
-  },
-
   recenterButton: {
     position: "absolute",
     bottom: 122, // Vertically centered with VoiceButton (110 + 75/2 - 50/2)
@@ -457,7 +517,6 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     justifyContent: "center",
     alignItems: "center",
-    ...theme.light.shadows.lg,
     elevation: 8,
     zIndex: 2000,
     borderWidth: 1.5,

@@ -1,6 +1,8 @@
-import axios, { AxiosInstance } from "axios";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export const BASE_URL = "http://10.0.40.121:5000";
+// Priority: Environmental Variable > Local IP Fallback
+export const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://10.5.1.144:5000";
 
 export const endpoints = {
   // Auth
@@ -17,7 +19,6 @@ export const endpoints = {
   userAvatar: "/user/me/avatar",
   userCover: "/user/me/cover",
   updateFcmToken: "/user/me/fcm-token",
-
 
   // Voice Pins
   voice: "/voice/",
@@ -69,19 +70,35 @@ export const endpoints = {
   chatPrivate: (targetUserId: string | number) => `/chat/private/${targetUserId}`,
 };
 
-
-export const authApis = (token: string): AxiosInstance => {
-  return axios.create({
-    baseURL: BASE_URL,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      // Content-Type header is removed to allow automatic boundary generation for FormData
-    },
-  });
-};
-
-const defaultAxios = axios.create({
+const axiosInstance = axios.create({
   baseURL: BASE_URL,
 });
 
-export default defaultAxios;
+axiosInstance.interceptors.request.use(
+  async (config) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (error) {
+      console.error("Error fetching token for API request", error);
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// For backward compatibility while we refactor, but we should eventually use axiosInstance directly
+export const authApis = (token?: string) => {
+  if (token) {
+    // If token is explicitly passed, use it, but prefer the interceptor approach
+    return axios.create({
+      baseURL: BASE_URL,
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  }
+  return axiosInstance;
+};
+
+export default axiosInstance;
