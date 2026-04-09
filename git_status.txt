@@ -1,0 +1,42 @@
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   .gitignore
+	modified:   app.json
+	modified:   app/(auth)/login.tsx
+	modified:   app/(auth)/register.tsx
+	modified:   app/(tabs)/home/index.tsx
+	modified:   app/(tabs)/profile/location-sharing.tsx
+	modified:   app/(tabs)/profile/settings.tsx
+	modified:   app/_layout.tsx
+	modified:   app/onboarding.tsx
+	modified:   components/discovery/SpawnedVoicePin.tsx
+	modified:   components/home/Filter.tsx
+	modified:   components/home/MapContainer.tsx
+	modified:   components/home/VoiceCameraCapture.tsx
+	modified:   components/home/VoicePinCard.tsx
+	modified:   components/home/VoiceUploadSheet.tsx
+	modified:   components/home/voice-pin/VinylRecord.tsx
+	modified:   components/home/voice-pin/useVoicePinTurntable.ts
+	modified:   configs/Apis.tsx
+	modified:   package-lock.json
+	modified:   package.json
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	android/
+	app.config.js
+	assets/images/doctor_strange.png
+	assets/images/doctor_strange_1.png
+	assets/images/marker_hidden_voice.png
+	components/home/MapboxContainer.tsx
+	components/home/voice-pin/ReactionRadialMenu.tsx
+	configs/Mapbox.ts
+	eas.json
+	git_status.txt
+	utils/mapGeoConverter.ts
+
+no changes added to commit (use "git add" and/or "git commit -a")

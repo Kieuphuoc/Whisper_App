@@ -128,11 +128,11 @@ export default function RegisterScreen() {
                 <View className="items-center mb-8">
                     <View className="w-20 h-20 rounded-full bg-white/95 justify-center items-center mb-5 shadow-violet-500/30 border-2 border-violet-500/20 elevation-12 overflow-hidden">
                         <Image
-                            source={require('../../assets/images/logo.png')}
+                            source={require('../../assets/images/doctor_strange_1.png')}
                             className="w-full h-full"
                         />
                     </View>
-                    <Text className="text-2xl font-bold text-white mb-2 shadow-black/50">Whisper of Memory</Text>
+                    <Text className="text-2xl font-bold text-white mb-2 shadow-black/50" style={{ fontFamily: 'Quicksand_700Bold' }}>Whispery</Text>
                     <Text className="text-base text-white/80 text-center shadow-black/50">Join our community today</Text>
                 </View>
 

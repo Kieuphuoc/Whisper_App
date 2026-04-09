@@ -130,7 +130,6 @@ const MapSection = forwardRef<MapView, Props>(function MapSection(
   );
 
   const clusteringEnabled = pins.length >= MIN_PINS_FOR_CLUSTERING;
-
   const initialRegion: Region = {
     latitude: location?.coords.latitude ?? FALLBACK_LAT,
     longitude: location?.coords.longitude ?? FALLBACK_LNG,
@@ -172,11 +171,12 @@ const MapSection = forwardRef<MapView, Props>(function MapSection(
         {pins.map((pin) => {
           const isAR = pin.type === VoiceType.HIDDEN_AR;
 
-          const avatarUri = (() => {
+          const imageSource = (() => {
             const userAvatar = pin.user?.avatar;
-            if (!userAvatar) return 'https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg';
-            if (userAvatar.startsWith('http')) return userAvatar;
-            return `${BASE_URL}${userAvatar.startsWith('/') ? '' : '/'}${userAvatar}`;
+            if (!userAvatar) return require('../../assets/images/marker_hidden_voice.png');
+            if (userAvatar.startsWith('http')) return { uri: userAvatar };
+            const fullUrl = `${BASE_URL}${userAvatar.startsWith('/') ? '' : '/'}${userAvatar}`;
+            return { uri: fullUrl };
           })();
 
           return (
@@ -188,23 +188,31 @@ const MapSection = forwardRef<MapView, Props>(function MapSection(
               tracksViewChanges={false}
             >
               {/* Custom pin marker */}
-              <View style={styles.markerWrap}>
-                <View style={[styles.markerBubble, isAR && styles.markerBubbleAR]}>
-                  <Image
-                    source={{ uri: avatarUri }}
-                    style={styles.markerAvatar}
-                  />
-                  {/* Small icon overlay to indicate type */}
-                  <View style={[styles.typeIndicator, { backgroundColor: isAR ? "#8b5cf6" : "#ef4444" }]}>
-                    <Ionicons
-                      name={isAR ? "sparkles" : "mic"}
-                      size={8}
-                      color="#fff"
+              {!pin.user?.avatar ? (
+                <Image
+                  source={imageSource}
+                  style={{ width: 70, height: 70 }}
+                  resizeMode="contain"
+                />
+              ) : (
+                <View style={styles.markerWrap}>
+                  <View style={[styles.markerBubble, isAR && styles.markerBubbleAR]}>
+                    <Image
+                      source={imageSource}
+                      style={styles.markerAvatar}
                     />
+                    {/* Small icon overlay to indicate type */}
+                    <View style={[styles.typeIndicator, { backgroundColor: isAR ? "#8b5cf6" : "#ef4444" }]}>
+                      <Ionicons
+                        name={isAR ? "sparkles" : "mic"}
+                        size={8}
+                        color="#fff"
+                      />
+                    </View>
                   </View>
+                  <View style={[styles.markerTail, isAR && styles.markerTailAR]} />
                 </View>
-                <View style={[styles.markerTail, isAR && styles.markerTailAR]} />
-              </View>
+              )}
 
               {/* Callout card */}
               <Callout tooltip onPress={() => setSelectedPin(pin)}>

@@ -2,9 +2,7 @@ import { Visibility } from "@/types";
 import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { Text } from "@/components/ui/text";
 
-const SEGMENT_PURPLE = "#8B5CF6";
-const SEGMENT_SURFACE = "#FFFFFF";
-const SEGMENT_INACTIVE_TEXT = "#171717";
+
 
 type FilterToggleProps = {
     value: Visibility;
@@ -23,7 +21,7 @@ const FilterToggle: React.FC<FilterToggleProps> = ({
 }) => {
     return (
         <View style={styles.filterContainer}>
-            <View style={styles.filterBento}>
+            <View style={styles.filterContent}>
                 {OPTIONS.map((opt) => (
                     <TouchableOpacity
                         key={opt.value}
@@ -37,7 +35,6 @@ const FilterToggle: React.FC<FilterToggleProps> = ({
                         <Text
                             style={[
                                 styles.filterText,
-                                { color: SEGMENT_INACTIVE_TEXT },
                                 value === opt.value && styles.activeFilterText,
                             ]}
                         >
@@ -57,37 +54,33 @@ const styles = StyleSheet.create({
         position: "absolute",
         top: 60,
         left: 16,
-        right: 16,
-        zIndex: 1,
+        zIndex: 10,
     },
 
-    filterBento: {
+    filterContent: {
         flexDirection: "row",
-        borderRadius: 20,
+        backgroundColor: "rgba(255, 255, 255, 0.9)",
+        borderRadius: 25,
         padding: 4,
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.15,
-        shadowRadius: 16,
-        elevation: 8,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
         borderWidth: 1,
+        borderColor: "rgba(0,0,0,0.05)",
     },
 
     filterButton: {
-        flex: 1,
-        paddingVertical: 12,
+        paddingVertical: 8,
         paddingHorizontal: 16,
-        borderRadius: 16,
+        borderRadius: 20,
         alignItems: "center",
+        justifyContent: "center",
     },
 
     activeFilterButton: {
         backgroundColor: "#8b5cf6",
-        shadowColor: "#8b5cf6",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 6,
     },
 
     filterText: {

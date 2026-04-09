@@ -18,6 +18,7 @@ import {
 } from '@expo-google-fonts/quicksand';
 import { setCustomText, setCustomTextInput } from 'react-native-global-props';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const queryClient = new QueryClient();
 
@@ -71,15 +72,17 @@ export default function RootLayout() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <MyUserContext.Provider value={user}>
-        <MyDispatchContext.Provider value={dispatch}>
-          <SocketProvider>
-            <RootLayoutNav user={user} />
-          </SocketProvider>
-        </MyDispatchContext.Provider>
-      </MyUserContext.Provider>
-    </QueryClientProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryClientProvider client={queryClient}>
+        <MyUserContext.Provider value={user}>
+          <MyDispatchContext.Provider value={dispatch}>
+            <SocketProvider>
+              <RootLayoutNav user={user} />
+            </SocketProvider>
+          </MyDispatchContext.Provider>
+        </MyUserContext.Provider>
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -111,21 +114,36 @@ function RootLayoutNav({ user }: { user: any }) {
   useEffect(() => {
     if (!isOnboardingChecked) return;
 
-    const inAuthGroup = segments[0] === "(auth)";
-    const inOnboarding = segments[0] === "onboarding";
+    const checkRedirect = async () => {
+      const inAuthGroup = segments[0] === "(auth)";
+      const inOnboarding = segments[0] === "onboarding";
 
-    if (!hasCompletedOnboarding && !inOnboarding) {
-      router.replace("/onboarding");
-      return;
-    }
-
-    if (hasCompletedOnboarding) {
-      if (!user && !inAuthGroup && !inOnboarding) {
-        router.replace("/login");
-      } else if (user && (inAuthGroup || inOnboarding || !segments[0])) {
-        router.replace("/home");
+      // If local state says onboarding not completed, double check AsyncStorage
+      // to avoid stale state issues during transitions.
+      let currentHasCompletedOnboarding = hasCompletedOnboarding;
+      if (!currentHasCompletedOnboarding && !inOnboarding) {
+        const completed = await AsyncStorage.getItem("onboarding_completed");
+        if (completed === "true") {
+          setHasCompletedOnboarding(true);
+          currentHasCompletedOnboarding = true;
+        }
       }
-    }
+
+      if (!currentHasCompletedOnboarding && !inOnboarding) {
+        router.replace("/onboarding");
+        return;
+      }
+
+      if (currentHasCompletedOnboarding) {
+        if (!user && !inAuthGroup && !inOnboarding) {
+          router.replace("/login");
+        } else if (user && (inAuthGroup || inOnboarding || !segments[0])) {
+          router.replace("/home");
+        }
+      }
+    };
+
+    checkRedirect();
   }, [user, segments, isOnboardingChecked, hasCompletedOnboarding]);
 
   if (!isOnboardingChecked) {

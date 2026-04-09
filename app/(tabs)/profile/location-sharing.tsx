@@ -6,7 +6,7 @@ import { useColorScheme as useNWColorScheme } from "nativewind";
 import { useRouter } from 'expo-router';
 import { SettingTabHeader } from '@/components/profile/SettingTabHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import MapView, { Marker } from 'react-native-maps';
+import Mapbox from '@/configs/Mapbox';
 import { darkMapStyle } from '@/constants/MapStyles';
 import { authApis, endpoints } from '@/configs/Apis';
 
@@ -78,26 +78,25 @@ export default function LocationSharingScreen() {
             <ScrollView contentContainerStyle={{ paddingBottom: 150 }}>
                 {/* Map Preview */}
                 <View className="h-[250px] w-full bg-gray-200 dark:bg-gray-800 relative shadow-sm">
-                    <MapView
+                    <Mapbox.MapView
                         style={{ flex: 1 }}
-                        initialRegion={{
-                            latitude: FALLBACK_LAT,
-                            longitude: FALLBACK_LNG,
-                            latitudeDelta: 0.05,
-                            longitudeDelta: 0.05,
-                        }}
-                        customMapStyle={mapType === 'dark' ? darkMapStyle : []}
-                        pitchEnabled={false}
-                        rotateEnabled={false}
-                        scrollEnabled={false}
-                        zoomEnabled={false}
+                        styleURL={mapType === 'dark' ? Mapbox.StyleURL.Dark : Mapbox.StyleURL.Light}
+                        logoEnabled={false}
+                        attributionEnabled={false}
                     >
-                        <Marker coordinate={{ latitude: FALLBACK_LAT, longitude: FALLBACK_LNG }}>
+                        <Mapbox.Camera
+                            centerCoordinate={[FALLBACK_LNG, FALLBACK_LAT]}
+                            zoomLevel={12}
+                        />
+                        <Mapbox.PointAnnotation
+                            id="sharing-marker"
+                            coordinate={[FALLBACK_LNG, FALLBACK_LAT]}
+                        >
                             <View className="w-10 h-10 rounded-full bg-primary-500/20 items-center justify-center">
                                 <View className="w-5 h-5 rounded-full bg-primary-500 border-2 border-white" />
                             </View>
-                        </Marker>
-                    </MapView>
+                        </Mapbox.PointAnnotation>
+                    </Mapbox.MapView>
                     <View className="absolute bottom-4 left-4 right-4 bg-white/90 dark:bg-gray-900/90 py-3 px-4 rounded-xl flex-row items-center shadow-lg backdrop-blur-md">
                         <Ionicons name="information-circle" size={20} color="#7ea000" />
                         <Text style={{ marginLeft: 8, fontSize: 13, color: colorScheme === 'dark' ? '#f3f4f6' : '#374151', flex: 1 }}>

@@ -1,14 +1,32 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { View, Animated, TouchableOpacity, Image, ImageBackground, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { View as MotiView } from "moti";
-import { Easing as ReanimatedEasing } from "react-native-reanimated";
+import { View as MotiView, AnimatePresence } from "moti";
 import { Text } from "../../ui/text";
 import { BASE_URL } from "@/configs/Apis";
 import { EMOTION_COLORS } from "@/constants/Emotions";
 import { WavyRipple } from "./WavyRipple";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
+import {
+  Gesture,
+  GestureDetector,
+} from "react-native-gesture-handler";
+import AnimatedRE, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withRepeat,
+  cancelAnimation,
+  runOnJS,
+  useDerivedValue,
+  useAnimatedReaction,
+  Easing as ReanimatedEasing
+} from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
+import { ReactionRadialMenu } from "./ReactionRadialMenu";
+import { REACTION_TYPES } from "./VoicePinConstants";
+import { Visibility } from "@/types";
 
 interface VinylRecordProps {
   pin: any;
@@ -22,7 +40,12 @@ interface VinylRecordProps {
   onReportPress?: () => void;
   onAlbumPress?: () => void;
   onReactionPress?: () => void;
+  onReactionSelect?: (type: string) => void;
   theme: any;
+  isCreationMode?: boolean;
+  visibility?: Visibility;
+  onVisibilityChange?: (v: Visibility) => void;
+  onPost?: () => void;
 }
 
 export function VinylRecord({
@@ -37,19 +60,112 @@ export function VinylRecord({
   onReportPress,
   onAlbumPress,
   onReactionPress,
+  onReactionSelect,
   theme,
+  isCreationMode,
+  visibility,
+  onVisibilityChange,
+  onPost,
 }: VinylRecordProps) {
   const isDark = theme.colors.background === "#0a0a14" || theme.colors.text === "#f1f5f9";
+  
+  // Bloom state for visibility
+  const [bloomVisible, setBloomVisible] = useState(false);
+
   const rawArtworkUri = pin.images?.[0]?.imageUrl ?? pin.imageUrl;
-  const artworkUri = rawArtworkUri
-    ? rawArtworkUri.startsWith("http")
-      ? rawArtworkUri
-      : `${BASE_URL}${rawArtworkUri.startsWith("/") ? "" : "/"}${rawArtworkUri}`
-    : "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&q=80";
+  const artworkUri = useMemo(() => {
+    if (!rawArtworkUri) return "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&q=80";
+    if (rawArtworkUri.startsWith("http") || rawArtworkUri.startsWith("file://") || rawArtworkUri.startsWith("ph://")) {
+      return rawArtworkUri;
+    }
+    return `${BASE_URL}${rawArtworkUri.startsWith("/") ? "" : "/"}${rawArtworkUri}`;
+  }, [rawArtworkUri]);
+
   const emotionColor = pin.emotionLabel ? EMOTION_COLORS[pin.emotionLabel as keyof typeof EMOTION_COLORS] || "#7c3aed" : theme.colors.primary;
 
+  // Gesture State
+  const radialVisible = useSharedValue(false);
+  const dragX = useSharedValue(0);
+  const dragY = useSharedValue(0);
+  const activeReaction = useSharedValue<string | null>(null);
+
+  const radialGesture = useMemo(() => Gesture.Pan()
+    .activateAfterLongPress(300)
+    .onStart(() => {
+      radialVisible.value = true;
+      runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
+    })
+    .onUpdate((e) => {
+      dragX.value = e.translationX;
+      dragY.value = e.translationY;
+
+      const dist = Math.sqrt(e.translationX ** 2 + e.translationY ** 2);
+      if (dist > 40) {
+        let angle = Math.atan2(e.translationY, e.translationX) * (180 / Math.PI);
+        angle = (angle + 360 + 90) % 360;
+
+        const step = 360 / REACTION_TYPES.length;
+        const index = Math.round(angle / step) % REACTION_TYPES.length;
+
+        const newReaction = REACTION_TYPES[index].type;
+        if (activeReaction.value !== newReaction) {
+          activeReaction.value = newReaction;
+          runOnJS(Haptics.selectionAsync)();
+        }
+      } else {
+        activeReaction.value = null;
+      }
+    })
+    .onEnd(() => {
+      if (activeReaction.value && onReactionSelect) {
+        runOnJS(onReactionSelect)(activeReaction.value);
+        runOnJS(Haptics.notificationAsync)(Haptics.NotificationFeedbackType.Success);
+      }
+      radialVisible.value = false;
+      dragX.value = 0;
+      dragY.value = 0;
+      activeReaction.value = null;
+    }), [onReactionSelect]);
+
+  const tapGesture = useMemo(() => Gesture.Tap()
+    .onEnd(() => {
+      runOnJS(onPress)();
+      runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+    }), [onPress]);
+
+  const composedGesture = useMemo(() => Gesture.Exclusive(radialGesture, tapGesture), [radialGesture, tapGesture]);
+
+  const rotation = useSharedValue(0);
+  React.useEffect(() => {
+    if (playing) {
+      rotation.value = withRepeat(
+        withTiming(360, { duration: 6000, easing: ReanimatedEasing.linear }),
+        -1,
+        false
+      );
+    } else {
+      cancelAnimation(rotation);
+    }
+  }, [playing]);
+
+  const discStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${rotation.value}deg` }]
+  }));
+
+  const handleBloomToggle = () => {
+    setBloomVisible(!bloomVisible);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const handleSelection = (v: Visibility) => {
+    if (onVisibilityChange) onVisibilityChange(v);
+    setBloomVisible(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
   return (
-    <View style={[styles.playerContainer, { backgroundColor: isDark ? "#151515" : "#FFFFFF" }]}>
+    <View style={[styles.playerContainer, { backgroundColor: isDark ? "#121212" : "#FFFFFF" }, isCreationMode && { elevation: 0, shadowOpacity: 0 }]}>
+      {/* Top Row: Re-enabled for Creation Mode with customizations */}
       <View style={styles.topRow}>
         <TouchableOpacity
           onPress={onTranscriptionToggle}
@@ -76,21 +192,33 @@ export function VinylRecord({
           )}
         </TouchableOpacity>
 
-        <View style={styles.topStatsRow}>
-          <View style={[styles.statPillSmall, { 
-            backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)",
-            paddingHorizontal: 10,
-            paddingVertical: 5,
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
-          }]}>
-            <Ionicons name="headset-outline" size={12} color={isDark ? theme.colors.primary : theme.colors.primary} />
-            <Text style={[styles.statTextSmall, { color: isDark ? "#F5F5F4" : "#1E293B", marginLeft: 4 }]}>
-              {pin.listensCount || 0}
-            </Text>
+        {pin.emotionLabel && (
+          <View style={styles.emotionTagCenter}>
+            <BlurView intensity={20} tint={isDark ? "dark" : "light"} style={styles.emotionTagPill}>
+              <View style={[styles.emotionDot, { backgroundColor: emotionColor }]} />
+              <Text style={[styles.emotionTagText, { color: isDark ? "#F5F5F4" : "#1E293B" }]}>{pin.emotionLabel}</Text>
+            </BlurView>
           </View>
-        </View>
+        )}
+
+        {/* Stats hidden in creation mode */}
+        {!isCreationMode && (
+          <View style={styles.topStatsRow}>
+            <View style={[styles.statPillSmall, {
+              backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)",
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+            }]}>
+              <Ionicons name="headset-outline" size={12} color={isDark ? theme.colors.primary : theme.colors.primary} />
+              <Text style={[styles.statTextSmall, { color: isDark ? "#F5F5F4" : "#1E293B", marginLeft: 4 }]}>
+                {pin.listensCount || 0}
+              </Text>
+            </View>
+          </View>
+        )}
       </View>
 
       <View style={styles.recordStage}>
@@ -99,30 +227,32 @@ export function VinylRecord({
           color={emotionColor}
           emotionLabel={pin.emotionLabel}
         />
-        <TouchableOpacity activeOpacity={0.9} onPress={onPress} style={styles.recordTouchArea}>
-          <Animated.View style={[styles.vinylPlate, { transform: [{ rotate: spin }] }]}>
-            <View style={styles.vinylBlackDisk}>
-              <ImageBackground
-                source={{ uri: artworkUri }}
-                style={styles.diskArtwork}
-                imageStyle={styles.diskArtworkImage}
-              >
-                {/* <View style={styles.diskArtworkOverlay} />
-                <View style={styles.diskGrooveRingOuter} />
-                <View style={styles.diskGrooveRingMid} />
-                <View style={styles.diskGrooveRingInner} />
-                <View style={styles.recordCenterLabel}>
-                  <Image
-                    source={{ uri: artworkUri }}
-                    style={styles.recordImage}
-                    resizeMode="cover"
-                  />
-                </View> */}
-                <View style={styles.recordSpindle} />
-              </ImageBackground>
-            </View>
-          </Animated.View>
-        </TouchableOpacity>
+        <GestureDetector gesture={composedGesture}>
+          <AnimatedRE.View collapsable={false}>
+            <AnimatedRE.View style={[styles.vinylPlate, discStyle]}>
+              <View style={styles.vinylBlackDisk}>
+                <ImageBackground
+                  source={{ uri: artworkUri }}
+                  style={styles.diskArtwork}
+                  imageStyle={styles.diskArtworkImage}
+                >
+                  <View style={styles.recordSpindle} />
+                </ImageBackground>
+              </View>
+            </AnimatedRE.View>
+          </AnimatedRE.View>
+        </GestureDetector>
+
+        {!isCreationMode && (
+          <ReactionRadialMenu
+            visible={radialVisible.value}
+            dragX={dragX}
+            dragY={dragY}
+            activeReaction={activeReaction}
+            isDark={isDark}
+            theme={theme}
+          />
+        )}
       </View>
 
       <Animated.View
@@ -142,7 +272,7 @@ export function VinylRecord({
               from={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', damping: 15 }}
-              style={[styles.avatarOuter, { borderColor: isDark ? '#fff' : '#1a1a1a' }]}
+              style={styles.avatarOuter}
             >
               <Image
                 source={{ uri: pin.user?.avatar ? (pin.user.avatar.startsWith('http') ? pin.user.avatar : `${BASE_URL}${pin.user.avatar.startsWith('/') ? '' : '/'}${pin.user.avatar}`) : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y' }}
@@ -170,40 +300,98 @@ export function VinylRecord({
         </BlurView>
 
         <View style={styles.actionsGroup}>
-          <TouchableOpacity
-            onPress={onReactionPress}
-            style={styles.actionButtonContainer}
-            activeOpacity={0.7}
-          >
-            <LinearGradient
-              colors={isDark ? ['#7c3aed', '#4338ca'] : ['#8b5cf6', '#6366f1']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.actionButtonGradient}
-            >
-              <Ionicons name="heart" size={16} color="#FFFFFF" />
-            </LinearGradient>
-          </TouchableOpacity>
+          {isCreationMode ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {/* Bloom Visibility Menu */}
+              <AnimatePresence>
+                {bloomVisible && (
+                  <MotiView
+                    from={{ opacity: 0, scale: 0, translateX: 20 }}
+                    animate={{ opacity: 1, scale: 1, translateX: 0 }}
+                    exit={{ opacity: 0, scale: 0, translateX: 10 }}
+                    transition={{ type: 'spring', damping: 15 }}
+                    style={styles.bloomContainer}
+                  >
+                    <TouchableOpacity onPress={() => handleSelection('PUBLIC')} style={styles.bloomIcon}>
+                      <Ionicons name="earth-outline" size={16} color={visibility === 'PUBLIC' ? theme.colors.primary : "#94a3b8"} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleSelection('FRIENDS')} style={styles.bloomIcon}>
+                      <Ionicons name="people-outline" size={16} color={visibility === 'FRIENDS' ? theme.colors.primary : "#94a3b8"} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleSelection('PRIVATE')} style={styles.bloomIcon}>
+                      <Ionicons name="lock-closed-outline" size={16} color={visibility === 'PRIVATE' ? theme.colors.primary : "#94a3b8"} />
+                    </TouchableOpacity>
+                  </MotiView>
+                )}
+              </AnimatePresence>
 
-          <TouchableOpacity
-            onPress={onAlbumPress}
-            style={styles.actionButtonContainer}
-            activeOpacity={0.7}
-          >
-            <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={styles.actionButtonBlur}>
-               <Ionicons name="library" size={16} color={isDark ? "#FFFFFF" : theme.colors.primary} />
-            </BlurView>
-          </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleBloomToggle}
+                style={[styles.actionButtonContainer, bloomVisible && { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" }]}
+                activeOpacity={0.7}
+              >
+                <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={styles.actionButtonBlur}>
+                  <Ionicons 
+                    name={visibility === 'PUBLIC' ? 'earth-outline' : visibility === 'FRIENDS' ? 'people-outline' : 'lock-closed-outline'} 
+                    size={18} 
+                    color={bloomVisible ? theme.colors.primary : (isDark ? "#FFFFFF" : theme.colors.primary)} 
+                  />
+                </BlurView>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={onReportPress}
-            style={styles.actionButtonContainer}
-            activeOpacity={0.7}
-          >
-            <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={styles.actionButtonBlur}>
-              <Ionicons name="flag-outline" size={14} color={isDark ? "#FB7185" : "#E11D48"} />
-            </BlurView>
-          </TouchableOpacity>
+              <View style={{ width: 8 }} />
+
+              <TouchableOpacity
+                onPress={onPost}
+                style={styles.actionButtonContainer}
+                activeOpacity={0.7}
+              >
+                <LinearGradient
+                  colors={['#7c3aed', '#4338ca']}
+                  style={styles.actionButtonGradient}
+                >
+                  <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              <TouchableOpacity
+                onPress={onReactionPress}
+                style={styles.actionButtonContainer}
+                activeOpacity={0.7}
+              >
+                <LinearGradient
+                  colors={isDark ? ['#7c3aed', '#4338ca'] : ['#8b5cf6', '#6366f1']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.actionButtonGradient}
+                >
+                  <Ionicons name="heart" size={16} color="#FFFFFF" />
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={onAlbumPress}
+                style={styles.actionButtonContainer}
+                activeOpacity={0.7}
+              >
+                <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={styles.actionButtonBlur}>
+                  <Ionicons name="library" size={16} color={isDark ? "#FFFFFF" : theme.colors.primary} />
+                </BlurView>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={onReportPress}
+                style={styles.actionButtonContainer}
+                activeOpacity={0.7}
+              >
+                <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={styles.actionButtonBlur}>
+                  <Ionicons name="flag-outline" size={14} color={isDark ? "#FB7185" : "#E11D48"} />
+                </BlurView>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
     </View>
@@ -243,6 +431,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  emotionTagCenter: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: -1,
+  },
+  emotionTagPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    overflow: "hidden",
+    gap: 6,
+  },
+  emotionDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  emotionTagText: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
   recordStage: {
     flex: 1,
     justifyContent: "center",
@@ -250,9 +467,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingTop: 8,
     paddingBottom: 34,
-  },
-  recordTouchArea: {
-    zIndex: 1,
   },
   vinylPlate: {
     width: 236,
@@ -287,51 +501,6 @@ const styles = StyleSheet.create({
   diskArtworkImage: {
     borderRadius: 113,
   },
-  diskArtworkOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.30)",
-  },
-  diskGrooveRingOuter: {
-    position: "absolute",
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-  },
-  diskGrooveRingMid: {
-    position: "absolute",
-    width: 146,
-    height: 146,
-    borderRadius: 73,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-  },
-  diskGrooveRingInner: {
-    position: "absolute",
-    width: 114,
-    height: 114,
-    borderRadius: 57,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-  },
-  recordCenterLabel: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: "rgba(15,23,42,0.7)",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.28)",
-  },
-  recordImage: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.92)",
-  },
   recordSpindle: {
     position: "absolute",
     width: 8,
@@ -346,7 +515,8 @@ const styles = StyleSheet.create({
     height: 250,
     width: 136,
     alignItems: "center",
-    zIndex: 5,
+    zIndex: 10,
+    elevation: 20,
     // @ts-ignore
     transformOrigin: ["50%", "0%", 0],
   },
@@ -374,8 +544,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
     borderRadius: 20,
     overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
+    borderWidth: 0,
   },
   userProfileSection: {
     flexDirection: "row",
@@ -386,7 +555,6 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 18,
-    borderWidth: 2,
     elevation: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -472,5 +640,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.15)",
+  },
+  bloomContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 18,
+    marginRight: 8,
+    paddingHorizontal: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  bloomIcon: {
+    padding: 8,
   },
 });

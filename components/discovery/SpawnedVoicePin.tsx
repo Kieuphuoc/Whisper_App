@@ -46,11 +46,11 @@ export default function SpawnedVoicePin({ pin, onPress }: Props) {
         opacity: interpolate(pulse.value, [1, 1.4], [0.5, 0]),
     }));
 
-    const avatarUri = (() => {
+    const imageSource = (() => {
         const userAvatar = pin.user?.avatar;
-        if (!userAvatar) return 'https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg';
-        if (userAvatar.startsWith('http')) return userAvatar;
-        return `${BASE_URL}${userAvatar.startsWith('/') ? '' : '/'}${userAvatar}`;
+        if (!userAvatar) return require('../../assets/images/marker_hidden_voice.png');
+        if (userAvatar.startsWith('http')) return { uri: userAvatar };
+        return { uri: `${BASE_URL}${userAvatar.startsWith('/') ? '' : '/'}${userAvatar}` };
     })();
 
     return (
@@ -64,9 +64,9 @@ export default function SpawnedVoicePin({ pin, onPress }: Props) {
                     style={[
                         {
                             position: 'absolute',
-                            width: 50,
-                            height: 50,
-                            borderRadius: 25,
+                            width: !pin.user?.avatar ? 85 : 50,
+                            height: !pin.user?.avatar ? 85 : 50,
+                            borderRadius: !pin.user?.avatar ? 42.5 : 25,
                             backgroundColor: '#a78bfa',
                         },
                         animatedPulse
@@ -74,7 +74,10 @@ export default function SpawnedVoicePin({ pin, onPress }: Props) {
                 />
                 <Animated.View
                     style={[
-                        {
+                        !pin.user?.avatar ? {
+                            width: 75,
+                            height: 75,
+                        } : {
                             width: 44,
                             height: 44,
                             borderRadius: 14,
@@ -92,42 +95,47 @@ export default function SpawnedVoicePin({ pin, onPress }: Props) {
                         animatedMarker
                     ]}
                 >
-                    <Image 
-                        source={{ uri: avatarUri }} 
-                        style={{ width: '100%', height: '100%', borderRadius: 12 }} 
+                    <Image
+                        source={imageSource}
+                        style={!pin.user?.avatar ? { width: '100%', height: '100%' } : { width: '100%', height: '100%', borderRadius: 12 }}
+                        resizeMode="contain"
                     />
-                    <View style={{
-                        position: 'absolute',
-                        bottom: -4,
-                        right: -4,
-                        width: 18,
-                        height: 18,
-                        borderRadius: 9,
-                        backgroundColor: '#8b5cf6',
-                        borderWidth: 2,
-                        borderColor: '#fff',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                    }}>
-                        <Ionicons name="sparkles" size={10} color="white" />
-                    </View>
+                    {pin.user?.avatar && (
+                        <View style={{
+                            position: 'absolute',
+                            bottom: -4,
+                            right: -4,
+                            width: 18,
+                            height: 18,
+                            borderRadius: 9,
+                            backgroundColor: '#8b5cf6',
+                            borderWidth: 2,
+                            borderColor: '#fff',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                        }}>
+                            <Ionicons name="sparkles" size={10} color="white" />
+                        </View>
+                    )}
                 </Animated.View>
-                <Animated.View
-                    style={[
-                        {
-                            width: 0,
-                            height: 0,
-                            borderLeftWidth: 6,
-                            borderRightWidth: 6,
-                            borderTopWidth: 10,
-                            borderLeftColor: 'transparent',
-                            borderRightColor: 'transparent',
-                            borderTopColor: '#8b5cf6',
-                            marginTop: -1,
-                        },
-                        animatedMarker
-                    ]}
-                />
+                {pin.user?.avatar && (
+                    <Animated.View
+                        style={[
+                            {
+                                width: 0,
+                                height: 0,
+                                borderLeftWidth: 6,
+                                borderRightWidth: 6,
+                                borderTopWidth: 10,
+                                borderLeftColor: 'transparent',
+                                borderRightColor: 'transparent',
+                                borderTopColor: '#8b5cf6',
+                                marginTop: -1,
+                            },
+                            animatedMarker
+                        ]}
+                    />
+                )}
             </View>
         </Marker>
     );

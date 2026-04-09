@@ -108,14 +108,31 @@ export default function LoginScreen() {
       >
         {/* Header Section */}
         <View className="items-center mb-10">
-          <View className="w-20 h-20 rounded-full bg-white/95 justify-center items-center mb-5 shadow-violet-500/30 border-2 border-violet-500/20 elevation-12 overflow-hidden">
+          <View className="w-44 h-44 justify-center items-center overflow-hidden mb-2">
             <Image
-              source={require('../../assets/images/logo.png')}
+              source={require('../../assets/images/doctor_strange_1.png')}
               className="w-full h-full"
+              resizeMode="contain"
             />
           </View>
-          <Text className="text-2xl font-bold text-white mb-2 shadow-black/50">Whisper of Memory</Text>
-          <Text className="text-base text-white/80 text-center shadow-black/50">Capture moments through voice</Text>
+          <Text 
+            className="text-6xl text-white mb-2"
+            style={{ 
+              fontFamily: 'Quicksand_700Bold', 
+              letterSpacing: -2,
+              textShadowColor: 'rgba(0, 0, 0, 0.4)', 
+              textShadowOffset: { width: 0, height: 4 }, 
+              textShadowRadius: 10 
+            }}
+          >
+            Whispery
+          </Text>
+          <Text 
+            className="text-lg text-white/60 text-center tracking-widest uppercase"
+            style={{ fontFamily: 'Quicksand_500Medium' }}
+          >
+            Capture moments
+          </Text>
         </View>
 
         {/* Login Form */}

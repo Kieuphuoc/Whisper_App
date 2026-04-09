@@ -97,11 +97,15 @@ export default function VoiceCameraCapture({ visible, onPhotoTaken, onSkip }: Pr
                     </TouchableOpacity>
                 </View>
 
-                {/* Philosophical text */}
-                <View style={styles.mottoContainer} pointerEvents="none">
-                    <Text style={styles.mottoText}>
-                        "Ảnh này để nhớ,{"\n"}không phải để đẹp"
-                    </Text>
+                {/* Circular Capture Guide */}
+                <View style={styles.guideContainer} pointerEvents="none">
+                    <View style={styles.guideCircle}>
+                        <View style={styles.guideBracketTop} />
+                        <View style={styles.guideBracketBottom} />
+                        <View style={styles.guideBracketLeft} />
+                        <View style={styles.guideBracketRight} />
+                        <View style={styles.guideCenterCross} />
+                    </View>
                 </View>
 
                 {/* Bottom controls — shutter only */}
@@ -202,22 +206,71 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "500",
     },
-    mottoContainer: {
-        position: "absolute",
-        bottom: 160,
-        left: 0,
-        right: 0,
+    guideContainer: {
+        ...StyleSheet.absoluteFillObject,
+        justifyContent: "center",
         alignItems: "center",
-        paddingHorizontal: 32,
     },
-    mottoText: {
-        color: "rgba(255,255,255,0.85)",
-        fontSize: 16,
-        fontWeight: "300",
-        fontStyle: "italic",
-        textAlign: "center",
-        lineHeight: 24,
-        letterSpacing: 0.3,
+    guideCircle: {
+        width: width * 0.85,
+        height: width * 0.85,
+        borderRadius: (width * 0.85) / 2,
+        borderWidth: 2,
+        borderColor: "rgba(255, 255, 255, 0.15)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    guideBracketTop: {
+        position: "absolute",
+        top: -2,
+        width: 30,
+        height: 4,
+        backgroundColor: "#8b5cf6",
+        borderRadius: 2,
+        shadowColor: "#8b5cf6",
+        shadowOpacity: 0.8,
+        shadowRadius: 10,
+    },
+    guideBracketBottom: {
+        position: "absolute",
+        bottom: -2,
+        width: 30,
+        height: 4,
+        backgroundColor: "#8b5cf6",
+        borderRadius: 2,
+        shadowColor: "#8b5cf6",
+        shadowOpacity: 0.8,
+        shadowRadius: 10,
+    },
+    guideBracketLeft: {
+        position: "absolute",
+        left: -2,
+        width: 4,
+        height: 30,
+        backgroundColor: "#8b5cf6",
+        borderRadius: 2,
+        shadowColor: "#8b5cf6",
+        shadowOpacity: 0.8,
+        shadowRadius: 10,
+    },
+    guideBracketRight: {
+        position: "absolute",
+        right: -2,
+        width: 4,
+        height: 30,
+        backgroundColor: "#8b5cf6",
+        borderRadius: 2,
+        shadowColor: "#8b5cf6",
+        shadowOpacity: 0.8,
+        shadowRadius: 10,
+    },
+    guideCenterCross: {
+        width: 14,
+        height: 14,
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.6)",
+        borderRadius: 7,
+        backgroundColor: "rgba(139, 92, 246, 0.2)",
     },
     bottomBar: {
         position: "absolute",

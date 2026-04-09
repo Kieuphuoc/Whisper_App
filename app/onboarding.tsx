@@ -9,6 +9,8 @@ import {
   Animated,
   StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -50,6 +52,8 @@ const SLIDES = [
 ];
 
 export default function OnboardingScreen() {
+  const insets = useSafeAreaInsets();
+
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
@@ -130,7 +134,8 @@ export default function OnboardingScreen() {
         ref={slidesRef}
       />
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) + 10 }]}>
+
         <View style={styles.pagination}>
           {SLIDES.map((_, i) => {
             const inputRange = [(i - 1) * width, i * width, (i + 1) * width];

@@ -5,6 +5,7 @@ import { StyleSheet, TouchableOpacity, View, Alert, useColorScheme } from "react
 import MapView, { Region } from "react-native-maps";
 
 import MapContainer from "@/components/home/MapContainer";
+import MapboxContainer from "@/components/home/MapboxContainer";
 import VoiceButton from "@/components/home/VoiceButton";
 import VoiceCameraCapture from "@/components/home/VoiceCameraCapture";
 import VoiceUploadSheet from "@/components/home/VoiceUploadSheet";
@@ -39,6 +40,8 @@ const VIEWPORT_RETAIN_FACTOR = 2.35;
 const USER_PIN_RETAIN_RADIUS_M = 1600;
 /** Hard cap on markers in memory — native maps OOM if this grows without bound. */
 const MAX_ACCUMULATED_PINS = 450;
+
+const USE_MAPBOX = true; // Chuyển thành true sau khi đã điền đủ Token và Build lại app
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme() || "light";
@@ -115,7 +118,7 @@ export default function HomeScreen() {
       }
 
       if (__DEV__) {
-        console.log(`[LazyLoad] New: ${latestPins.length}, Total (Memory): ${pins.length}`);
+        console.log(`[HomeScreen] BBox pins fetched: ${latestPins.length}, Accumulated: ${pins.length}`);
       }
 
       return pins;
@@ -283,15 +286,22 @@ export default function HomeScreen() {
 
   const recenterMap = () => {
     if (location && mapRef.current) {
-      const region = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      };
-      mapRef.current.animateToRegion(region, 1000);
-      // Manually trigger region change logic for immediate fetch if needed
-      handleRegionChangeComplete(region);
+      if (USE_MAPBOX) {
+        // Mapbox animate to point
+        (mapRef.current as any).setCamera({
+          centerCoordinate: [location.coords.longitude, location.coords.latitude],
+          zoomLevel: 14,
+          animationDuration: 1000,
+        });
+      } else {
+        const region = {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        };
+        (mapRef.current as any).animateToRegion(region, 1000);
+      }
     } else if (!location) {
       Alert.alert("Vị trí", "Đang lấy vị trí của bạn...");
     }
@@ -334,18 +344,33 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <MapContainer
-        location={location}
-        pins={accumulatedPins}
-        isScanning={isScanning}
-        discoveredPin={discoveredPin}
-        onPressDiscoveredPin={handlePressDiscoveredPin}
-        externalSelectedPin={externalSelectedPin}
-        onSelectPin={handleSelectMapPin}
-        autoPlayPin={autoPlayPin}
-        onRegionChangeComplete={handleRegionChangeComplete}
-        ref={mapRef}
-      />
+      {USE_MAPBOX ? (
+        <MapboxContainer
+          location={location}
+          pins={accumulatedPins}
+          isScanning={isScanning}
+          discoveredPin={discoveredPin}
+          onPressDiscoveredPin={handlePressDiscoveredPin}
+          externalSelectedPin={externalSelectedPin}
+          onSelectPin={handleSelectMapPin}
+          autoPlayPin={autoPlayPin}
+          onRegionChangeComplete={handleRegionChangeComplete}
+          ref={mapRef as any}
+        />
+      ) : (
+        <MapContainer
+          location={location}
+          pins={accumulatedPins}
+          isScanning={isScanning}
+          discoveredPin={discoveredPin}
+          onPressDiscoveredPin={handlePressDiscoveredPin}
+          externalSelectedPin={externalSelectedPin}
+          onSelectPin={handleSelectMapPin}
+          autoPlayPin={autoPlayPin}
+          onRegionChangeComplete={handleRegionChangeComplete}
+          ref={mapRef as any}
+        />
+      )}
 
 
 
@@ -418,7 +443,7 @@ export default function HomeScreen() {
 
       <FilterToggle value={visibility} onChange={setVisibility} />
 
-      <StatsBento voicePins={accumulatedPins} />
+      {/* <StatsBento voicePins={accumulatedPins} /> */}
       <QuickActions
         onExplore={() => {
           if (location) {

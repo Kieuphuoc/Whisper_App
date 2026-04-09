@@ -126,7 +126,13 @@ export function useVoicePinTurntable(pin: VoicePin, autoPlay: boolean) {
   };
 
   const handleReaction = async (type: string | null) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7563/ingest/7bee5893-5664-4b9f-a0df-553827003edb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a18a31'},body:JSON.stringify({sessionId:'a18a31',runId:'pre-fix',hypothesisId:'R1',location:'useVoicePinTurntable.ts:129',message:'handleReaction called',data:{pinId:pin.id,type:type??null,currentUserReaction:userReaction},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     const token = await AsyncStorage.getItem("token");
+    // #region agent log
+    fetch('http://127.0.0.1:7563/ingest/7bee5893-5664-4b9f-a0df-553827003edb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a18a31'},body:JSON.stringify({sessionId:'a18a31',runId:'pre-fix',hypothesisId:'R2',location:'useVoicePinTurntable.ts:132',message:'token loaded for reaction',data:{hasToken:!!token},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     if (!token) {
       Alert.alert("Thông báo", "Bạn cần đăng nhập để thả tim.");
       return;
@@ -136,9 +142,15 @@ export function useVoicePinTurntable(pin: VoicePin, autoPlay: boolean) {
 
     try {
       if (type === null || (userReaction === type && type === "LIKE")) {
+        // #region agent log
+        fetch('http://127.0.0.1:7563/ingest/7bee5893-5664-4b9f-a0df-553827003edb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a18a31'},body:JSON.stringify({sessionId:'a18a31',runId:'pre-fix',hypothesisId:'R3',location:'useVoicePinTurntable.ts:143',message:'attempt delete reaction',data:{pinId:pin.id,type:type??null},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         setReactionCount((prev) => Math.max(0, prev - 1));
         setUserReaction(null);
         await api.delete(endpoints.reactionDelete(pin.id));
+        // #region agent log
+        fetch('http://127.0.0.1:7563/ingest/7bee5893-5664-4b9f-a0df-553827003edb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a18a31'},body:JSON.stringify({sessionId:'a18a31',runId:'pre-fix',hypothesisId:'R3',location:'useVoicePinTurntable.ts:147',message:'delete reaction success',data:{pinId:pin.id},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         return;
       }
 
@@ -150,8 +162,18 @@ export function useVoicePinTurntable(pin: VoicePin, autoPlay: boolean) {
 
       fireVibe(type);
 
+      // #region agent log
+      fetch('http://127.0.0.1:7563/ingest/7bee5893-5664-4b9f-a0df-553827003edb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a18a31'},body:JSON.stringify({sessionId:'a18a31',runId:'pre-fix',hypothesisId:'R4',location:'useVoicePinTurntable.ts:159',message:'attempt create/update reaction',data:{pinId:pin.id,type,isChanging},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       await api.post(endpoints.reaction, { voicePinId: pin.id, type });
+      // #region agent log
+      fetch('http://127.0.0.1:7563/ingest/7bee5893-5664-4b9f-a0df-553827003edb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a18a31'},body:JSON.stringify({sessionId:'a18a31',runId:'pre-fix',hypothesisId:'R4',location:'useVoicePinTurntable.ts:162',message:'create/update reaction success',data:{pinId:pin.id,type},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
     } catch (err) {
+      const e = err as any;
+      // #region agent log
+      fetch('http://127.0.0.1:7563/ingest/7bee5893-5664-4b9f-a0df-553827003edb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a18a31'},body:JSON.stringify({sessionId:'a18a31',runId:'pre-fix',hypothesisId:'R5',location:'useVoicePinTurntable.ts:166',message:'reaction request failed',data:{pinId:pin.id,type:type??null,errorMessage:e?.message??String(err),status:e?.response?.status??null,responseData:e?.response?.data??null},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       console.log("Error reacting", err);
       Alert.alert("Lỗi", "Không thể thả tim. Vui lòng thử lại sau.");
     }

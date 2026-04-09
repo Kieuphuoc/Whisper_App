@@ -150,6 +150,7 @@ export default function VoicePinTurntable({
                onReportPress={() => setShowReportModal(true)}
                onAlbumPress={() => setShowAddToAlbum(true)}
                onReactionPress={toggleReactions}
+               onReactionSelect={handleReaction}
                isThinking={isThinking}
                showTranscription={showTranscription}
                theme={currentTheme}
