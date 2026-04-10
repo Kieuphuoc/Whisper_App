@@ -1,6 +1,6 @@
 # Design Preferences Analysis - Whisper App
 
-This document outlines the visual identity and design language established in the Whisper application, specifically based on the Profile and UI components.
+This document outlines the visual identity and design language established in the Whisper application, specifically based on the Profile, Chatroom, and Voice-AR components.
 
 ## Core Aesthetic: Avant-Garde Glassmorphism
 The application follows a "Glassmorphism" design style combined with "Avant-Garde" experimental layouts.
@@ -12,15 +12,28 @@ The application follows a "Glassmorphism" design style combined with "Avant-Gard
 - **Layering**: Deep shadows (`shadowRadius: 20`, `shadowOpacity: 0.3`) and layered containers to create a sense of floating elements.
 
 ### 2. Color Palette
-- **Primary**: Vibrant Purple/Violet (`#7c3aed`, `#4338ca`).
-- **Surface**: Dark/Midnight backgrounds with translucent overlays (`rgba(0,0,0,0.2)` to `rgba(0,0,0,0.8)`).
-- **Accents**: 
-  - Emerald Green (`#10b981`) for secondary indicators.
-  - White/Silver for high-contrast text and icons.
-- **Theme**: Primarily Dark Mode focused, but with adaptive structures for Light Mode using the `theme` constant.
+- **Primary (Voice-AR Base)**:
+  - Action Violet: `#8b5cf6` (primary CTA/background action color).
+  - Signal Violet: `#a78bfa` (ring, glow, directional cue).
+  - Soft Violet: `#c4b5fd`, `#ddd6fe` (sparkle, badge text, highlights).
+- **Surface**:
+  - Dark Base: `#05060a` and camera black `#000000`.
+  - Light Fallback: `#f5f7ff`.
+  - Glass Surface: `rgba(17,24,39,0.70)` to `rgba(17,24,39,0.75)`.
+  - Floating Overlay: `rgba(0,0,0,0.35)`.
+- **Borders / Strokes**:
+  - Primary glass stroke: `rgba(255,255,255,0.12)`.
+  - Secondary glass stroke: `rgba(255,255,255,0.16)`.
+  - Violet stroke: `rgba(139,92,246,0.35)` to `rgba(139,92,246,0.45)`.
+- **Text**:
+  - On dark: `#ffffff`, `#e5e7eb`, and soft white (`rgba(255,255,255,0.75-0.92)`).
+  - On light: `#111827`.
+- **Semantic Accent**:
+  - Keep Emerald (`#10b981`) only for "active/live signal" states, not as dominant brand color.
+- **Theme Rule**: Dark-first visual language remains the default, with light mode as a contrast-safe fallback.
 
 ### 3. Motion & Micro-interactions
-- **Entry Animations**: Using `Moti` for spring-based entrance effects (scale, rotate, translate).
+- **Entry Animations**: Using Moti for calm, subtle entrance effects such as fade-in combined with slight scale (0.95 → 1) and gentle upward translate (a few px), paired with a soft spring (low bounce) to create a smooth and composed feel.
 - **Atmospheric Effects**:
   - **Shimmer Flash**: Periodic light streaks passing through interactive elements.
   - **Glow/Aura**: Subtle pulsing glow effects around active components or call-to-actions.

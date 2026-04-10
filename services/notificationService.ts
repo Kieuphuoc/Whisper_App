@@ -14,42 +14,50 @@ Notifications.setNotificationHandler({
 });
 
 export async function registerForPushNotificationsAsync(userToken: string) {
+  // Flag to temporarily disable push notifications
+  const ENABLE_NOTIFICATIONS = false;
+  if (!ENABLE_NOTIFICATIONS) return;
+
   let token;
 
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF231F7C',
-    });
-  }
+  try {
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF231F7C',
+      });
+    }
 
-  if (Device.isDevice) {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-    if (finalStatus !== 'granted') {
-      console.log('Failed to get push token for push notification!');
-      return;
-    }
-    
-    // Get the FCM token
-    token = (await Notifications.getDevicePushTokenAsync()).data;
-    console.log('FCM Token:', token);
+    if (Device.isDevice) {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== 'granted') {
+        console.log('Failed to get push token for push notification!');
+        return;
+      }
+      
+      // Get the FCM token
+      token = (await Notifications.getDevicePushTokenAsync()).data;
+      console.log('FCM Token:', token);
 
-    // Send token to backend
-    try {
-      await authApis(userToken).put(endpoints.updateFcmToken, { fcmToken: token });
-      console.log('FCM Token synced with backend');
-    } catch (error) {
-      console.error('Error syncing FCM token:', error);
+      // Send token to backend
+      try {
+        await authApis(userToken).put(endpoints.updateFcmToken, { fcmToken: token });
+        console.log('FCM Token synced with backend');
+      } catch (error) {
+        console.error('Error syncing FCM token:', error);
+      }
+    } else {
+      console.log('Must use physical device for Push Notifications');
     }
-  } else {
-    console.log('Must use physical device for Push Notifications');
+  } catch (error) {
+    console.error('Push Notification Error (Ignored):', error);
   }
 
   return token;

@@ -49,12 +49,6 @@ const QuickActions: React.FC<QuickActionsProps> = ({
                 <Text style={[styles.quickActionText, { color: currentTheme.colors.textSecondary }]}>Bạn bè</Text>
             </TouchableOpacity>
 
-{/* <TouchableOpacity style={styles.quickActionButton} onPress={onTrending}>
-    <View style={styles.quickActionIcon}>
-        <Ionicons name="trending-up" size={20} color="#8b5cf6" />
-    </View>
-    <Text style={[styles.quickActionText, { color: currentTheme.colors.textSecondary }]}>Xu hướng</Text>
-</TouchableOpacity> */}
         </View>
     );
 };

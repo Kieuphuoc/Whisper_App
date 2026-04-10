@@ -7,11 +7,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApis, endpoints } from '@/configs/Apis';
 import { useSocket } from '@/hooks/useSocket';
 import { View, StyleSheet, Platform } from 'react-native';
-import { registerForPushNotificationsAsync } from '@/services/notificationService';
+import { registerForPushNotificationsAsync, addNotificationResponseListener } from '@/services/notificationService';
+import { useRouter } from 'expo-router';
+
+import CustomTabBar from '@/components/ui/CustomTabBar';
 
 export default function TabLayout() {
     const user = useContext(MyUserContext);
     const segments = useSegments();
+    const router = useRouter();
     const [unreadCount, setUnreadCount] = useState(0);
     const [isReady, setIsReady] = useState(false);
     const isFetchingRef = useRef(false);
@@ -42,21 +46,34 @@ export default function TabLayout() {
 
     useEffect(() => {
         if (user) {
-            AsyncStorage.getItem('token').then((token) => {
-                if (token) registerForPushNotificationsAsync(token);
-            });
+            // Temporarily disabled push notifications
+            // AsyncStorage.getItem('token').then((token) => {
+            //     if (token) registerForPushNotificationsAsync(token);
+            // });
 
             fetchUnreadCount();
             const interval = setInterval(fetchUnreadCount, 30000);
 
-            on('new_message', () => fetchUnreadCount());
+            const handleNewMessage = () => fetchUnreadCount();
+            on('new_message', handleNewMessage);
+
+            // Temporarily disabled notification listener
+            // const notifResponseSub = addNotificationResponseListener((response) => {
+            //     const data = response.notification.request.content.data as any;
+            //     if (data?.voicePinId) {
+            //         router.push({ pathname: '/(tabs)/home/voiceDetail', params: { id: String(data.voicePinId) } });
+            //     } else if (data?.senderId) {
+            //         router.push({ pathname: '/user/[id]', params: { id: String(data.senderId) } });
+            //     }
+            // });
 
             return () => {
                 clearInterval(interval);
-                off('new_message');
+                off('new_message', handleNewMessage);
+                // notifResponseSub.remove();
             };
         }
-    }, [user, fetchUnreadCount, on, off]);
+    }, [user, fetchUnreadCount, on, off, router]);
 
     if (!isReady) return null;
     if (!user) return <Redirect href="/login" />;
@@ -95,16 +112,7 @@ export default function TabLayout() {
                 options={{
                     title: 'Ký ức',
                     tabBarIcon: ({ color, focused }) => (
-                        <Ionicons name={focused ? "planet" : "planet-outline"} size={26} color={color} />
-                    ),
-                }}
-            />
-
-            <Tabs.Screen name="album"
-                options={{
-                    title: 'Album',
-                    tabBarIcon: ({ color, focused }) => (
-                        <Ionicons name={focused ? "library" : "library-outline"} size={26} color={color} />
+                        <Ionicons name={focused ? "heart" : "heart-outline"} size={26} color={color} />
                     ),
                 }}
             />
@@ -114,7 +122,7 @@ export default function TabLayout() {
                     title: 'Bản đồ',
                     tabBarIcon: ({ focused }) => (
                         <View style={styles.homeIconContainer}>
-                            <Ionicons name={focused ? "compass" : "compass-outline"} size={24} color="#ffffff" />
+                            <Ionicons name={focused ? "map" : "map-outline"} size={24} color="#ffffff" />
                         </View>
                     ),
                 }}
@@ -124,7 +132,7 @@ export default function TabLayout() {
                 options={{
                     title: 'Hồ sơ',
                     tabBarIcon: ({ color, focused }) => (
-                        <Ionicons name={focused ? "search" : "search-outline"} size={26} color={color} />
+                        <Ionicons name={focused ? "person" : "person-outline"} size={26} color={color} />
                     ),
                     tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
                     tabBarBadgeStyle: {
@@ -132,12 +140,19 @@ export default function TabLayout() {
                         color: '#fff',
                         fontSize: 10,
                         fontWeight: 'bold',
-                        marginTop: 2,
                     }
                 }}
             />
 
             <Tabs.Screen name="notification/index"
+                options={{ href: null }}
+            />
+
+            <Tabs.Screen name="album"
+                options={{ href: null }}
+            />
+
+            <Tabs.Screen name="store/index"
                 options={{ href: null }}
             />
         </Tabs>

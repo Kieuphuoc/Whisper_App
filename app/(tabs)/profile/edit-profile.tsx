@@ -159,10 +159,10 @@ export default function EditProfileScreen() {
                         activeOpacity={0.9}
                         className="relative group"
                     >
-                        <View className="p-1 rounded-full border-2 border-primary-500/20">
+                        <View className="p-1 rounded-2xl border-2 border-primary-500/20">
                             <Image
                                 source={{ uri: avatarUri }}
-                                className="w-32 h-32 rounded-full bg-gray-200"
+                                className="w-32 h-32 rounded-xl bg-gray-200"
                             />
                         </View>
                         <View className="absolute bottom-1 right-1 w-9 h-9 rounded-full bg-primary-500 items-center justify-center border-4 border-white dark:border-gray-950 shadow-sm">

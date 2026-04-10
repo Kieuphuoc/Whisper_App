@@ -6,27 +6,39 @@ import {
     StatusBar,
     ActivityIndicator,
     StyleSheet,
+    LayoutAnimation,
+    UIManager,
+    useColorScheme,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { MotiView } from 'moti';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Text } from '@/components/ui/text';
 
 import { MyUserContext } from '@/configs/Context';
 import { authApis, endpoints } from '@/configs/Apis';
 import { useSocket } from '@/hooks/useSocket';
 
-// Import new modular components
 import Navbar from '../../../../components/chat_v2/Navbar';
 import WelcomeMessage from '../../../../components/chat_v2/WelcomeMessage';
 import SuggestionCards from '../../../../components/chat_v2/SuggestionCards';
 import ChatList from '../../../../components/chat_v2/ChatList';
 import MessageInput from '../../../../components/chat_v2/MessageInput';
 
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 export default function ChatDetailScreen() {
     const { id } = useLocalSearchParams();
     const user = useContext(MyUserContext);
     const insets = useSafeAreaInsets();
-    
+    const scheme = useColorScheme() || 'light';
+    const isDark = scheme === 'dark';
+
     const [messages, setMessages] = useState<any[]>([]);
     const [room, setRoom] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -56,22 +68,6 @@ export default function ChatDetailScreen() {
                     attachments: m.type === 'FILE' ? [{ type: 'pdf', label: 'Document' }] : []
                 }));
 
-                // Add dummy AI message if list is empty or for demo
-                if (fetchedMessages.length === 0) {
-                    fetchedMessages.push({
-                        id: 'dummy-ai',
-                        text: "Imagine that you are the manager and make me the list of summary points of this documents",
-                        isMine: true,
-                    });
-                    fetchedMessages.push({
-                        id: 'dummy-ai-resp',
-                        text: "1. Resilient Tourism: Despite the global impact, international tourism showed significant resilience in 2022.\n2. Growth Predictions: Forecasts suggest that travel and tourism GDP will grow at 5.8% annually between 2022 and 2032.",
-                        isMine: false,
-                        senderAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330",
-                        attachments: [{ type: 'pdf', label: 'Chat Files' }]
-                    });
-                }
-
                 setMessages(fetchedMessages);
             } catch (error) {
                 console.error('Error fetching chat data:', error);
@@ -88,6 +84,7 @@ export default function ChatDetailScreen() {
         joinRoom(roomId);
         const handleNewMessage = (msg: any) => {
             if (msg.roomId === roomId) {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                 setMessages(prev => {
                     if (prev.some(m => m.id === msg.id.toString())) return prev;
                     return [...prev, {
@@ -103,7 +100,7 @@ export default function ChatDetailScreen() {
         on('new_message', handleNewMessage);
         return () => {
             leaveRoom(roomId);
-            off('new_message');
+            off('new_message', handleNewMessage);
         };
     }, [connected, roomId, user?.id, joinRoom, leaveRoom, on, off]);
 
@@ -113,6 +110,11 @@ export default function ChatDetailScreen() {
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) return;
+
+            // Trigger animation specifically for the header disappearing if this is the first message
+            if (messages.length === 0) {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            }
 
             const res = await authApis(token).post(endpoints.chatSend(roomId), {
                 content: text.trim(),
@@ -135,30 +137,106 @@ export default function ChatDetailScreen() {
         }
     };
 
+    const getDisplayName = () => {
+        if (room?.isAnonymous) return "Kênh Chat Ẩn";
+        const otherMember = room?.members?.find((m: any) => m.user?.id !== user?.id);
+        const other = otherMember?.user;
+        return room?.name || other?.displayName || other?.username || "Người Dùng Bí Ẩn";
+    };
+
+    const getDisplayAvatar = () => {
+        const DEFAULT = "https://images.unsplash.com/photo-1494790108377-be9c29b29330";
+        if (room?.isAnonymous) return DEFAULT;
+        const otherMember = room?.members?.find((m: any) => m.user?.id !== user?.id);
+        const other = otherMember?.user;
+        return room?.avatar || other?.avatar || DEFAULT;
+    };
+
     return (
-        <View style={styles.container}>
-            <StatusBar barStyle="dark-content" />
+        <View style={[styles.container, { backgroundColor: isDark ? '#05060a' : '#f5f7ff' }]}>
+            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
+            
+            {/* AURA BACKGROUND */}
+            <View style={StyleSheet.absoluteFill}>
+                <LinearGradient
+                    colors={isDark ? ['#000000', '#05060a', '#05060a'] : ['#f5f7ff', '#eef2ff', '#f8fafc']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                />
+                <MotiView
+                    from={{ opacity: 0.15, scale: 1 }}
+                    animate={{ opacity: 0.35, scale: 1.4 }}
+                    transition={{ loop: true, type: 'timing', duration: 12000, repeatReverse: true }}
+                    style={[styles.auraCircle, { backgroundColor: isDark ? 'rgba(139,92,246,0.64)' : 'rgba(196,181,253,0.88)', top: '-14%', left: '-22%' }]}
+                />
+                <MotiView
+                    from={{ opacity: 0.1, scale: 1.2 }}
+                    animate={{ opacity: 0.25, scale: 0.9 }}
+                    transition={{ loop: true, type: 'timing', duration: 15000, repeatReverse: true }}
+                    style={[styles.auraCircle, { backgroundColor: isDark ? 'rgba(16,185,129,0.68)' : 'rgba(167,139,250,0.75)', bottom: '10%', right: '-24%' }]}
+                />
+            </View>
+
             <KeyboardAvoidingView
                 style={styles.keyboardView}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             >
-                <View style={[styles.header, { paddingTop: insets.top }]}>
-                    <Navbar title={room?.name || "Chi tiết Chat"} subtitle="Whispering in real-time" />
-                </View>
+                <BlurView intensity={isDark ? 28 : 54} tint={isDark ? "dark" : "light"} style={[styles.header, { paddingTop: insets.top }]}>
+                    <Navbar 
+                        title={getDisplayName()} 
+                        subtitle={room?.isAnonymous ? "Kênh Chat Ẩn Danh" : "Tần số giao điểm"} 
+                        avatarUrl={getDisplayAvatar()}
+                    />
+                </BlurView>
 
                 {loading ? (
                     <View style={styles.center}>
-                        <ActivityIndicator size="large" color="#111827" />
+                        <ActivityIndicator size="large" color="#8b5cf6" />
                     </View>
                 ) : (
                     <View style={styles.content}>
-                        <ChatList 
-                            messages={messages} 
+                        <ChatList
+                            messages={messages}
                             header={
-                                <View style={styles.listHeader}>
-                                    <WelcomeMessage name={user?.displayName || "Bạn"} />
-                                    <SuggestionCards />
-                                </View>
+                                messages.length === 0 ? (
+                                    <View style={styles.listHeader}>
+                                        <View style={styles.signalRow}>
+                                            <BlurView intensity={26} tint={isDark ? 'dark' : 'light'} style={[styles.signalChip, { borderColor: isDark ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.95)' }]}>
+                                                <LinearGradient
+                                                    colors={isDark ? ['rgba(139,92,246,0.2)', 'transparent'] : ['rgba(139,92,246,0.1)', 'transparent']}
+                                                    style={StyleSheet.absoluteFill}
+                                                />
+                                                <MotiView
+                                                    from={{ opacity: 0.45 }}
+                                                    animate={{ opacity: 1 }}
+                                                    transition={{ loop: true, type: 'timing', duration: 1200, repeatReverse: true }}
+                                                >
+                                                    <View style={[styles.signalDot, { backgroundColor: '#10b981' }]} />
+                                                </MotiView>
+                                                <View style={styles.signalTextWrap}>
+                                                    <Text style={[styles.signalTitle, { color: isDark ? '#e9d5ff' : '#6d28d9' }]}>Tần số mở</Text>
+                                                    <Text style={[styles.signalSub, { color: isDark ? 'rgba(255,255,255,0.64)' : '#6B7280' }]}>Kênh mã hóa hoạt động</Text>
+                                                </View>
+                                            </BlurView>
+                                            <BlurView intensity={24} tint={isDark ? 'dark' : 'light'} style={[styles.signalChip, styles.signalChipTilt, { borderColor: isDark ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.9)' }]}>
+                                                <LinearGradient
+                                                    colors={isDark ? ['rgba(16,185,129,0.16)', 'transparent'] : ['rgba(16,185,129,0.08)', 'transparent']}
+                                                    style={StyleSheet.absoluteFill}
+                                                />
+                                                <View style={styles.signalTextWrap}>
+                                                    <Text style={[styles.signalTitle, { color: isDark ? '#d1fae5' : '#047857' }]}>Dị thường</Text>
+                                                    <Text style={[styles.signalSub, { color: isDark ? 'rgba(255,255,255,0.64)' : '#6B7280' }]}>Không để lộ danh tính</Text>
+                                                </View>
+                                            </BlurView>
+                                        </View>
+                                        <WelcomeMessage 
+                                            name={getDisplayName()} 
+                                            avatarUrl={getDisplayAvatar()}
+                                        />
+                                        <SuggestionCards />
+                                    </View>
+                                ) : null
                             }
                         />
                     </View>
@@ -173,10 +251,16 @@ export default function ChatDetailScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F7F6F1',
     },
     keyboardView: {
         flex: 1,
+    },
+    auraCircle: {
+        position: 'absolute',
+        width: 400,
+        height: 400,
+        borderRadius: 200,
+        opacity: 0.65,
     },
     header: {
         backgroundColor: 'transparent',
@@ -191,6 +275,51 @@ const styles = StyleSheet.create({
     },
     listHeader: {
         paddingBottom: 8,
+    },
+    signalRow: {
+        flexDirection: 'row',
+        gap: 10,
+        marginHorizontal: 14,
+        marginBottom: 12,
+    },
+    signalChip: {
+        flex: 1,
+        minHeight: 58,
+        borderRadius: 20,
+        borderWidth: 1.2,
+        overflow: 'hidden',
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.12,
+        shadowRadius: 16,
+        elevation: 5,
+    },
+    signalChipTilt: {
+        transform: [{ rotate: '1.5deg' }],
+    },
+    signalDot: {
+        width: 9,
+        height: 9,
+        borderRadius: 999,
+        marginRight: 8,
+    },
+    signalTextWrap: {
+        flex: 1,
+    },
+    signalTitle: {
+        fontSize: 10.5,
+        fontWeight: '800',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    signalSub: {
+        marginTop: 2,
+        fontSize: 10.5,
+        fontWeight: '600',
     },
 });
 

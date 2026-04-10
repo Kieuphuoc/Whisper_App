@@ -135,7 +135,7 @@ export default function VoiceUploadSheet({
             // Ensure URI starts with file:// for proper FormData handling in React Native
             const audioFileUri = audioUri.startsWith('file://') ? audioUri : `file://${audioUri}`;
             
-            formData.append('audio', {
+            formData.append('file', {
                 uri: audioFileUri,
                 name: `voice_${Date.now()}.m4a`,
                 type: 'audio/m4a',
@@ -151,7 +151,7 @@ export default function VoiceUploadSheet({
 
             if (photoUri) {
                 const imageFileUri = photoUri.startsWith('file://') ? photoUri : `file://${photoUri}`;
-                formData.append('image', {
+                formData.append('images', {
                     uri: imageFileUri,
                     name: `photo_${Date.now()}.jpg`,
                     type: 'image/jpeg',

@@ -214,6 +214,28 @@ export default function MemoryScreen() {
             if (thisMonth.length > 0) {
                 result.push({ key: 'month', title: 'Tháng này', icon: 'calendar-outline', iconColor: '#3b82f6', pins: thisMonth });
             }
+
+            // Gom các pin cũ hơn theo từng tháng để không bị mất
+            const shownIds = new Set([...recent, ...thisMonth].map(p => p.id));
+            const olderByMonth: Record<string, VoicePin[]> = {};
+            for (const p of filtered) {
+                if (shownIds.has(p.id)) continue;
+                const d = new Date(p.createdAt);
+                const label = d.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
+                (olderByMonth[label] = olderByMonth[label] ?? []).push(p);
+            }
+            const monthsSorted = Object.entries(olderByMonth).sort(([, a], [, b]) =>
+                new Date(b[0].createdAt).getTime() - new Date(a[0].createdAt).getTime()
+            );
+            for (const [label, mpins] of monthsSorted) {
+                result.push({
+                    key: `time-${label}`,
+                    title: label,
+                    icon: 'planet-outline',
+                    iconColor: '#f59e0b',
+                    pins: mpins.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+                });
+            }
         }
 
         if (activeFilter === 'visibility') {

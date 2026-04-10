@@ -1,32 +1,38 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, ScrollView, TouchableOpacity, StyleSheet, useColorScheme } from 'react-native';
+import { Text } from '@/components/ui/text';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
 const SUGGESTIONS = [
     {
         id: '1',
-        icon: 'document-text-outline',
-        title: 'Project Brief',
-        desc: 'Summary points of this doc',
-        accent: '#3B82F6',
+        icon: 'scan',
+        title: 'Dò dị thường',
+        accent: '#c4b5fd', 
+        rotate: '-2deg',
     },
     {
         id: '2',
-        icon: 'analytics-outline',
-        title: 'Growth Preds',
-        desc: 'Analyze trends for 2026',
-        accent: '#EF4444',
+        icon: 'radio',
+        title: 'Ping tần số',
+        accent: '#a78bfa', 
+        rotate: '1deg',
     },
     {
         id: '3',
-        icon: 'stats-chart-outline',
-        title: 'Market Report',
-        desc: 'Extract key insights',
-        accent: '#10B981',
+        icon: 'color-wand',
+        title: 'Aura filter',
+        accent: '#ddd6fe', 
+        rotate: '-1deg',
     }
 ];
 
 const SuggestionCards = () => {
+    const scheme = useColorScheme() || 'light';
+    const isDark = scheme === 'dark';
+
     return (
         <ScrollView 
             horizontal 
@@ -37,18 +43,31 @@ const SuggestionCards = () => {
             {SUGGESTIONS.map((item) => (
                 <TouchableOpacity 
                     key={item.id}
-                    activeOpacity={0.85}
-                    style={styles.card}
+                    activeOpacity={0.8}
+                    style={[styles.card, { transform: [{ rotate: item.rotate as any }] }]}
                 >
-                    <View style={[styles.iconBox, { backgroundColor: `${item.accent}15` }]}>
-                        <Ionicons name={item.icon as any} size={18} color={item.accent} />
-                    </View>
-                    <View style={styles.copyBox}>
-                        <Text style={styles.metaLabel}>{item.title}</Text>
-                        <Text style={styles.metaPrimary} numberOfLines={2}>
-                            {item.desc}
-                        </Text>
-                    </View>
+                    <LinearGradient
+                        colors={
+                            isDark
+                                ? ['rgba(139,92,246,0.24)', 'rgba(17,24,39,0.58)']
+                                : ['rgba(139,92,246,0.15)', 'rgba(255,255,255,0.75)']
+                        }
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={[
+                            styles.cardInner,
+                            {
+                                borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.92)',
+                            },
+                        ]}
+                    >
+                        <BlurView intensity={20} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+                        <View style={[styles.iconBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.13)' : 'rgba(17,24,39,0.06)' }]}>
+                            <Ionicons name={item.icon as any} size={20} color={item.accent} />
+                        </View>
+                        <Text style={[styles.title, { color: isDark ? '#f8fafc' : '#111827' }]}>{item.title}</Text>
+                        <Text style={[styles.kicker, { color: isDark ? 'rgba(255,255,255,0.68)' : '#6B7280' }]}>Kích hoạt gợi ý</Text>
+                    </LinearGradient>
                 </TouchableOpacity>
             ))}
         </ScrollView>
@@ -60,50 +79,45 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     scrollContent: {
-        paddingHorizontal: 22,
+        paddingHorizontal: 12,
         gap: 12,
         paddingBottom: 4,
     },
     card: {
-        width: 170,
-        minHeight: 120,
+        width: 130,
+        height: 112,
         borderRadius: 22,
-        padding: 16,
-        backgroundColor: "rgba(255,255,255,0.8)",
-        borderWidth: 1,
-        borderColor: "#ECECEC",
+    },
+    cardInner: {
+        borderRadius: 22,
+        padding: 12,
+        borderWidth: 1.2,
         justifyContent: "space-between",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.04,
-        shadowRadius: 8,
-        elevation: 2,
+        flex: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 7 },
+        shadowOpacity: 0.15,
+        shadowRadius: 14,
+        elevation: 5,
     },
     iconBox: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
+        width: 40,
+        height: 40,
+        borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    copyBox: {
-        marginTop: 12,
+    title: {
+        fontSize: 13,
+        fontWeight: "800",
+        marginTop: 6,
+        letterSpacing: 0.25,
     },
-    metaLabel: {
-        fontSize: 10,
-        color: "#9CA3AF",
-        textTransform: "uppercase",
-        letterSpacing: 1.2,
-        fontWeight: "700",
-    },
-    metaPrimary: {
+    kicker: {
         marginTop: 4,
-        fontSize: 14,
-        lineHeight: 18,
-        color: "#111827",
-        fontWeight: "700",
+        fontSize: 11,
+        fontWeight: '600',
     },
 });
 
 export default SuggestionCards;
-

@@ -144,6 +144,14 @@ export default function UserProfileScreen() {
             if (!token) return;
             const api = authApis(token);
 
+            const successMessages: Record<string, string> = {
+                request: 'Đã gửi lời mời kết bạn!',
+                accept: 'Đã chấp nhận kết bạn!',
+                reject: 'Đã từ chối lời mời kết bạn.',
+                cancel: 'Đã hủy lời mời kết bạn.',
+                remove: 'Đã hủy kết bạn thành công.',
+            };
+
             switch (action) {
                 case 'request':
                     await api.post(endpoints.friendRequest, { receiverId: parseInt(id as string) });
@@ -166,6 +174,8 @@ export default function UserProfileScreen() {
 
             const sRes = await api.get(endpoints.userStats(id as string));
             setStats(sRes.data?.data);
+
+            Alert.alert('Thành công', successMessages[action]);
         } catch (e: any) {
             console.error('Friend action error:', e);
             Alert.alert('Lỗi', e.response?.data?.message || 'Thao tác thất bại');
@@ -565,6 +575,7 @@ export default function UserProfileScreen() {
                             title="Ký ức công khai"
                             pins={publicPins}
                             onSelectPin={(pin) => router.push({ pathname: '/(tabs)/home/voiceDetail', params: { id: pin.id.toString() } })}
+                            onSeeAll={() => router.push({ pathname: '/(tabs)/memory/grid', params: { title: 'Ký ức công khai', userId: id } })}
                             currentTheme={currentTheme}
                             icon="mic"
                             iconColor={currentTheme.colors.primary}

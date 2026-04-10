@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useContext } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions, useColorScheme, StatusBar, Image } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -12,9 +12,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 
 import { MyUserContext } from '@/configs/Context';
-import { BASE_URL } from '@/configs/Apis';
+import { authApis, BASE_URL, endpoints } from '@/configs/Apis';
 import { VoicePinCarouselCard as MemoryCard } from '@/components/memory/VoicePinCarouselCard';
-import { useContext } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 const GRID_PADDING = 20;
@@ -25,10 +25,26 @@ export default function MemoryGridScreen() {
     const colorScheme = useColorScheme() || 'light';
     const currentTheme = theme[colorScheme];
     const router = useRouter();
-    const { title, sectionKey, filter, query } = useLocalSearchParams();
-    const { pins } = useMyPins();
+    const { title, sectionKey, filter, query, userId } = useLocalSearchParams();
+    const { pins: myPins } = useMyPins();
+    const [externalPins, setExternalPins] = useState<VoicePin[]>([]);
     const [selectedPin, setSelectedPin] = useState<VoicePin | null>(null);
     const user = useContext(MyUserContext);
+
+    useEffect(() => {
+        if (!userId) return;
+        const load = async () => {
+            try {
+                const token = await AsyncStorage.getItem('token');
+                if (!token) return;
+                const res = await authApis(token).get(endpoints.voicePublicByUser(String(userId)));
+                setExternalPins(res.data?.data ?? []);
+            } catch { /* silent */ }
+        };
+        load();
+    }, [userId]);
+
+    const pins = userId ? externalPins : myPins;
 
     const coverUri = useMemo(() => {
         if (!user?.cover) return 'https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=2071&auto=format&fit=crop';

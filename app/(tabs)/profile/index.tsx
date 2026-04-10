@@ -197,7 +197,8 @@ export default function ProfileScreen() {
                 const formData = new FormData();
                 const uri = result.assets[0].uri;
                 const fileName = uri.split('/').pop() || 'image.jpg';
-                const fileType = result.assets[0].type || 'image/jpeg';
+                const mimeMatch = /\.(\w+)$/.exec(fileName);
+                const fileType = mimeMatch ? `image/${mimeMatch[1].toLowerCase()}` : 'image/jpeg';
 
                 formData.append(type, {
                     uri,
@@ -206,7 +207,14 @@ export default function ProfileScreen() {
                 } as any);
 
                 const endpoint = type === 'avatar' ? endpoints.userAvatar : endpoints.userCover;
-                await api.put(endpoint, formData);
+                const res = await api.put(endpoint, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                });
+                const updatedUser = res.data?.data;
+                if (dispatch && updatedUser) {
+                    dispatch({ type: 'SET_USER', payload: updatedUser });
+                    await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+                }
                 fetchData(true);
             } catch (e: any) {
                 console.error('Update image error:', e);

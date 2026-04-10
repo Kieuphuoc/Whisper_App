@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'expo-router';
 import {
     ActivityIndicator,
     Dimensions,
@@ -134,12 +135,14 @@ function NotifItem({
     item, 
     onRead, 
     onAction,
+    onNavigate,
     isDark, 
     theme 
 }: { 
     item: Notification; 
     onRead: (id: number) => void; 
     onAction: (id: number, action: string, data: any) => void;
+    onNavigate: (item: Notification) => void;
     isDark: boolean; 
     theme: any 
 }) {
@@ -174,7 +177,7 @@ function NotifItem({
             style={styles.itemWrapper}
         >
             <TouchableOpacity
-                onPress={() => onRead(item.id)}
+                onPress={() => { onRead(item.id); onNavigate(item); }}
                 activeOpacity={0.9}
                 style={[styles.itemContainer, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
             >
@@ -234,6 +237,7 @@ export default function NotificationScreen() {
     const colorScheme = useColorScheme() || 'light';
     const isDark = colorScheme === 'dark';
     const themeContext = theme[colorScheme];
+    const router = useRouter();
 
     const [notifs, setNotifs] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(false);
@@ -245,27 +249,46 @@ export default function NotificationScreen() {
         isRefresh ? setRefreshing(true) : setLoading(true);
         try {
             const token = await AsyncStorage.getItem('token');
-            if (!token) { setNotifs(MOCK); setUsedMock(true); return; }
+            if (!token) { setUsedMock(false); return; }
             const api = authApis(token);
             const res = await api.get(endpoints.notifications);
             const data = res.data?.notifications || res.data?.data || [];
-            
-            if (data.length === 0) {
-                setNotifs(MOCK);
-                setUsedMock(true);
-            } else {
-                setNotifs(data);
-                setUsedMock(false);
-            }
+            setNotifs(data);
+            setUsedMock(false);
         } catch (e) {
             console.error('Load notifications error:', e);
-            setNotifs(MOCK);
             setUsedMock(true);
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     }, []);
+
+    const handleNavigate = useCallback((item: Notification) => {
+        const { data } = item;
+        switch (item.type) {
+            case 'NEW_REACTION':
+            case 'NEW_COMMENT':
+            case 'COMMENT_REPLY':
+            case 'FRIEND_VOICEPIN':
+                if (data?.voicePinId) {
+                    router.push({ pathname: '/(tabs)/home/voiceDetail', params: { id: String(data.voicePinId) } });
+                }
+                break;
+            case 'FRIEND_REQUEST':
+                if (data?.senderId) {
+                    router.push({ pathname: '/user/[id]', params: { id: String(data.senderId) } });
+                }
+                break;
+            case 'FRIEND_ACCEPTED':
+                if (data?.accepterId) {
+                    router.push({ pathname: '/user/[id]', params: { id: String(data.accepterId) } });
+                }
+                break;
+            default:
+                break;
+        }
+    }, [router]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -320,11 +343,10 @@ export default function NotificationScreen() {
             const api = authApis(token);
 
             if (action === 'ACCEPT_FRIEND' || action === 'REJECT_FRIEND') {
-                const status = action === 'ACCEPT_FRIEND' ? 'ACCEPTED' : 'REJECTED';
-                await api.post(endpoints.friendRespond(data.friendshipId), { status });
-                // Mark original notification as read and remove from UI list if needed
+                const friendAction = action === 'ACCEPT_FRIEND' ? 'accept' : 'reject';
+                await api.post(endpoints.friendRespond(data.friendshipId), { action: friendAction });
                 handleRead(id);
-                load(true); // reload to get updated status
+                load(true);
             }
         } catch (e: any) {
             alert(e.response?.data?.message || 'Có lỗi xảy ra');
@@ -398,6 +420,7 @@ export default function NotificationScreen() {
                             item={item} 
                             onRead={handleRead} 
                             onAction={handleAction}
+                            onNavigate={handleNavigate}
                             isDark={isDark} 
                             theme={themeContext} 
                         />

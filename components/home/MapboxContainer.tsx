@@ -1,4 +1,4 @@
-import React, { forwardRef, useCallback, useMemo, useState } from "react";
+import React, { forwardRef, useCallback, useMemo, useRef, useState } from "react";
 import { StyleSheet, View, Image, TouchableOpacity } from "react-native";
 import Mapbox from "@/configs/Mapbox";
 import { VoicePin, VoiceType } from "@/types";
@@ -40,6 +40,7 @@ const MapboxContainer = forwardRef<Mapbox.MapView, Props>((props, ref) => {
 
   const [internalSelectedPin, setInternalSelectedPin] = useState<VoicePin | null>(null);
   const [currentZoom, setCurrentZoom] = useState(14);
+  const lastRegionKeyRef = useRef<string | null>(null);
   const selectedPin = externalSelectedPin !== undefined ? externalSelectedPin : internalSelectedPin;
 
   const setSelectedPin = (pin: VoicePin | null) => {
@@ -68,8 +69,9 @@ const MapboxContainer = forwardRef<Mapbox.MapView, Props>((props, ref) => {
   }, [ref]);
 
   const handleRegionChange = useCallback((state: any) => {
-    if (state.properties?.zoomLevel) {
-      setCurrentZoom(state.properties.zoomLevel);
+    const zoomLevel = state.properties?.zoomLevel;
+    if (typeof zoomLevel === "number") {
+      setCurrentZoom((prevZoom) => (Math.abs(prevZoom - zoomLevel) >= 0.01 ? zoomLevel : prevZoom));
     }
     
     if (onRegionChangeComplete && state.properties?.visibleBounds) {
@@ -78,9 +80,22 @@ const MapboxContainer = forwardRef<Mapbox.MapView, Props>((props, ref) => {
       const longitude = (neLng + swLng) / 2;
       const latitudeDelta = Math.abs(neLat - swLat);
       const longitudeDelta = Math.abs(neLng - swLng);
+      const regionKey = [
+        latitude.toFixed(4),
+        longitude.toFixed(4),
+        latitudeDelta.toFixed(4),
+        longitudeDelta.toFixed(4),
+      ].join("|");
+
+      if (lastRegionKeyRef.current === regionKey) {
+        return;
+      }
+      lastRegionKeyRef.current = regionKey;
 
       if (__DEV__) {
-        console.log(`[Mapbox] Region Change: lat=${latitude.toFixed(6)}, lng=${longitude.toFixed(6)}, dLat=${latitudeDelta.toFixed(6)}, dLng=${longitudeDelta.toFixed(6)}, zoom=${state.properties?.zoomLevel?.toFixed(2)}`);
+        console.log(
+          `[Mapbox] Region Change: lat=${latitude.toFixed(6)}, lng=${longitude.toFixed(6)}, dLat=${latitudeDelta.toFixed(6)}, dLng=${longitudeDelta.toFixed(6)}, zoom=${zoomLevel?.toFixed(2)}`
+        );
       }
 
 
@@ -105,10 +120,13 @@ const MapboxContainer = forwardRef<Mapbox.MapView, Props>((props, ref) => {
         onRegionDidChange={handleRegionChange}
       >
         <Mapbox.Camera
-          zoomLevel={14}
-          centerCoordinate={[location.coords.longitude, location.coords.latitude]}
-          animationMode="flyTo"
-          animationDuration={2000}
+          ref={(c) => {
+            // Có thể dùng camera ref nếu cần
+          }}
+          defaultSettings={{
+            centerCoordinate: [location.coords.longitude, location.coords.latitude],
+            zoomLevel: currentZoom,
+          }}
         />
 
         <Mapbox.UserLocation animated showsUserHeadingIndicator />
@@ -172,6 +190,32 @@ const MapboxContainer = forwardRef<Mapbox.MapView, Props>((props, ref) => {
               textColor: '#ffffff',
               textFont: ['Open Sans Bold', 'Arial Unicode MS Bold'],
               textPitchAlignment: 'map',
+            }}
+          />
+
+          {/* Unclustered Points - Hiển thị các điểm đơn lẻ khi chưa zoom đủ sâu (Dự phòng) */}
+          <Mapbox.CircleLayer
+            id="single-pins-layer"
+            filter={['!', ['has', 'point_count']]}
+            style={{
+              circleColor: '#ef4444',
+              circleRadius: 10,
+              circleStrokeWidth: 2,
+              circleStrokeColor: '#ffffff',
+              circleOpacity: [
+                'step',
+                ['zoom'],
+                1,
+                13,
+                0 // Ẩn khi zoom >= 13 để nhường chỗ cho MarkerView (avatars)
+              ],
+              circleStrokeOpacity: [
+                'step',
+                ['zoom'],
+                1,
+                13,
+                0
+              ],
             }}
           />
         </Mapbox.ShapeSource>

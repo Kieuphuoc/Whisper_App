@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
-const { width } = Dimensions.get("window");
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
 interface MessageInputProps {
     onSend: (text: string) => void;
@@ -10,6 +10,8 @@ interface MessageInputProps {
 
 const MessageInput: React.FC<MessageInputProps> = ({ onSend }) => {
     const [text, setText] = useState('');
+    const scheme = useColorScheme() || 'light';
+    const isDark = scheme === 'dark';
 
     const handleSend = () => {
         if (text.trim()) {
@@ -20,34 +22,50 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend }) => {
 
     return (
         <View style={styles.container}>
-            <View style={styles.inputWrapper}>
-                <TouchableOpacity style={styles.attachButton} activeOpacity={0.7}>
-                    <Ionicons name="add" size={22} color="#4B5563" />
+            <View style={[styles.inputWrapper, { 
+                backgroundColor: isDark ? 'rgba(7,10,21,0.74)' : 'rgba(255,255,255,0.88)',
+                borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.94)',
+            }]}>
+                <BlurView intensity={22} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+                <LinearGradient
+                    colors={isDark ? ['rgba(139,92,246,0.15)', 'transparent'] : ['rgba(139,92,246,0.08)', 'transparent']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                />
+                <TouchableOpacity style={[styles.attachButton, { backgroundColor: isDark ? 'rgba(139,92,246,0.24)' : 'rgba(139,92,246,0.12)' }]} activeOpacity={0.7}>
+                    <Ionicons name="add" size={22} color={isDark ? "rgba(255,255,255,0.9)" : "#4B5563"} />
                 </TouchableOpacity>
-                
-                <TextInput 
-                    style={styles.input}
-                    placeholder="Whisper message..."
-                    placeholderTextColor="#9CA3AF"
+
+                <TextInput
+                    style={[styles.input, { color: isDark ? '#FFFFFF' : '#111827' }]}
+                    placeholder="Phát tín hiệu..."
+                    placeholderTextColor={isDark ? "rgba(255,255,255,0.5)" : "#9CA3AF"}
                     value={text}
                     onChangeText={setText}
                     multiline={false}
                 />
 
-                <TouchableOpacity 
+                <TouchableOpacity
                     onPress={handleSend}
                     disabled={!text.trim()}
                     activeOpacity={0.85}
-                    style={[
-                        styles.sendButton,
-                        text.trim() ? styles.sendButtonActive : styles.sendButtonDisabled
-                    ]}
+                    style={styles.sendButton}
                 >
-                    <Ionicons 
-                        name="arrow-up" 
-                        size={20} 
-                        color={text.trim() ? '#FFFFFF' : '#9CA3AF'} 
-                    />
+                    {text.trim() ? (
+                        <LinearGradient
+                            colors={['#8b5cf6', '#a78bfa']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={styles.sendButtonActive}
+                        >
+                            <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
+                        </LinearGradient>
+                    ) : (
+                        <View style={[styles.sendButtonDisabled, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#EEF2FF' }]}>
+                            <Ionicons name="arrow-up" size={20} color={isDark ? 'rgba(255,255,255,0.5)' : '#9CA3AF'} />
+                        </View>
+                    )}
                 </TouchableOpacity>
             </View>
         </View>
@@ -57,55 +75,59 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend }) => {
 const styles = StyleSheet.create({
     container: {
         paddingHorizontal: 16,
-        paddingBottom: 24,
+        paddingBottom: 18,
         paddingTop: 8,
         backgroundColor: 'transparent',
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 28,
+        borderRadius: 30,
         paddingHorizontal: 8,
         paddingVertical: 8,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        shadowColor: "#0B0F19",
+        borderWidth: 1.2,
+        shadowColor: "#000",
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
+        shadowOpacity: 0.16,
+        shadowRadius: 16,
         elevation: 6,
     },
     attachButton: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#F3F4F6',
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 8,
     },
     input: {
         flex: 1,
-        fontSize: 15,
+        fontSize: 15.5,
         height: 44,
-        color: '#111827',
         paddingHorizontal: 12,
-        fontWeight: '500',
+        fontWeight: '600',
     },
     sendButton: {
         width: 40,
         height: 40,
-        borderRadius: 20,
+        borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
         marginLeft: 8,
     },
     sendButtonActive: {
-        backgroundColor: '#111827',
+        width: 40,
+        height: 40,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     sendButtonDisabled: {
-        backgroundColor: '#F3F4F6',
+        width: 40,
+        height: 40,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 });
 
