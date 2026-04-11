@@ -106,16 +106,18 @@ export function useVoicePinTurntable(pin: VoicePin, autoPlay: boolean) {
     
     // Haptics
     switch (type) {
-      case "LIGHT_TAP":
+      case "LIKE":
+      case "LAUGH":
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         break;
-      case "EMPATHY":
+      case "LOVE":
+      case "WOW":
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         break;
-      case "RELAX":
-        // Subtle or none
+      case "SAD":
+        Haptics.selectionAsync();
         break;
-      case "STRONG":
+      case "ANGRY":
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
         break;
     }
@@ -187,12 +189,22 @@ export function useVoicePinTurntable(pin: VoicePin, autoPlay: boolean) {
       return;
     }
 
+    // Close transcription if open
+    setShowTranscription(false);
+    
     setShowReactions(true);
     Animated.spring(reactionAnim, { toValue: 1, useNativeDriver: true }).start();
   };
 
   const handleToggleTranscription = async () => {
     if (!showTranscription) {
+      // Close reactions if open
+      if (showReactions) {
+        Animated.spring(reactionAnim, { toValue: 0, useNativeDriver: true }).start(() => {
+          setShowReactions(false);
+        });
+      }
+
       if (!transcription) {
         setIsThinking(true);
         try {
@@ -208,7 +220,11 @@ export function useVoicePinTurntable(pin: VoicePin, autoPlay: boolean) {
           console.log("Error fetching transcription", err);
         } finally {
           setIsThinking(false);
-          setShowTranscription(true);
+          if (!transcription && !pin.transcription) {
+             Alert.alert("Thông báo", "Âm thanh này chưa có bản phiên âm.");
+          } else {
+             setShowTranscription(true);
+          }
         }
       } else {
         setShowTranscription(true);

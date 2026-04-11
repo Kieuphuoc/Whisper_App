@@ -151,14 +151,14 @@ export default function SettingsScreen() {
                             centerCoordinate={[FALLBACK_LNG, FALLBACK_LAT]}
                             zoomLevel={12}
                         />
-                        <Mapbox.PointAnnotation
+                        <Mapbox.MarkerView
                             id="preview-marker"
                             coordinate={[FALLBACK_LNG, FALLBACK_LAT]}
                         >
                             <View className="w-8 h-8 rounded-full bg-primary-500 border-2 border-white items-center justify-center">
                                 <Ionicons name="mic" size={16} color="white" />
                             </View>
-                        </Mapbox.PointAnnotation>
+                        </Mapbox.MarkerView>
                     </Mapbox.MapView>
 
                     {/* Animated Overlay for selection change feedback */}

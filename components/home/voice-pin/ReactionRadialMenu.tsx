@@ -133,10 +133,10 @@ function ReactionItem({
   const blurStyle = useAnimatedStyle(() => {
     return {
       backgroundColor: isSelected.value 
-        ? (isDark ? 'rgba(124, 58, 237, 0.4)' : 'rgba(124, 58, 237, 0.2)')
+        ? reaction.color + '4D' // 30% opacity
         : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'),
       borderColor: isSelected.value 
-        ? (isDark ? 'rgba(139, 92, 246, 0.8)' : 'rgba(139, 92, 246, 0.6)')
+        ? reaction.color
         : (isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)'),
       borderWidth: isSelected.value ? 2 : 1,
     };
@@ -144,9 +144,9 @@ function ReactionItem({
 
   const iconStyle = useAnimatedStyle(() => {
     return {
-      color: isSelected.value ? '#FFFFFF' : (isDark ? '#E5E5E5' : '#475569'),
+      color: isSelected.value ? '#FFFFFF' : reaction.color,
       transform: [
-        { scale: isSelected.value ? 1.1 : 1 }
+        { scale: isSelected.value ? 1.2 : 1 }
       ]
     };
   });
@@ -165,15 +165,15 @@ function ReactionItem({
         tint={isDark ? "dark" : "light"} 
         style={[styles.itemBlur, blurStyle]}
       >
-        <AnimatedIonicons
+        <Ionicons
           name={reaction.icon} 
           size={24} 
-          style={iconStyle} 
+          color={isSelected.value ? '#FFFFFF' : reaction.color}
         />
       </AnimatedBlurView>
       <Animated.View style={[styles.labelContainer, labelStyle]}>
         <BlurView intensity={20} tint={isDark ? "dark" : "light"} style={styles.labelBlur}>
-          <Text style={[styles.labelText, { color: isDark ? '#FFF' : '#1E293B' }]}>
+          <Text style={[styles.labelText, { color: reaction.color }]}>
             {reaction.label}
           </Text>
         </BlurView>

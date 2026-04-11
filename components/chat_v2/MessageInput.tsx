@@ -22,51 +22,54 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend }) => {
 
     return (
         <View style={styles.container}>
-            <View style={[styles.inputWrapper, { 
-                backgroundColor: isDark ? 'rgba(7,10,21,0.74)' : 'rgba(255,255,255,0.88)',
-                borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.94)',
-            }]}>
-                <BlurView intensity={22} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
-                <LinearGradient
-                    colors={isDark ? ['rgba(139,92,246,0.15)', 'transparent'] : ['rgba(139,92,246,0.08)', 'transparent']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={StyleSheet.absoluteFill}
-                />
-                <TouchableOpacity style={[styles.attachButton, { backgroundColor: isDark ? 'rgba(139,92,246,0.24)' : 'rgba(139,92,246,0.12)' }]} activeOpacity={0.7}>
-                    <Ionicons name="add" size={22} color={isDark ? "rgba(255,255,255,0.9)" : "#4B5563"} />
-                </TouchableOpacity>
+            <View style={styles.shadowWrapper}>
+                <View style={[styles.inputWrapper, { 
+                    backgroundColor: isDark ? 'rgba(7,10,21,0.74)' : 'rgba(255,255,255,0.88)',
+                    borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.94)',
+                }]}>
+                    <BlurView intensity={22} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+                    <LinearGradient
+                        colors={isDark ? ['rgba(139,92,246,0.15)', 'transparent'] : ['rgba(139,92,246,0.08)', 'transparent']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={StyleSheet.absoluteFill}
+                    />
+                    
+                    <TouchableOpacity style={[styles.attachButton, { backgroundColor: isDark ? 'rgba(139,92,246,0.24)' : 'rgba(139,92,246,0.12)' }]} activeOpacity={0.7}>
+                        <Ionicons name="add" size={22} color={isDark ? "rgba(255,255,255,0.9)" : "#4B5563"} />
+                    </TouchableOpacity>
 
-                <TextInput
-                    style={[styles.input, { color: isDark ? '#FFFFFF' : '#111827' }]}
-                    placeholder="Phát tín hiệu..."
-                    placeholderTextColor={isDark ? "rgba(255,255,255,0.5)" : "#9CA3AF"}
-                    value={text}
-                    onChangeText={setText}
-                    multiline={false}
-                />
+                    <TextInput
+                        style={[styles.input, { color: isDark ? '#FFFFFF' : '#111827' }]}
+                        placeholder="Phát tín hiệu..."
+                        placeholderTextColor={isDark ? "rgba(255,255,255,0.5)" : "#9CA3AF"}
+                        value={text}
+                        onChangeText={setText}
+                        multiline={false}
+                    />
 
-                <TouchableOpacity
-                    onPress={handleSend}
-                    disabled={!text.trim()}
-                    activeOpacity={0.85}
-                    style={styles.sendButton}
-                >
-                    {text.trim() ? (
-                        <LinearGradient
-                            colors={['#8b5cf6', '#a78bfa']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                            style={styles.sendButtonActive}
-                        >
-                            <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
-                        </LinearGradient>
-                    ) : (
-                        <View style={[styles.sendButtonDisabled, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#EEF2FF' }]}>
-                            <Ionicons name="arrow-up" size={20} color={isDark ? 'rgba(255,255,255,0.5)' : '#9CA3AF'} />
-                        </View>
-                    )}
-                </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={handleSend}
+                        disabled={!text.trim()}
+                        activeOpacity={0.85}
+                        style={styles.sendButton}
+                    >
+                        {text.trim() ? (
+                            <LinearGradient
+                                colors={['#8b5cf6', '#a78bfa']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={styles.sendButtonActive}
+                            >
+                                <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
+                            </LinearGradient>
+                        ) : (
+                            <View style={[styles.sendButtonDisabled, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#EEF2FF' }]}>
+                                <Ionicons name="arrow-up" size={20} color={isDark ? 'rgba(255,255,255,0.5)' : '#9CA3AF'} />
+                            </View>
+                        )}
+                    </TouchableOpacity>
+                </View>
             </View>
         </View>
     );
@@ -79,6 +82,13 @@ const styles = StyleSheet.create({
         paddingTop: 8,
         backgroundColor: 'transparent',
     },
+    shadowWrapper: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.16,
+        shadowRadius: 16,
+        elevation: 6,
+    },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -86,11 +96,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
         paddingVertical: 8,
         borderWidth: 1.2,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.16,
-        shadowRadius: 16,
-        elevation: 6,
+        overflow: 'hidden', // This is key to fix the overflow of absolute children
     },
     attachButton: {
         width: 40,

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { View, Animated, TouchableOpacity, Image, ImageBackground, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { View as MotiView, AnimatePresence } from "moti";
 import { Text } from "../../ui/text";
 import { BASE_URL } from "@/configs/Apis";
@@ -41,6 +42,8 @@ interface VinylRecordProps {
   onAlbumPress?: () => void;
   onReactionPress?: () => void;
   onReactionSelect?: (type: string) => void;
+  userReaction?: string | null;
+  reactionCount?: number;
   theme: any;
   isCreationMode?: boolean;
   visibility?: Visibility;
@@ -61,16 +64,20 @@ export function VinylRecord({
   onAlbumPress,
   onReactionPress,
   onReactionSelect,
+  userReaction,
+  reactionCount,
   theme,
   isCreationMode,
   visibility,
   onVisibilityChange,
   onPost,
 }: VinylRecordProps) {
+  const router = useRouter();
   const isDark = theme.colors.background === "#0a0a14" || theme.colors.text === "#f1f5f9";
-  
+
   // Bloom state for visibility
   const [bloomVisible, setBloomVisible] = useState(false);
+  const [radialVisibleState, setRadialVisibleState] = useState(false);
 
   const rawArtworkUri = pin.images?.[0]?.imageUrl ?? pin.imageUrl;
   const artworkUri = useMemo(() => {
@@ -83,8 +90,21 @@ export function VinylRecord({
 
   const emotionColor = pin.emotionLabel ? EMOTION_COLORS[pin.emotionLabel as keyof typeof EMOTION_COLORS] || "#7c3aed" : theme.colors.primary;
 
+  const formattedDate = useMemo(() => {
+    if (!pin.createdAt) return "";
+    try {
+      const date = new Date(pin.createdAt);
+      return date.toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch (e) {
+      return "";
+    }
+  }, [pin.createdAt]);
+
   // Gesture State
-  const radialVisible = useSharedValue(false);
   const dragX = useSharedValue(0);
   const dragY = useSharedValue(0);
   const activeReaction = useSharedValue<string | null>(null);
@@ -92,7 +112,7 @@ export function VinylRecord({
   const radialGesture = useMemo(() => Gesture.Pan()
     .activateAfterLongPress(300)
     .onStart(() => {
-      radialVisible.value = true;
+      runOnJS(setRadialVisibleState)(true);
       runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
     })
     .onUpdate((e) => {
@@ -121,7 +141,7 @@ export function VinylRecord({
         runOnJS(onReactionSelect)(activeReaction.value);
         runOnJS(Haptics.notificationAsync)(Haptics.NotificationFeedbackType.Success);
       }
-      radialVisible.value = false;
+      runOnJS(setRadialVisibleState)(false);
       dragX.value = 0;
       dragY.value = 0;
       activeReaction.value = null;
@@ -192,17 +212,25 @@ export function VinylRecord({
           )}
         </TouchableOpacity>
 
-        {pin.emotionLabel && (
+        {formattedDate ? (
           <View style={styles.emotionTagCenter}>
             <BlurView intensity={20} tint={isDark ? "dark" : "light"} style={styles.emotionTagPill}>
-              <View style={[styles.emotionDot, { backgroundColor: emotionColor }]} />
-              <Text style={[styles.emotionTagText, { color: isDark ? "#F5F5F4" : "#1E293B" }]}>{pin.emotionLabel}</Text>
+              <Ionicons
+                name="calendar-outline"
+                size={10}
+                color={isDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.5)"}
+                style={{ marginRight: 4 }}
+              />
+              <Text style={[styles.emotionTagText, { color: isDark ? "#F5F5F4" : "#1E293B" }]}>
+                {formattedDate}
+              </Text>
             </BlurView>
           </View>
-        )}
+        ) : null}
 
         {/* Stats hidden in creation mode */}
-        {!isCreationMode && (
+        {/* Stats hidden temporarily */}
+        {/* {!isCreationMode && (
           <View style={styles.topStatsRow}>
             <View style={[styles.statPillSmall, {
               backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)",
@@ -218,7 +246,7 @@ export function VinylRecord({
               </Text>
             </View>
           </View>
-        )}
+        )} */}
       </View>
 
       <View style={styles.recordStage}>
@@ -245,7 +273,7 @@ export function VinylRecord({
 
         {!isCreationMode && (
           <ReactionRadialMenu
-            visible={radialVisible.value}
+            visible={radialVisibleState}
             dragX={dragX}
             dragY={dragY}
             activeReaction={activeReaction}
@@ -266,8 +294,16 @@ export function VinylRecord({
       </Animated.View>
 
       <View style={styles.statusBarRow}>
-        <BlurView intensity={isDark ? 30 : 50} tint={isDark ? "dark" : "light"} style={styles.userProfileGlass}>
-          <View style={styles.userProfileSection}>
+        <View style={styles.userProfileGlass}>
+          <TouchableOpacity
+            onPress={() => {
+              if (pin.user?.id) {
+                router.push({ pathname: '/user/[id]', params: { id: pin.user.id.toString() } });
+              }
+            }}
+            activeOpacity={0.7}
+            style={styles.userProfileSection}
+          >
             <MotiView
               from={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -275,7 +311,7 @@ export function VinylRecord({
               style={styles.avatarOuter}
             >
               <Image
-                source={{ uri: pin.user?.avatar ? (pin.user.avatar.startsWith('http') ? pin.user.avatar : `${BASE_URL}${pin.user.avatar.startsWith('/') ? '' : '/'}${pin.user.avatar}`) : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y' }}
+                source={pin.user?.avatar ? { uri: pin.user.avatar.startsWith('http') ? pin.user.avatar : `${BASE_URL}${pin.user.avatar.startsWith('/') ? '' : '/'}${pin.user.avatar}` } : require('@/assets/images/avatar.png')}
                 style={styles.avatar}
               />
               <MotiView
@@ -296,8 +332,8 @@ export function VinylRecord({
                 {pin.user?.bio || pin.emotionLabel || "Tap record to play"}
               </Text>
             </View>
-          </View>
-        </BlurView>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.actionsGroup}>
           {isCreationMode ? (
@@ -331,10 +367,10 @@ export function VinylRecord({
                 activeOpacity={0.7}
               >
                 <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={styles.actionButtonBlur}>
-                  <Ionicons 
-                    name={visibility === 'PUBLIC' ? 'earth-outline' : visibility === 'FRIENDS' ? 'people-outline' : 'lock-closed-outline'} 
-                    size={18} 
-                    color={bloomVisible ? theme.colors.primary : (isDark ? "#FFFFFF" : theme.colors.primary)} 
+                  <Ionicons
+                    name={visibility === 'PUBLIC' ? 'earth-outline' : visibility === 'FRIENDS' ? 'people-outline' : 'lock-closed-outline'}
+                    size={18}
+                    color={bloomVisible ? theme.colors.primary : (isDark ? "#FFFFFF" : theme.colors.primary)}
                   />
                 </BlurView>
               </TouchableOpacity>
@@ -361,14 +397,33 @@ export function VinylRecord({
                 style={styles.actionButtonContainer}
                 activeOpacity={0.7}
               >
-                <LinearGradient
-                  colors={isDark ? ['#7c3aed', '#4338ca'] : ['#8b5cf6', '#6366f1']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.actionButtonGradient}
-                >
-                  <Ionicons name="heart" size={16} color="#FFFFFF" />
-                </LinearGradient>
+                {(() => {
+                  const activeReactionObj = REACTION_TYPES.find(r => r.type === userReaction);
+                  return (
+                    <MotiView
+                      animate={{
+                        scale: userReaction ? [1, 1.15, 1] : 1,
+                      }}
+                      transition={{ type: 'spring', damping: 12 }}
+                      style={StyleSheet.absoluteFill}
+                    >
+                      <LinearGradient
+                        colors={activeReactionObj
+                          ? [activeReactionObj.color, activeReactionObj.color]
+                          : (isDark ? ['#7c3aed', '#4338ca'] : ['#8b5cf6', '#6366f1'])}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.actionButtonGradient}
+                      >
+                        <Ionicons
+                          name={activeReactionObj ? (activeReactionObj.icon as any) : "heart"}
+                          size={userReaction ? 18 : 16}
+                          color="#FFFFFF"
+                        />
+                      </LinearGradient>
+                    </MotiView>
+                  );
+                })()}
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -555,12 +610,6 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 18,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.1)',
     overflow: 'visible',
     justifyContent: 'center',
     alignItems: 'center',

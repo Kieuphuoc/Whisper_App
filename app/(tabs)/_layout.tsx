@@ -78,8 +78,6 @@ export default function TabLayout() {
     if (!isReady) return null;
     if (!user) return <Redirect href="/login" />;
 
-    const shouldHideTabBar = segments[0] === '(tabs)' && segments[1] === 'home' && segments[2] === 'chat';
-
     return (
         <Tabs
             screenOptions={{
@@ -101,7 +99,6 @@ export default function TabLayout() {
                     shadowOffset: { width: 0, height: 10 },
                     shadowOpacity: 0.08,
                     shadowRadius: 20,
-                    display: shouldHideTabBar ? 'none' : 'flex',
                 },
                 tabBarBackground: () => (
                     <BlurView tint="light" intensity={60} style={{ ...StyleSheet.absoluteFillObject, borderRadius: 36, overflow: 'hidden' }} />

@@ -10,6 +10,7 @@ export default ({ config }) => {
           {
             ...plugin[1],
             RNMapboxMapsDownloadToken: process.env.MAPBOX_SECRET_TOKEN,
+            RNMapboxMapsAccessToken: process.env.EXPO_PUBLIC_MAPBOX_TOKEN,
           }
         ];
       }

@@ -54,7 +54,7 @@ const ChatList: React.FC<ChatListProps> = ({ messages, header }) => {
             ref={flatListRef}
             data={processedMessages}
             renderItem={({ item }) => <ChatMessage message={item} />}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item, index) => item.id ? `${item.id}-${index}` : index.toString()}
             ListHeaderComponent={() => <View>{header}</View>}
             contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 60, paddingTop: 10 }}
             showsVerticalScrollIndicator={false}

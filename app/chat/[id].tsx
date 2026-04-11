@@ -22,11 +22,11 @@ import { MyUserContext } from '@/configs/Context';
 import { authApis, endpoints } from '@/configs/Apis';
 import { useSocket } from '@/hooks/useSocket';
 
-import Navbar from '../../../../components/chat_v2/Navbar';
-import WelcomeMessage from '../../../../components/chat_v2/WelcomeMessage';
-import SuggestionCards from '../../../../components/chat_v2/SuggestionCards';
-import ChatList from '../../../../components/chat_v2/ChatList';
-import MessageInput from '../../../../components/chat_v2/MessageInput';
+import Navbar from '../../components/chat_v2/Navbar';
+import WelcomeMessage from '../../components/chat_v2/WelcomeMessage';
+import SuggestionCards from '../../components/chat_v2/SuggestionCards';
+import ChatList from '../../components/chat_v2/ChatList';
+import MessageInput from '../../components/chat_v2/MessageInput';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -123,12 +123,15 @@ export default function ChatDetailScreen() {
 
             const sentMessage = res.data?.data;
             if (sentMessage) {
-                setMessages(prev => [...prev, {
-                    id: sentMessage.id.toString(),
-                    text: sentMessage.content,
-                    isMine: true,
-                    createdAt: sentMessage.createdAt
-                }]);
+                setMessages(prev => {
+                    if (prev.some(m => m.id === sentMessage.id.toString())) return prev;
+                    return [...prev, {
+                        id: sentMessage.id.toString(),
+                        text: sentMessage.content,
+                        isMine: true,
+                        createdAt: sentMessage.createdAt
+                    }];
+                });
             }
         } catch (error) {
             console.error('Error sending message:', error);
@@ -145,18 +148,23 @@ export default function ChatDetailScreen() {
     };
 
     const getDisplayAvatar = () => {
-        const DEFAULT = "https://images.unsplash.com/photo-1494790108377-be9c29b29330";
-        if (room?.isAnonymous) return DEFAULT;
+        if (room?.isAnonymous) return "";
         const otherMember = room?.members?.find((m: any) => m.user?.id !== user?.id);
         const other = otherMember?.user;
-        return room?.avatar || other?.avatar || DEFAULT;
+        return room?.avatar || other?.avatar || "";
+    };
+
+    const isOtherUserOnline = () => {
+        if (!room || !room.members) return false;
+        const otherMember = room.members.find((m: any) => m.user?.id !== user?.id);
+        // Checking for typical online flags. Fallback to false if not found.
+        return otherMember?.user?.isOnline || otherMember?.user?.isActive || false;
     };
 
     return (
         <View style={[styles.container, { backgroundColor: isDark ? '#05060a' : '#f5f7ff' }]}>
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
             
-            {/* AURA BACKGROUND */}
             <View style={StyleSheet.absoluteFill}>
                 <LinearGradient
                     colors={isDark ? ['#000000', '#05060a', '#05060a'] : ['#f5f7ff', '#eef2ff', '#f8fafc']}
@@ -178,18 +186,20 @@ export default function ChatDetailScreen() {
                 />
             </View>
 
+            <BlurView intensity={isDark ? 28 : 54} tint={isDark ? "dark" : "light"} style={[styles.header, { paddingTop: insets.top }]}>
+                <Navbar 
+                    title={getDisplayName()} 
+                    subtitle={room?.isAnonymous ? "Kênh Chat Ẩn Danh" : "Tần số giao điểm"} 
+                    avatarUrl={getDisplayAvatar()}
+                    isOnline={isOtherUserOnline()}
+                />
+            </BlurView>
+
             <KeyboardAvoidingView
                 style={styles.keyboardView}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} // We can adjust this if needed, but 0 often works if Header is outside
             >
-                <BlurView intensity={isDark ? 28 : 54} tint={isDark ? "dark" : "light"} style={[styles.header, { paddingTop: insets.top }]}>
-                    <Navbar 
-                        title={getDisplayName()} 
-                        subtitle={room?.isAnonymous ? "Kênh Chat Ẩn Danh" : "Tần số giao điểm"} 
-                        avatarUrl={getDisplayAvatar()}
-                    />
-                </BlurView>
-
                 {loading ? (
                     <View style={styles.center}>
                         <ActivityIndicator size="large" color="#8b5cf6" />

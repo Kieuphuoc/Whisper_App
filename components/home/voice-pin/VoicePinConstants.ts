@@ -7,10 +7,10 @@ export const VISIBILITY_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
 };
 
 export const REACTION_TYPES = [
-  { type: "LIGHT_TAP", label: "Chạm nhẹ", icon: "radio-button-on-outline" as const },
-  { type: "EMPATHY", label: "Đồng cảm", icon: "pulse-outline" as const },
-  { type: "RELAX", label: "Thư giãn", icon: "water-outline" as const },
-  { type: "STRONG", label: "Mạnh", icon: "flash-outline" as const },
+  { type: "LIKE", label: "Thích", icon: "thumbs-up" as const, color: "#3b82f6" },
+  { type: "LOVE", label: "Yêu", icon: "heart" as const, color: "#f43f5e" },
+  { type: "LAUGH", label: "Haha", icon: "happy" as const, color: "#f59e0b" },
+  { type: "WOW", label: "Wow", icon: "alert-circle" as const, color: "#f97316" },
 ] as const;
 
 export type ReactionType = (typeof REACTION_TYPES)[number]["type"];

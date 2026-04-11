@@ -202,7 +202,7 @@ export default function UserProfileScreen() {
                 return;
             }
 
-            router.push(`/(tabs)/home/chat/${roomId}`);
+            router.push(`/chat/${roomId}`);
         } catch (e: any) {
             console.error('Start chat error:', e);
             Alert.alert('Lỗi', e.response?.data?.message || 'Không thể bắt đầu cuộc trò chuyện');
@@ -574,7 +574,7 @@ export default function UserProfileScreen() {
                         <VoicePinCarouselLegacy
                             title="Ký ức công khai"
                             pins={publicPins}
-                            onSelectPin={(pin) => router.push({ pathname: '/(tabs)/home/voiceDetail', params: { id: pin.id.toString() } })}
+                            onSelectPin={(pin) => router.push({ pathname: '/voiceDetail', params: { id: pin.id.toString() } })}
                             onSeeAll={() => router.push({ pathname: '/(tabs)/memory/grid', params: { title: 'Ký ức công khai', userId: id } })}
                             currentTheme={currentTheme}
                             icon="mic"

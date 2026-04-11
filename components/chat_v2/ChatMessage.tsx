@@ -81,7 +81,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
                     <View style={[styles.avatarWrapper, { paddingBottom: showTimestamp ? 22 : 2 }]}>
                         {showAvatar ? (
                             <Image
-                                source={{ uri: senderAvatar || "https://images.unsplash.com/photo-1494790108377-be9c29b29330" }}
+                                source={senderAvatar ? { uri: senderAvatar } : require('@/assets/images/avatar.png')}
                                 style={styles.avatar}
                             />
                         ) : <View style={styles.avatarSpacer} />}

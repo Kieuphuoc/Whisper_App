@@ -21,12 +21,6 @@ const StatsBento: React.FC<StatsBentoProps> = ({ voicePins }) => {
                 <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>Giọng nói</Text>
             </View>
 
-            <View style={styles.statDivider} />
-
-            <View style={styles.statItem}>
-                <Text style={styles.statNumber}>1.2km</Text>
-                <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>Bán kính</Text>
-            </View>
         </View>
     );
 };

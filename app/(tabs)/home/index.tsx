@@ -434,7 +434,7 @@ export default function HomeScreen() {
                 ...currentTheme.shadow.md,
             }
           ]}
-          onPress={() => router.push("/(tabs)/home/chat")}
+          onPress={() => router.push("/chat")}
         >
           <Ionicons name="chatbubble-ellipses-outline" size={22} color={currentTheme.colors.primary} />
           {/* Badge for unread chat messages could go here */}

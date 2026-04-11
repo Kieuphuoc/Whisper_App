@@ -59,23 +59,23 @@ export default function ProfileScreen() {
     const buttonGlow = useSharedValue(0);
 
 
-    const MOCK_STATS = {
-        totalListens: 256,
-        voicePinCount: 4,
-        friendCount: 18,
-        discoveredVoicesCount: 7,
+    const EMPTY_STATS = {
+        totalListens: 0,
+        voicePinCount: 0,
+        friendCount: 0,
+        discoveredVoicesCount: 0,
     };
 
-    const MOCK_USER: User = {
-        id: 1,
-        username: "Wanderer",
-        displayName: "The Silent Wanderer",
-        level: 15,
-        xp: 1250,
-        createdAt: new Date('2024-01-01').toISOString(),
+    const EMPTY_USER: User = {
+        id: 0,
+        username: "User",
+        displayName: "User",
+        level: 1,
+        xp: 0,
+        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        bio: "Đang dò tìm những tần số lạc lối giữa thực tại.",
-        avatar: "https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg",
+        bio: "",
+        avatar: "",
     };
 
     const fetchData = async (isRefresh = false) => {
@@ -83,20 +83,20 @@ export default function ProfileScreen() {
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) {
-                setStats(MOCK_STATS);
-                setUser(MOCK_USER);
+                setStats(EMPTY_STATS);
+                setUser(EMPTY_USER);
                 return;
             }
             const api = authApis(token);
 
             const [uRes, sRes] = await Promise.all([
-                api.get(endpoints.userMe).catch(() => ({ data: { data: MOCK_USER } })),
-                api.get(endpoints.meStats).catch(() => ({ data: { data: MOCK_STATS } })),
+                api.get(endpoints.userMe).catch(() => ({ data: { data: EMPTY_USER } })),
+                api.get(endpoints.meStats).catch(() => ({ data: { data: EMPTY_STATS } })),
             ]);
 
-            const userData = uRes.data?.data || MOCK_USER;
+            const userData = uRes.data?.data || EMPTY_USER;
             setUser(userData);
-            setStats(sRes.data?.data || MOCK_STATS);
+            setStats(sRes.data?.data || EMPTY_STATS);
 
             if (dispatch) {
                 dispatch({ type: 'SET_USER', payload: userData });
@@ -104,8 +104,8 @@ export default function ProfileScreen() {
             }
         } catch (e) {
             console.error('Fetch profile error:', e);
-            setStats(MOCK_STATS);
-            setUser(MOCK_USER);
+            setStats(EMPTY_STATS);
+            setUser(EMPTY_USER);
         } finally {
             setLoading(false);
             setRefreshing(false);

@@ -34,62 +34,58 @@ export function FloatingVibe({ type, onComplete }: VibeEffectProps) {
 
   const renderEffect = () => {
     switch (type) {
-      case "LIGHT_TAP":
+      case "LIKE":
         return (
-          <>
-            <Animated.View style={[styles.ripple, { 
-              transform: [{ scale }], 
-              opacity,
-              borderColor: "rgba(255, 255, 255, 0.8)",
-              borderWidth: 1,
-            }]} />
-            <Animated.View style={[styles.ripple, { 
-              transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1.5] }) }], 
-              opacity: anim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 0.8, 0] }),
-              borderColor: "rgba(255, 255, 255, 0.4)",
-              borderWidth: 0.5,
-            }]} />
-          </>
-        );
-      case "EMPATHY":
-        return (
-          <>
-            <Animated.View style={[styles.ripple, { 
-              transform: [{ scale }], 
-              opacity,
-              borderColor: "#a78bfa",
-              borderWidth: 2,
-            }]} />
-             <Animated.View style={[styles.ripple, { 
-              transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 2.5] }) }], 
-              opacity: anim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0, 0.4, 0] }),
-              borderColor: "#7c3aed",
-              borderWidth: 1,
-              borderStyle: "dashed",
-            }]} />
-          </>
-        );
-      case "RELAX":
-        return (
-          <Animated.View style={[styles.blurEffect, { 
-            transform: [{ scale: scale.interpolate({ inputRange: [0.5, 2], outputRange: [0.8, 1.5] }) }], 
-            opacity: anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.3, 0] }),
-          }]}>
-            <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFill} />
-          </Animated.View>
-        );
-      case "STRONG":
-        return (
-          <Animated.View style={[styles.glowPulse, { 
+          <Animated.View style={[styles.ripple, { 
             transform: [{ scale }], 
             opacity,
-            backgroundColor: "rgba(124, 58, 237, 0.4)",
-            shadowColor: "#7c3aed",
-            shadowRadius: 30,
-            shadowOpacity: 0.8,
-            elevation: 20,
+            borderColor: "#3b82f6",
+            borderWidth: 2,
           }]} />
         );
+      case "LOVE":
+        return (
+          <>
+            <Animated.View style={[styles.glowPulse, { 
+              transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 3] }) }], 
+              opacity,
+              backgroundColor: "rgba(244, 63, 94, 0.4)",
+              shadowColor: "#f43f5e",
+              shadowRadius: 40,
+            }]} />
+            <Animated.View style={[styles.ripple, { 
+              transform: [{ scale }], 
+              opacity: anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 1, 0] }),
+              borderColor: "#f43f5e",
+              borderWidth: 3,
+            }]} />
+          </>
+        );
+      case "LAUGH":
+        return (
+          <Animated.View style={[styles.ripple, { 
+            transform: [{ scale: anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.8, 2.5, 3.5] }) }], 
+            opacity,
+            borderColor: "#f59e0b",
+            borderWidth: 1.5,
+            borderStyle: "dashed",
+          }]} />
+        );
+      case "WOW":
+        return (
+          <Animated.View style={[styles.glowPulse, { 
+            transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 4] }) }], 
+            opacity: anim.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 0.5, 0] }),
+            backgroundColor: "rgba(249, 115, 22, 0.3)",
+            shadowColor: "#f97316",
+            shadowRadius: 50,
+          }]} />
+        );
+      case "LIGHT_TAP":
+      case "EMPATHY":
+      case "RELAX":
+      case "STRONG":
+        return null; // Legacy cleanup
       default:
         return null;
     }

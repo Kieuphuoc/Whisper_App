@@ -60,7 +60,7 @@ export default function ChatListScreen() {
             >
                 <TouchableOpacity
                     style={styles.roomCard}
-                    onPress={() => router.push(`/(tabs)/home/chat/${item.id}`)}
+                    onPress={() => router.push(`/chat/${item.id}`)}
                 >
                     <BlurView intensity={isDark ? 40 : 60} tint={isDark ? "dark" : "light"} style={styles.glassContent}>
                         <View style={styles.avatarContainer}>
@@ -71,8 +71,10 @@ export default function ChatListScreen() {
                                     <Ionicons name="person" size={24} color={currentTheme.colors.primary} />
                                 </View>
                             )}
-                            {/* Online status indicator could go here */}
-                            <View style={styles.onlineStatus} />
+                            {/* Online status indicator */}
+                            {(otherMember?.isOnline || otherMember?.isActive) && (
+                                <View style={styles.onlineStatus} />
+                            )}
                         </View>
 
                         <View style={styles.roomInfo}>
@@ -121,8 +123,8 @@ export default function ChatListScreen() {
                     <Ionicons name="chevron-back" size={28} color={isDark ? '#fff' : '#000'} />
                 </TouchableOpacity>
                 <MotiText 
-                    from={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
+                    from={{ opacity: 0, translateX: -20 }}
+                    animate={{ opacity: 1, translateX: 0 }}
                     style={[styles.headerTitle, { color: isDark ? '#fff' : '#000' }]}
                 >
                     Tín Hiệu

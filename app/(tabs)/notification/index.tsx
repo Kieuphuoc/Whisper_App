@@ -272,7 +272,7 @@ export default function NotificationScreen() {
             case 'COMMENT_REPLY':
             case 'FRIEND_VOICEPIN':
                 if (data?.voicePinId) {
-                    router.push({ pathname: '/(tabs)/home/voiceDetail', params: { id: String(data.voicePinId) } });
+                    router.push({ pathname: '/voiceDetail', params: { id: String(data.voicePinId) } });
                 }
                 break;
             case 'FRIEND_REQUEST':

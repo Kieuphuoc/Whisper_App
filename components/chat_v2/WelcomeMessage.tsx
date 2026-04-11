@@ -12,7 +12,7 @@ interface WelcomeMessageProps {
 
 const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ 
     name = "User", 
-    avatarUrl = "https://images.unsplash.com/photo-1494790108377-be9c29b29330" 
+    avatarUrl = "" 
 }) => {
     const scheme = useColorScheme() || 'light';
     const isDark = scheme === 'dark';
@@ -36,7 +36,7 @@ const WelcomeMessage: React.FC<WelcomeMessageProps> = ({
             </View>
             <View style={styles.avatarWrapper}>
                 <Image
-                    source={{ uri: avatarUrl }}
+                    source={avatarUrl ? { uri: avatarUrl } : require('@/assets/images/avatar.png')}
                     style={[styles.avatar, { borderColor: isDark ? '#a78bfa' : '#8b5cf6' }]}
                     contentFit="cover"
                 />

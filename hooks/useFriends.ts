@@ -44,11 +44,7 @@ export function useFriends() {
             ]);
 
             const fData = fRes.data?.data ?? fRes.data ?? [];
-            // For now, let's mock 'hasNewPost' randomly to show the visual enhancement
-            const enrichedFriends = (Array.isArray(fData) ? fData : []).map((f: any) => ({
-                ...f,
-                hasNewPost: Math.random() > 0.7, // Mocking
-            }));
+            const enrichedFriends = (Array.isArray(fData) ? fData : []);
             setFriends(enrichedFriends);
 
             const pData = pRes.data?.data ?? pRes.data ?? [];
