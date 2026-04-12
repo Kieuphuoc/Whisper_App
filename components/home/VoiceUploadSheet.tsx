@@ -62,7 +62,7 @@ export default function VoiceUploadSheet({
     
     const armRotate = armRotateAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: ['0deg', '25deg']
+        outputRange: ['-10deg', '5deg']
     });
 
     useEffect(() => {
@@ -85,11 +85,10 @@ export default function VoiceUploadSheet({
     };
 
     const animateArm = (toValue: number) => {
-        Animated.spring(armRotateAnim, {
+        Animated.timing(armRotateAnim, {
             toValue,
             useNativeDriver: true,
-            tension: 20,
-            friction: 5,
+            duration: 400,
         }).start();
     };
 
