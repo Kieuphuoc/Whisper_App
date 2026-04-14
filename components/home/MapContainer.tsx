@@ -22,8 +22,8 @@ const DEFAULT_DELTA = 0.01;
 const FALLBACK_LAT = 10.7769;
 const FALLBACK_LNG = 106.7009;
 
-/** Below this, skip SuperCluster — fewer native crashes with small datasets; clustering still runs when you have many pins. */
-const MIN_PINS_FOR_CLUSTERING = 55;
+/** Lowered threshold to 2 to enable clustering for small groups of pins without crashing. */
+const MIN_PINS_FOR_CLUSTERING = 2;
 
 type Props = {
   location: Location.LocationObject | null;
@@ -162,8 +162,8 @@ const MapSection = forwardRef<MapView, Props>(function MapSection(
         onRegionChangeComplete={onRegionChangeComplete}
         clusteringEnabled={clusteringEnabled}
         spiralEnabled={clusteringEnabled}
-        radius={60}
-        minPoints={3}
+        radius={30}
+        minPoints={2}
         extent={512}
         nodeSize={64}
         renderCluster={renderCluster}

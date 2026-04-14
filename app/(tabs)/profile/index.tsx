@@ -18,8 +18,11 @@ import {
     View,
     Alert,
     useColorScheme,
+    Share,
+    ScrollView,
 } from 'react-native';
 import { Text } from '@/components/ui/text';
+import { VoicePin } from '@/types';
 import Animated, {
     useAnimatedScrollHandler,
     useAnimatedStyle,
@@ -35,6 +38,17 @@ import Animated, {
 import { MotiView } from 'moti';
 import * as ImagePicker from 'expo-image-picker';
 import { BlurView } from 'expo-blur';
+import VoicePinCarousel from '@/components/memory/VoicePinCarousel';
+import VoicePinTurntable from '@/components/home/VoicePinCard';
+
+const MASCOT_ICONS: { [key: string]: any } = {
+    first_voice: require('@/assets/images/achievements/first_voice.png'),
+    voice_collector: require('@/assets/images/achievements/voice_collector.png'),
+    social_butterfly: require('@/assets/images/achievements/social_butterfly.png'),
+    explorer: require('@/assets/images/achievements/explorer.png'),
+    commenter: require('@/assets/images/achievements/commenter.png'),
+    popular_voice: require('@/assets/images/achievements/popular_voice.png'),
+};
 
 const { width, height } = Dimensions.get('window');
 const BANNER_HEIGHT = height * (2 / 3);
@@ -53,29 +67,35 @@ export default function ProfileScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [updatingImage, setUpdatingImage] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [activeTab, setActiveTab] = useState<'voices' | 'achievements' | 'discovered'>('voices');
+    const [myVoices, setMyVoices] = useState<VoicePin[]>([]);
+    const [achievements, setAchievements] = useState<any[]>([]);
+    const [discoveredVoices, setDiscoveredVoices] = useState<any[]>([]);
+    const [tabLoading, setTabLoading] = useState(false);
+    const [selectedPin, setSelectedPin] = useState<VoicePin | null>(null);
 
     const scrollY = useSharedValue(0);
     const shimmerProgress = useSharedValue(0);
     const buttonGlow = useSharedValue(0);
 
 
-    const MOCK_STATS = {
-        totalListens: 256,
-        voicePinCount: 4,
-        friendCount: 18,
-        discoveredVoicesCount: 7,
+    const EMPTY_STATS = {
+        totalListens: 0,
+        voicePinCount: 0,
+        friendCount: 0,
+        discoveredVoicesCount: 0,
     };
 
-    const MOCK_USER: User = {
-        id: 1,
-        username: "Wanderer",
-        displayName: "The Silent Wanderer",
-        level: 15,
-        xp: 1250,
-        createdAt: new Date('2024-01-01').toISOString(),
+    const EMPTY_USER: User = {
+        id: 0,
+        username: "User",
+        displayName: "User",
+        level: 1,
+        xp: 0,
+        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        bio: "Đang dò tìm những tần số lạc lối giữa thực tại.",
-        avatar: "https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg",
+        bio: "",
+        avatar: "",
     };
 
     const fetchData = async (isRefresh = false) => {
@@ -83,34 +103,67 @@ export default function ProfileScreen() {
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) {
-                setStats(MOCK_STATS);
-                setUser(MOCK_USER);
+                setStats(EMPTY_STATS);
+                setUser(EMPTY_USER);
                 return;
             }
             const api = authApis(token);
 
             const [uRes, sRes] = await Promise.all([
-                api.get(endpoints.userMe).catch(() => ({ data: { data: MOCK_USER } })),
-                api.get(endpoints.meStats).catch(() => ({ data: { data: MOCK_STATS } })),
+                api.get(endpoints.userMe).catch(() => ({ data: { data: EMPTY_USER } })),
+                api.get(endpoints.meStats).catch(() => ({ data: { data: EMPTY_STATS } })),
             ]);
 
-            const userData = uRes.data?.data || MOCK_USER;
+            const userData = uRes.data?.data || EMPTY_USER;
             setUser(userData);
-            setStats(sRes.data?.data || MOCK_STATS);
+            setStats(sRes.data?.data || EMPTY_STATS);
 
             if (dispatch) {
                 dispatch({ type: 'SET_USER', payload: userData });
                 await AsyncStorage.setItem('user', JSON.stringify(userData));
             }
+
+            // Fetch current tab data
+            fetchTabData(activeTab, token);
         } catch (e) {
             console.error('Fetch profile error:', e);
-            setStats(MOCK_STATS);
-            setUser(MOCK_USER);
+            setStats(EMPTY_STATS);
+            setUser(EMPTY_USER);
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     };
+
+    const fetchTabData = async (tab: string, token: string | null = null) => {
+        setTabLoading(true);
+        try {
+            const authToken = token || await AsyncStorage.getItem('token');
+            if (!authToken) return;
+            const api = authApis(authToken);
+
+            if (tab === 'voices') {
+                const res = await api.get(endpoints.voicePublicByUser(user?.id || 'me'));
+                setMyVoices(res.data?.data || []);
+            } else if (tab === 'achievements') {
+                const res = await api.get(endpoints.myAchievements);
+                setAchievements(res.data?.data || []);
+            } else if (tab === 'discovered') {
+                const res = await api.get(endpoints.myDiscovered);
+                setDiscoveredVoices(res.data?.data || []);
+            }
+        } catch (e) {
+            console.error(`Fetch ${tab} error:`, e);
+        } finally {
+            setTabLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!loading && user) {
+            fetchTabData(activeTab);
+        }
+    }, [activeTab]);
 
     const fetchUnreadCount = async () => {
         try {
@@ -225,6 +278,17 @@ export default function ProfileScreen() {
         }
     };
 
+    const handleShareProfile = async () => {
+        try {
+            await Share.share({
+                message: `Khám phá hồ sơ của mình trên Whispery! @${user?.username}`,
+                url: `https://whispery.app/user/${user?.username}`, // Mock URL for now
+            });
+        } catch (error: any) {
+            Alert.alert('Lỗi', error.message);
+        }
+    };
+
     const avatarUri = useMemo(() => {
         if (!user?.avatar) return 'https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg';
         if (user.avatar.startsWith('http')) return user.avatar;
@@ -241,7 +305,7 @@ export default function ProfileScreen() {
     const joinDate = useMemo(() => {
         if (!user?.createdAt) return 'Vô định';
         const date = new Date(user.createdAt);
-        return `Phát tín hiệu: ${date.getMonth() + 1}/${date.getFullYear()}`;
+        return `Tham gia vào: ${date.getMonth() + 1}/${date.getFullYear()}`;
     }, [user]);
 
     const bannerAnim = useAnimatedStyle(() => {
@@ -429,7 +493,7 @@ export default function ProfileScreen() {
                     {/* GLASS VIBE SECTION */}
                     <View style={styles.glassRow}>
                         {[
-                            { icon: "search", label: `${stats?.discoveredVoicesCount || 0} Dị thường` },
+                            { icon: "search", label: `${stats?.discoveredVoicesCount || 0} Khám phá` },
                             { icon: "time-outline", label: joinDate }
                         ].map((item, i) => (
                             <MotiView
@@ -437,9 +501,12 @@ export default function ProfileScreen() {
                                 from={{ opacity: 0, scale: 0.8 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: 700 + i * 150 }}
-                                style={[styles.glassStrangeCard, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
+                                style={[styles.glassStrangeCard, { 
+                                    backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.7)',
+                                    borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' 
+                                }]}
                             >
-                                <BlurView intensity={25} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+                                <BlurView intensity={isDark ? 30 : 20} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
                                 <Ionicons name={item.icon as any} size={14} color={isDark ? "#fff" : currentTheme.colors.primary} />
                                 <Text style={[styles.glassStrangeText, { color: isDark ? "#fff" : currentTheme.colors.text }]}>{item.label}</Text>
                             </MotiView>
@@ -492,19 +559,20 @@ export default function ProfileScreen() {
 
                         <View style={styles.actionGrid}>
                             <TouchableOpacity
+                                onPress={handleShareProfile}
                                 style={styles.glassMainButton}
                                 activeOpacity={0.9}
                             >
                                 {/* PERIODIC GLOW EFFECT */}
                                 <Animated.View
                                     style={[
-                                        StyleSheet.absoluteFill,
-                                        glowStyle,
                                         {
+                                            ...StyleSheet.absoluteFillObject,
                                             backgroundColor: currentTheme.colors.primary,
                                             borderRadius: 20,
-                                            filter: 'blur(15px)'
-                                        } as any
+                                            // filter: 'blur(15px)' // filter is not supported in style object directly sometimes depending on RN version, using simpler glow
+                                        } as any,
+                                        glowStyle,
                                     ]}
                                 />
 
@@ -543,8 +611,8 @@ export default function ProfileScreen() {
                                         transition={{ type: 'spring', damping: 10 }}
                                         style={{ flexDirection: 'row', alignItems: 'center' }}
                                     >
-                                        <Ionicons name="person-add" size={20} color="#fff" style={{ marginRight: 10 }} />
-                                        <Text style={styles.mainActionText}>Theo dõi</Text>
+                                        <Ionicons name="share-social" size={20} color="#fff" style={{ marginRight: 10 }} />
+                                        <Text style={styles.mainActionText}>Chia sẻ</Text>
                                     </MotiView>
                                 </View>
                             </TouchableOpacity>
@@ -563,16 +631,190 @@ export default function ProfileScreen() {
                             </TouchableOpacity>
                         </View>
                     </MotiView>
+
+                    {/* NEW: LEVEL PROGRESS BAR */}
+                    <MotiView
+                        from={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 500 }}
+                        style={[styles.levelProgressContainer, {
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.7)',
+                            borderColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.1)',
+                        }]}
+                    >
+                        <BlurView intensity={isDark ? 10 : 5} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+                        <View style={{ padding: 20 }}>
+                            <View style={styles.levelHeader}>
+                                <Text style={[styles.levelLabel, { color: isDark ? '#fff' : currentTheme.colors.text }]}>Level {user.level || 1}</Text>
+                                <Text style={[styles.xpText, { color: isDark ? 'rgba(255,255,255,0.6)' : currentTheme.colors.textMuted }]}>{user.xp || 0} / {((user.level || 1) * 1000)} XP</Text>
+                            </View>
+                            <View style={[styles.progressBarBg, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                                <MotiView
+                                    from={{ width: '0%' }}
+                                    animate={{ width: `${Math.min(100, ((user.xp || 0) / ((user.level || 1) * 1000)) * 100)}%` }}
+                                    transition={{ type: 'timing', duration: 1000, easing: Easing.out(Easing.quad) }}
+                                    style={[styles.progressBarFill, { backgroundColor: currentTheme.colors.primary }]}
+                                >
+                                    <LinearGradient
+                                        colors={['rgba(255,255,255,0.3)', 'transparent']}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 1 }}
+                                        style={StyleSheet.absoluteFill}
+                                    />
+                                </MotiView>
+                            </View>
+                        </View>
+                    </MotiView>
+
+                    {/* NEW: CONTENT FEED TABS */}
+                    <View style={[styles.tabHeaderContainer, { 
+                        backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.7)',
+                        borderColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.1)' 
+                    }]}>
+                        <BlurView intensity={isDark ? 10 : 5} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+                        <View style={styles.tabHeader}>
+                            {[
+                                { id: 'voices', icon: 'mic', label: 'VoicePin' },
+                                { id: 'discovered', icon: 'compass', label: 'AR đã khám phá' },
+                                { id: 'achievements', icon: 'trophy', label: 'Thành tựu' }
+                            ].map((tab) => (
+                                <TouchableOpacity
+                                    key={tab.id}
+                                    onPress={() => setActiveTab(tab.id as any)}
+                                    style={[
+                                        styles.tabItem,
+                                        activeTab === tab.id && [
+                                            styles.activeTabItem, 
+                                            { 
+                                                borderColor: currentTheme.colors.primary,
+                                                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : currentTheme.colors.primary + '15'
+                                            }
+                                        ]
+                                    ]}
+                                >
+                                    <Ionicons
+                                        name={tab.icon as any}
+                                        size={18}
+                                        color={activeTab === tab.id ? currentTheme.colors.primary : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)')}
+                                    />
+                                    <Text style={[
+                                        styles.tabLabel,
+                                        { color: activeTab === tab.id ? currentTheme.colors.primary : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)') },
+                                        activeTab === tab.id && styles.activeTabLabel
+                                    ]}>
+                                        {tab.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+
+                    {/* TAB CONTENT */}
+                    <View style={styles.tabContent}>
+                        {tabLoading ? (
+                            <ActivityIndicator size="small" color={currentTheme.colors.primary} style={{ marginTop: 20 }} />
+                        ) : (
+                            <>
+                                {activeTab === 'voices' && (
+                                    <MotiView
+                                        from={{ opacity: 0, translateY: 10 }}
+                                        animate={{ opacity: 1, translateY: 0 }}
+                                        transition={{ type: 'timing' }}
+                                        key="voices"
+                                    >
+                                        <VoicePinCarousel
+                                            title="VoicePin của tôi"
+                                            pins={myVoices}
+                                            onSelectPin={(p) => setSelectedPin(p)}
+                                            currentTheme={currentTheme}
+                                            emptyText="Bạn chưa có VoicePin nào"
+                                        />
+                                    </MotiView>
+                                )}
+
+                                {activeTab === 'discovered' && (
+                                    <MotiView
+                                        from={{ opacity: 0, translateY: 10 }}
+                                        animate={{ opacity: 1, translateY: 0 }}
+                                        transition={{ type: 'timing' }}
+                                        key="discovered"
+                                    >
+                                        <VoicePinCarousel
+                                            title="AR đã tìm thấy"
+                                            pins={discoveredVoices?.map(d => d.voicePin) || []}
+                                            onSelectPin={(p) => setSelectedPin(p)}
+                                            currentTheme={currentTheme}
+                                            emptyText="Bạn chưa khám phá được AR nào"
+                                            icon="sparkles"
+                                            iconColor="#f59e0b"
+                                        />
+                                    </MotiView>
+                                )}
+
+                                {activeTab === 'achievements' && (
+                                    <MotiView
+                                        from={{ opacity: 0, translateY: 10 }}
+                                        animate={{ opacity: 1, translateY: 0 }}
+                                        transition={{ type: 'timing' }}
+                                        key="achievements"
+                                    >
+                                        <View style={styles.achievementsGrid}>
+                                            {achievements.length > 0 ? achievements.map((item) => {
+                                                // Map to mascot icons
+                                                let mascotIcon = { uri: item.achievement?.iconUrl };
+                                                const name = item.achievement?.name || "";
+                                                if (name.includes("Lời nói đầu tiên")) mascotIcon = MASCOT_ICONS.first_voice;
+                                                else if (name.includes("sưu tầm")) mascotIcon = MASCOT_ICONS.voice_collector;
+                                                else if (name.includes("bạn")) mascotIcon = MASCOT_ICONS.social_butterfly;
+                                                else if (name.includes("thám hiểm")) mascotIcon = MASCOT_ICONS.explorer;
+                                                else if (name.includes("bình luận")) mascotIcon = MASCOT_ICONS.commenter;
+                                                else if (name.includes("phổ biến")) mascotIcon = MASCOT_ICONS.popular_voice;
+
+                                                return (
+                                                    <MotiView
+                                                        key={item.achievementId}
+                                                        from={{ opacity: 0, scale: 0.8 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        style={styles.achievementBadge}
+                                                    >
+                                                        <View style={[styles.badgeIconBg, { backgroundColor: currentTheme.colors.primary + '20' }]}>
+                                                            <Image source={mascotIcon} style={styles.badgeIcon} />
+                                                        </View>
+                                                        <Text style={[styles.badgeName, { color: isDark ? '#fff' : '#000' }]} numberOfLines={1}>
+                                                            {item.achievement?.name}
+                                                        </Text>
+                                                    </MotiView>
+                                                );
+                                            }) : (
+                                                <View style={styles.emptyContainer}>
+                                                    <Ionicons name="trophy-outline" size={48} color={isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'} />
+                                                    <Text style={[styles.emptyText, { color: currentTheme.colors.textMuted }]}>Tiếp tục khám phá để nhận thưởng</Text>
+                                                </View>
+                                            )}
+                                        </View>
+                                    </MotiView>
+                                )}
+                            </>
+                        )}
+                    </View>
                 </Animated.View>
 
-
-                <View style={{ height: 120 }} />
+                <View style={{ height: 100 }} />
             </Animated.ScrollView>
 
             {updatingImage && (
                 <View style={StyleSheet.absoluteFill}>
                     <View style={styles.overlay} />
                     <ActivityIndicator size="large" color="#fff" style={styles.absCenter} />
+                </View>
+            )}
+
+            {selectedPin && (
+                <View style={StyleSheet.absoluteFill}>
+                    <VoicePinTurntable
+                        pin={selectedPin!}
+                        onClose={() => setSelectedPin(null)}
+                    />
                 </View>
             )}
         </View>
@@ -710,7 +952,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         borderWidth: 1.5,
         borderColor: 'rgba(255,255,255,0.25)',
-        backgroundColor: 'rgba(0,0,0,0.2)',
+        backgroundColor: 'transparent',
     },
     nameHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 15 },
     glassDisplayName: { fontSize: 32, fontWeight: '900', color: '#fff', letterSpacing: -1 },
@@ -762,7 +1004,6 @@ const styles = StyleSheet.create({
         fontSize: 18,
         letterSpacing: 1,
         textShadowColor: 'rgba(0,0,0,0.3)',
-        textShadowOffset: { width: 0, height: 2 },
         textShadowRadius: 4,
     },
     glassSettingsButton: {
@@ -775,6 +1016,134 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         borderWidth: 1.5,
         borderColor: 'rgba(255,255,255,0.3)',
+    },
+    levelProgressContainer: {
+        borderRadius: 24,
+        marginBottom: 35,
+        borderWidth: 1.5,
+        overflow: 'hidden',
+        backgroundColor: 'transparent',
+    },
+    levelHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'baseline',
+        marginBottom: 10,
+    },
+    levelLabel: {
+        fontSize: 18,
+        fontWeight: '900',
+    },
+    xpText: {
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    progressBarBg: {
+        height: 10,
+        borderRadius: 5,
+        overflow: 'hidden',
+    },
+    progressBarFill: {
+        height: '100%',
+        borderRadius: 5,
+    },
+    tabHeaderContainer: {
+        padding: 6,
+        borderRadius: 20,
+        marginBottom: 25,
+        borderWidth: 1.5,
+        overflow: 'hidden',
+        backgroundColor: 'transparent',
+    },
+    tabHeader: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    tabItem: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        borderRadius: 14,
+        gap: 6,
+        borderWidth: 1,
+        borderColor: 'transparent',
+    },
+    activeTabItem: {
+        borderColor: 'rgba(255, 255, 255, 0.2)',
+    },
+    tabLabel: {
+        fontSize: 13,
+        fontWeight: '700',
+    },
+    activeTabLabel: {
+        fontWeight: '800',
+    },
+    tabContent: {
+        minHeight: 300,
+    },
+    voicesGrid: {
+        gap: 12,
+    },
+    voiceMiniCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        borderRadius: 20,
+        gap: 12,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    voiceContent: {
+        fontSize: 15,
+        fontWeight: '700',
+    },
+    voiceDate: {
+        fontSize: 12,
+        marginTop: 2,
+    },
+    achievementsGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+        justifyContent: 'space-between',
+    },
+    achievementBadge: {
+        width: (width - 64) / 3,
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    badgeIconBg: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    badgeIcon: {
+        width: 40,
+        height: 40,
+        resizeMode: 'contain',
+    },
+    badgeName: {
+        fontSize: 11,
+        fontWeight: '700',
+        textAlign: 'center',
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 40,
+        gap: 12,
+    },
+    emptyText: {
+        fontSize: 14,
+        fontWeight: '600',
     },
     overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)' },
     absCenter: { position: 'absolute', top: '50%', left: '50%', transform: [{ translateX: -15 }, { translateY: -15 }] },

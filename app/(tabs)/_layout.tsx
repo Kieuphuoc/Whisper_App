@@ -78,8 +78,6 @@ export default function TabLayout() {
     if (!isReady) return null;
     if (!user) return <Redirect href="/login" />;
 
-    const shouldHideTabBar = segments[0] === '(tabs)' && segments[1] === 'home' && segments[2] === 'chat';
-
     return (
         <Tabs
             screenOptions={{
@@ -101,7 +99,6 @@ export default function TabLayout() {
                     shadowOffset: { width: 0, height: 10 },
                     shadowOpacity: 0.08,
                     shadowRadius: 20,
-                    display: shouldHideTabBar ? 'none' : 'flex',
                 },
                 tabBarBackground: () => (
                     <BlurView tint="light" intensity={60} style={{ ...StyleSheet.absoluteFillObject, borderRadius: 36, overflow: 'hidden' }} />
@@ -134,6 +131,16 @@ export default function TabLayout() {
                     tabBarIcon: ({ color, focused }) => (
                         <Ionicons name={focused ? "person" : "person-outline"} size={26} color={color} />
                     ),
+                }}
+            />
+
+            <Tabs.Screen name="notification/index"
+                options={{
+                    href: null,
+                    title: 'Thông báo',
+                    tabBarIcon: ({ color, focused }) => (
+                        <Ionicons name={focused ? "notifications" : "notifications-outline"} size={26} color={color} />
+                    ),
                     tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
                     tabBarBadgeStyle: {
                         backgroundColor: '#ef4444',
@@ -142,10 +149,6 @@ export default function TabLayout() {
                         fontWeight: 'bold',
                     }
                 }}
-            />
-
-            <Tabs.Screen name="notification/index"
-                options={{ href: null }}
             />
 
             <Tabs.Screen name="album"

@@ -108,7 +108,9 @@ const MapboxContainer = forwardRef<Mapbox.MapView, Props>((props, ref) => {
     }
   }, [onRegionChangeComplete]);
 
-  if (!location) return null;
+  const centerCoord: [number, number] = location 
+    ? [location.coords.longitude, location.coords.latitude] 
+    : FALLBACK_COORD;
 
   return (
     <View style={styles.container}>
@@ -117,14 +119,14 @@ const MapboxContainer = forwardRef<Mapbox.MapView, Props>((props, ref) => {
         style={styles.map}
         styleURL={Mapbox.StyleURL.Dark} 
         logoEnabled={false}
-        onRegionDidChange={handleRegionChange}
+        onMapIdle={handleRegionChange}
       >
         <Mapbox.Camera
           ref={(c) => {
             // Có thể dùng camera ref nếu cần
           }}
           defaultSettings={{
-            centerCoordinate: [location.coords.longitude, location.coords.latitude],
+            centerCoordinate: centerCoord,
             zoomLevel: currentZoom,
           }}
         />

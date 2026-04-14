@@ -40,8 +40,9 @@ const VIEWPORT_RETAIN_FACTOR = 2.35;
 const USER_PIN_RETAIN_RADIUS_M = 1600;
 /** Hard cap on markers in memory — native maps OOM if this grows without bound. */
 const MAX_ACCUMULATED_PINS = 450;
+const EMPTY_PINS: VoicePin[] = [];
 
-const USE_MAPBOX = true; // Chuyển thành true sau khi đã điền đủ Token và Build lại app
+const USE_MAPBOX = false; // Chuyển thành true sau khi đã điền đủ Token và Build lại app
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme() || "light";
@@ -56,7 +57,7 @@ export default function HomeScreen() {
   /** Aligns with useVoicePins query key (4 decimals) — skip setState when viewport cell unchanged. */
   const lastBboxKeyRef = useRef<string | null>(null);
 
-  const { data: latestPins = [], refetch, isFetching } = useVoicePins(visibility, bbox);
+  const { data: latestPins = EMPTY_PINS, refetch, isFetching } = useVoicePins(visibility, bbox, { enabled: !!bbox });
   const [accumulatedPins, setAccumulatedPins] = useState<VoicePin[]>([]);
 
   // Reset cache when changing filter
@@ -77,10 +78,20 @@ export default function HomeScreen() {
   // Merge bbox results, then evict pins far outside the padded viewport (and not near the user).
   // Without eviction, every pan/zoom adds markers until the app runs out of native memory.
   useEffect(() => {
+    if (!latestPins && !bbox) return;
+
     setAccumulatedPins((prev) => {
+      const pinsToProcess = latestPins || [];
       const pinMap = new Map(prev.map((p) => [p.id, p]));
-      if (latestPins.length > 0) {
-        latestPins.forEach((p) => pinMap.set(p.id, p));
+      
+      let hasNewPins = false;
+      if (pinsToProcess.length > 0) {
+        for (const p of pinsToProcess) {
+          if (!pinMap.has(p.id)) {
+            pinMap.set(p.id, p);
+            hasNewPins = true;
+          }
+        }
       }
 
       let pins = Array.from(pinMap.values());
@@ -89,6 +100,8 @@ export default function HomeScreen() {
         const expanded = expandBoundingBox(bbox, VIEWPORT_RETAIN_FACTOR);
         const uLat = location?.coords.latitude;
         const uLng = location?.coords.longitude;
+        
+        const initialCount = pins.length;
         pins = pins.filter((p) => {
           if (pointInBoundingBox(p.latitude, p.longitude, expanded)) return true;
           if (uLat != null && uLng != null) {
@@ -100,6 +113,10 @@ export default function HomeScreen() {
           }
           return false;
         });
+
+        if (!hasNewPins && pins.length === initialCount && pins.length === prev.length) {
+            return prev; // Skip update if nothing changed
+        }
       }
 
       if (pins.length > MAX_ACCUMULATED_PINS) {
@@ -118,12 +135,17 @@ export default function HomeScreen() {
       }
 
       if (__DEV__) {
-        console.log(`[HomeScreen] BBox pins fetched: ${latestPins.length}, Accumulated: ${pins.length}`);
+        console.log(`[HomeScreen] BBox pins fetched: ${pinsToProcess.length}, Accumulated: ${pins.length}`);
+      }
+
+      // If the array content is exactly the same as before, don't update to avoid re-renders
+      if (pins.length === prev.length && pins.every((p, i) => p.id === prev[i].id)) {
+        return prev;
       }
 
       return pins;
     });
-  }, [latestPins, bbox, location]);
+  }, [latestPins, bbox, location?.coords.latitude, location?.coords.longitude]);
   const dispatch = useContext(MyDispatchContext);
   const user = useContext(MyUserContext);
   const router = useRouter();
@@ -434,7 +456,7 @@ export default function HomeScreen() {
                 ...currentTheme.shadow.md,
             }
           ]}
-          onPress={() => router.push("/(tabs)/home/chat")}
+          onPress={() => router.push("/chat")}
         >
           <Ionicons name="chatbubble-ellipses-outline" size={22} color={currentTheme.colors.primary} />
           {/* Badge for unread chat messages could go here */}
@@ -453,11 +475,13 @@ export default function HomeScreen() {
           }
         }}
         onFriends={() => setFriendsVisible(true)}
+        onNotifications={() => router.push('/(tabs)/notification')}
         onTrending={() => {
           Alert.alert("Trending", "Tính năng đang được phát triển");
         }}
         isScanning={isScanning}
         receivedCount={receivedCount}
+        unreadCount={receivedCount}
       />
 
       {isMiniCardOpen && discoveredPin && (

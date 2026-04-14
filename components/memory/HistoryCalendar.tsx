@@ -17,6 +17,7 @@ import Animated, { useAnimatedStyle, withRepeat, withTiming, withSequence, withD
 
 const { width } = Dimensions.get('window');
 const GRID_COLS = 7;
+const WEEKDAY_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
 function startOfDay(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -33,6 +34,11 @@ function fmtKey(d: Date) {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+function mondayFirstWeekdayIndex(d: Date) {
+  // JS getDay(): 0=CN ... 6=T7 -> convert to 0=T2 ... 6=CN
+  return (d.getDay() + 6) % 7;
 }
 
 interface HistoryCalendarProps {
@@ -146,79 +152,124 @@ const HistoryCalendar: React.FC<HistoryCalendarProps> = ({
         >
           <View style={[styles.monthCard]}>
             <View style={styles.grid}>
-              {Array.from({ length: activeMonth.daysInMonth }).map((_, i) => {
-                const day = i + 1;
-                const cellDate = new Date(activeMonth.year, activeMonth.month, day);
-                const cellDateStart = startOfDay(cellDate);
-                const key = fmtKey(cellDateStart);
-                const dayPins = pinsByDateKey[key];
-                const firstPin = dayPins?.[0];
-                const imgUrl = firstPin ? getPinImage(firstPin) : null;
+              {/* Weekday header */}
+              {WEEKDAY_LABELS.map((label) => (
+                <View key={`weekday-${label}`} style={[styles.dayCell, styles.weekdayCell]}>
+                  <Text style={styles.weekdayText}>{label}</Text>
+                </View>
+              ))}
 
-                const isToday = cellDateStart.getTime() === today.getTime();
-                const isFuture = cellDateStart.getTime() > today.getTime();
-                const showAdd = isToday && !dayPins?.length && !!onPressAddToday;
+              {(() => {
+                const firstOfMonth = new Date(activeMonth.year, activeMonth.month, 1);
+                const leadingEmptyCells = mondayFirstWeekdayIndex(firstOfMonth);
+                const totalCells = leadingEmptyCells + activeMonth.daysInMonth;
+                const trailingEmptyCells = (GRID_COLS - (totalCells % GRID_COLS)) % GRID_COLS;
 
-                return (
-                  <MotiView
-                    key={day}
-                    from={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 15, type: 'spring' }}
-                    style={styles.dayCell}
-                  >
-                    {imgUrl ? (
-                      <TouchableOpacity
-                        activeOpacity={0.8}
-                        onPress={() => onSelectPin(firstPin)}
-                        style={[styles.pinImageWrapper, shadowStyle]}
-                      >
-                        <Image source={{ uri: imgUrl }} style={styles.pinImage} />
-                        <LinearGradient
-                          colors={['transparent', 'rgba(0,0,0,0.4)']}
-                          style={StyleSheet.absoluteFill}
-                        />
-                        <View style={styles.dateOverlay}>
-                          <Text style={styles.dateNumberText}>{day}</Text>
+                const monthCells: Array<{ type: 'empty' } | { type: 'day'; day: number }> = [];
+                for (let i = 0; i < leadingEmptyCells; i++) monthCells.push({ type: 'empty' });
+                for (let day = 1; day <= activeMonth.daysInMonth; day++) monthCells.push({ type: 'day', day });
+                for (let i = 0; i < trailingEmptyCells; i++) monthCells.push({ type: 'empty' });
+
+                return monthCells.map((cell, i) => {
+                  if (cell.type === 'empty') {
+                    return <View key={`empty-${i}`} style={[styles.dayCell, styles.emptyDayCell]} />;
+                  }
+
+                  const day = cell.day;
+                  const cellDate = new Date(activeMonth.year, activeMonth.month, day);
+                  const cellDateStart = startOfDay(cellDate);
+                  const key = fmtKey(cellDateStart);
+                  const dayPins = pinsByDateKey[key];
+
+                  // Show newest pin first; if there are images, prioritize newest pin with image.
+                  const dayPinsSorted = [...(dayPins ?? [])].sort(
+                    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                  );
+                  const firstPinWithImage = dayPinsSorted.find((p) => !!getPinImage(p));
+                  const representativePin = firstPinWithImage ?? dayPinsSorted[0];
+                  const imgUrl = representativePin ? getPinImage(representativePin) : null;
+
+                  const isToday = cellDateStart.getTime() === today.getTime();
+                  const isFuture = cellDateStart.getTime() > today.getTime();
+                  const showAdd = isToday && !dayPins?.length && !!onPressAddToday;
+
+                  return (
+                    <MotiView
+                      key={`day-${day}`}
+                      from={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 12, type: 'spring' }}
+                      style={styles.dayCell}
+                    >
+                      {imgUrl ? (
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          onPress={() => representativePin && onSelectPin(representativePin)}
+                          style={[styles.pinImageWrapper, shadowStyle]}
+                        >
+                          <Image source={{ uri: imgUrl }} style={styles.pinImage} />
+                          <LinearGradient
+                            colors={['transparent', 'rgba(0,0,0,0.4)']}
+                            style={StyleSheet.absoluteFill}
+                          />
+                          <View style={styles.dateOverlay}>
+                            <Text style={styles.dateNumberText}>{day}</Text>
+                          </View>
+                          {dayPins.length > 1 && (
+                            <MotiView
+                              from={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              style={styles.badge}
+                            >
+                              <Text style={styles.badgeText}>{dayPins.length}</Text>
+                            </MotiView>
+                          )}
+                        </TouchableOpacity>
+                      ) : dayPins?.length ? (
+                        <TouchableOpacity
+                          activeOpacity={0.85}
+                          onPress={() => representativePin && onSelectPin(representativePin)}
+                          style={styles.pinFallbackWrapper}
+                        >
+                          <View style={styles.pinFallbackIcon}>
+                            <Ionicons name="mic" size={16} color="#8b5cf6" />
+                          </View>
+                          <Text style={styles.pinFallbackDateText}>{day}</Text>
+                          {dayPins.length > 1 && (
+                            <View style={[styles.badge, styles.fallbackBadge]}>
+                              <Text style={styles.badgeText}>{dayPins.length}</Text>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      ) : showAdd ? (
+                        <TouchableOpacity
+                          activeOpacity={0.85}
+                          onPress={onPressAddToday}
+                          style={styles.addWrapper}
+                        >
+                          <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFill} />
+                          <LinearGradient
+                            colors={[currentTheme.colors.primary + '40', 'transparent']}
+                            style={StyleSheet.absoluteFill}
+                          />
+                          <Ionicons name="add" size={24} color="#fff" />
+                          <Text style={styles.todayText}>Nay</Text>
+                        </TouchableOpacity>
+                      ) : isFuture ? (
+                        <View style={styles.futurePlaceholder}>
+                          <BlurView intensity={5} tint="light" style={StyleSheet.absoluteFill} />
+                          <Text style={styles.futureDateText}>{day}</Text>
                         </View>
-                        {dayPins.length > 1 && (
-                          <MotiView
-                            from={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            style={styles.badge}
-                          >
-                            <Text style={styles.badgeText}>{dayPins.length}</Text>
-                          </MotiView>
-                        )}
-                      </TouchableOpacity>
-                    ) : showAdd ? (
-                      <TouchableOpacity
-                        activeOpacity={0.85}
-                        onPress={onPressAddToday}
-                        style={styles.addWrapper}
-                      >
-                        <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFill} />
-                        <LinearGradient
-                          colors={[currentTheme.colors.primary + '40', 'transparent']}
-                          style={StyleSheet.absoluteFill}
-                        />
-                        <Ionicons name="add" size={24} color="#fff" />
-                        <Text style={styles.todayText}>Nay</Text>
-                      </TouchableOpacity>
-                    ) : isFuture ? (
-                      <View style={styles.futurePlaceholder}>
-                        <BlurView intensity={5} tint="light" style={StyleSheet.absoluteFill} />
-                        <Text style={styles.futureDateText}>{day}</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.pastEmpty}>
-                        <View style={[styles.dot, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
-                        <Text style={styles.pastDateText}>{day}</Text>
-                      </View>
-                    )}
-                  </MotiView>
-                );
-              })}
+                      ) : (
+                        <View style={styles.pastEmpty}>
+                          <View style={[styles.dot, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
+                          <Text style={styles.pastDateText}>{day}</Text>
+                        </View>
+                      )}
+                    </MotiView>
+                  );
+                });
+              })()}
             </View>
           </View>
         </MotiView>
@@ -295,6 +346,17 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  weekdayCell: {
+    aspectRatio: 0.6,
+  },
+  weekdayText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  emptyDayCell: {
+    opacity: 0,
   },
   pinImageWrapper: {
     width: '100%',
@@ -374,6 +436,31 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
+  pinFallbackWrapper: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(139, 92, 246, 0.25)',
+    backgroundColor: 'rgba(139, 92, 246, 0.08)',
+    position: 'relative',
+  },
+  pinFallbackIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(139, 92, 246, 0.14)',
+    marginBottom: 2,
+  },
+  pinFallbackDateText: {
+    color: '#8b5cf6',
+    fontSize: 10,
+    fontWeight: '800',
+  },
   badge: {
     position: 'absolute',
     top: 4,
@@ -387,6 +474,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     borderWidth: 1.5,
     borderColor: '#fff',
+  },
+  fallbackBadge: {
+    borderColor: 'rgba(255,255,255,0.8)',
   },
   badgeText: {
     color: '#fff',

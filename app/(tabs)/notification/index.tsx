@@ -179,9 +179,14 @@ function NotifItem({
             <TouchableOpacity
                 onPress={() => { onRead(item.id); onNavigate(item); }}
                 activeOpacity={0.9}
-                style={[styles.itemContainer, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
+                style={[
+                    styles.itemContainer, 
+                    { 
+                        borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.7)'
+                    }
+                ]}
             >
-                <BlurView intensity={20} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
                 
                 <View style={styles.leftCol}>
                     <View style={styles.avatarContainer}>
@@ -258,6 +263,7 @@ export default function NotificationScreen() {
         } catch (e) {
             console.error('Load notifications error:', e);
             setUsedMock(true);
+            // Optional: alert('Không thể kết nối máy chủ. Đang hiển thị dữ liệu tạm thời.');
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -272,7 +278,7 @@ export default function NotificationScreen() {
             case 'COMMENT_REPLY':
             case 'FRIEND_VOICEPIN':
                 if (data?.voicePinId) {
-                    router.push({ pathname: '/(tabs)/home/voiceDetail', params: { id: String(data.voicePinId) } });
+                    router.push({ pathname: '/voiceDetail', params: { id: String(data.voicePinId) } });
                 }
                 break;
             case 'FRIEND_REQUEST':
@@ -378,13 +384,33 @@ export default function NotificationScreen() {
                     transition={{ loop: true, type: 'timing', duration: 15000, repeatReverse: true }}
                     style={[styles.auraCircle, { backgroundColor: isDark ? '#4338ca' : '#ddd6fe', top: -50, right: -100 }]}
                 />
+                <BlurView 
+                    intensity={isDark ? 100 : 60} 
+                    tint={isDark ? "dark" : "light"} 
+                    style={StyleSheet.absoluteFill} 
+                />
             </View>
 
             {/* HEADER */}
             <View style={styles.header}>
-                <View>
-                    <Text style={[styles.title, { color: isDark ? '#fff' : '#111827' }]}>Tín Hiệu</Text>
-                    <Text style={styles.subtitle}>Kết nối từ tần số của bạn</Text>
+                <View style={styles.headerLeft}>
+                    <TouchableOpacity
+                        onPress={() => {
+                            if (router.canGoBack()) {
+                                router.back();
+                            } else {
+                                router.replace('/(tabs)/home');
+                            }
+                        }}
+                        style={[styles.headerIconBtn, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
+                        activeOpacity={0.8}
+                    >
+                        <Ionicons name="arrow-back" size={20} color={themeContext.colors.primary} />
+                    </TouchableOpacity>
+                    <View>
+                        <Text style={[styles.title, { color: isDark ? '#fff' : '#111827' }]}>Thông báo</Text>
+                        <Text style={styles.subtitle}>Xem các hoạt động mới nhất</Text>
+                    </View>
                 </View>
                 <TouchableOpacity 
                     onPress={markAllRead}
@@ -404,7 +430,7 @@ export default function NotificationScreen() {
             {loading && !refreshing ? (
                 <View style={styles.center}>
                     <ActivityIndicator color={themeContext.colors.primary} size="large" />
-                    <Text style={{ marginTop: 15, color: '#9ca3af', fontWeight: '600' }}>Đang quét dải tần...</Text>
+                    <Text style={{ marginTop: 15, color: '#9ca3af', fontWeight: '600' }}>Đang tải thông báo...</Text>
                 </View>
             ) : (
                 <SectionList
@@ -443,7 +469,7 @@ export default function NotificationScreen() {
                             >
                                 <Ionicons name="radio" size={60} color={isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6"} />
                             </MotiView>
-                            <Text style={styles.emptyText}>Bầu trời tĩnh lặng. Không có tín hiệu nào mới.</Text>
+                            <Text style={styles.emptyText}>Hiện tại chưa có thông báo mới.</Text>
                         </View>
                     }
                     ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
@@ -460,7 +486,6 @@ const styles = StyleSheet.create({
         width: width,
         height: width,
         borderRadius: width / 2,
-        filter: 'blur(100px)',
     },
     header: {
         flexDirection: 'row',
@@ -469,6 +494,11 @@ const styles = StyleSheet.create({
         paddingTop: 70,
         paddingBottom: 20,
         paddingHorizontal: 24,
+    },
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
     },
     title: { fontSize: 34, fontWeight: '900', letterSpacing: -1.5 },
     subtitle: { fontSize: 13, color: '#9ca3af', fontWeight: '500', marginTop: -2 },
@@ -529,12 +559,12 @@ const styles = StyleSheet.create({
     avatar: {
         width: '100%',
         height: '100%',
-        borderRadius: 20,
+        borderRadius: 15,
     },
     avatarPlaceholder: {
         width: '100%',
         height: '100%',
-        borderRadius: 20,
+        borderRadius: 15,
         justifyContent: 'center',
         alignItems: 'center',
     },

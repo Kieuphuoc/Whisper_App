@@ -12,7 +12,7 @@ interface WelcomeMessageProps {
 
 const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ 
     name = "User", 
-    avatarUrl = "https://images.unsplash.com/photo-1494790108377-be9c29b29330" 
+    avatarUrl = "" 
 }) => {
     const scheme = useColorScheme() || 'light';
     const isDark = scheme === 'dark';
@@ -36,20 +36,20 @@ const WelcomeMessage: React.FC<WelcomeMessageProps> = ({
             </View>
             <View style={styles.avatarWrapper}>
                 <Image
-                    source={{ uri: avatarUrl }}
+                    source={avatarUrl ? { uri: avatarUrl } : require('@/assets/images/avatar.png')}
                     style={[styles.avatar, { borderColor: isDark ? '#a78bfa' : '#8b5cf6' }]}
                     contentFit="cover"
                 />
             </View>
             <Text style={[styles.title, { color: isDark ? "#ffffff" : "#111827" }]}>{name}</Text>
-            <Text style={[styles.subtitle, { color: isDark ? "#a78bfa" : "#8b5cf6" }]}>TẦN SỐ KẾT NỐI BÍ MẬT</Text>
+            <Text style={[styles.subtitle, { color: isDark ? "#a78bfa" : "#8b5cf6" }]}>KÊNH TRÒ CHUYỆN RIÊNG TƯ</Text>
             <Text style={[styles.disclaimer, { color: isDark ? "rgba(255,255,255,0.58)" : "rgba(17,24,39,0.55)" }]}>Giao tiếp ẩn danh đã được mã hóa hai đầu.</Text>
             <View style={styles.infoRow}>
                 <View style={[styles.infoPill, { transform: [{ rotate: '-2.5deg' }], backgroundColor: isDark ? 'rgba(139,92,246,0.2)' : 'rgba(139,92,246,0.12)' }]}>
-                    <Text style={[styles.infoText, { color: isDark ? '#E9D5FF' : '#6D28D9' }]}>Dị thường: ẩn danh</Text>
+                    <Text style={[styles.infoText, { color: isDark ? '#E9D5FF' : '#6D28D9' }]}>Trạng thái: ẩn danh</Text>
                 </View>
                 <View style={[styles.infoPill, { transform: [{ rotate: '2deg' }], backgroundColor: isDark ? 'rgba(16,185,129,0.18)' : 'rgba(16,185,129,0.1)' }]}>
-                    <Text style={[styles.infoText, { color: isDark ? '#D1FAE5' : '#047857' }]}>Tín hiệu: ổn định</Text>
+                    <Text style={[styles.infoText, { color: isDark ? '#D1FAE5' : '#047857' }]}>Kết nối: ổn định</Text>
                 </View>
             </View>
         </LinearGradient>
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     avatar: {
         width: 86,
         height: 86,
-        borderRadius: 28,
+        borderRadius: 24,
         backgroundColor: '#E5E7EB',
         borderWidth: 2,
     },

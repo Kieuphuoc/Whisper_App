@@ -19,7 +19,7 @@ import {
     Switch,
 } from 'react-native';
 import { Text } from '@/components/ui/text';
-import Mapbox from '@/configs/Mapbox';
+import MapView, { Marker, MapType } from 'react-native-maps';
 import { darkMapStyle } from '@/constants/MapStyles';
 import { SettingTabHeader } from '@/components/profile/SettingTabHeader';
 
@@ -140,26 +140,31 @@ export default function SettingsScreen() {
             <View className="mt-2 mb-4">
                 <View className="relative h-48 rounded-3xl overflow-hidden bg-gray-200 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
                     {/* Native Map Preview */}
-                    <Mapbox.MapView
+                    <MapView
                         key={mapType}
                         style={StyleSheet.absoluteFill}
-                        styleURL={mapType === 'satellite' ? Mapbox.StyleURL.Satellite : (mapType === 'dark' ? Mapbox.StyleURL.Dark : Mapbox.StyleURL.Light)}
-                        logoEnabled={false}
-                        attributionEnabled={false}
+                        initialRegion={{
+                            latitude: FALLBACK_LAT,
+                            longitude: FALLBACK_LNG,
+                            latitudeDelta: 0.05,
+                            longitudeDelta: 0.05,
+                        }}
+                        mapType={(mapType === 'satellite' ? 'satellite' : 'standard') as MapType}
+                        customMapStyle={mapType === 'dark' ? darkMapStyle : []}
+                        rotateEnabled={false}
+                        scrollEnabled={false}
+                        zoomEnabled={false}
+                        pitchEnabled={false}
+                        cacheEnabled={true}
                     >
-                        <Mapbox.Camera
-                            centerCoordinate={[FALLBACK_LNG, FALLBACK_LAT]}
-                            zoomLevel={12}
-                        />
-                        <Mapbox.PointAnnotation
-                            id="preview-marker"
-                            coordinate={[FALLBACK_LNG, FALLBACK_LAT]}
+                        <Marker
+                            coordinate={{ latitude: FALLBACK_LAT, longitude: FALLBACK_LNG }}
                         >
                             <View className="w-8 h-8 rounded-full bg-primary-500 border-2 border-white items-center justify-center">
                                 <Ionicons name="mic" size={16} color="white" />
                             </View>
-                        </Mapbox.PointAnnotation>
-                    </Mapbox.MapView>
+                        </Marker>
+                    </MapView>
 
                     {/* Animated Overlay for selection change feedback */}
                     <View className="absolute inset-0 bg-black/5 pointer-events-none" />

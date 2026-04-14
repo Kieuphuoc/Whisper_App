@@ -20,6 +20,9 @@ import { ReactionPicker } from "./voice-pin/ReactionPicker";
 import { ReportModal } from "./voice-pin/ReportModal";
 import { useVoicePinReport } from "./voice-pin/useVoicePinReport";
 import { useVoicePinTurntable } from "./voice-pin/useVoicePinTurntable";
+import { Easing as ReanimatedEasing } from "react-native-reanimated";
+import { View as MotiView } from "moti";
+import { Text } from "../ui/text";
 import { VinylRecord } from "./voice-pin/VinylRecord";
 
 const { width, height } = Dimensions.get("window");
@@ -145,16 +148,48 @@ export default function VoicePinTurntable({
               playing={playing}
               spin={spin}
               armRotate={armRotate}
-               onPress={() => (playing ? player.pause() : player.play())}
-               onTranscriptionToggle={handleToggleTranscription}
-               onReportPress={() => setShowReportModal(true)}
-               onAlbumPress={() => setShowAddToAlbum(true)}
-               onReactionPress={toggleReactions}
-               onReactionSelect={handleReaction}
-               isThinking={isThinking}
-               showTranscription={showTranscription}
-               theme={currentTheme}
-             />
+              onPress={() => {
+                if (!player) return;
+                playing ? player.pause() : player.play();
+              }}
+              onTranscriptionToggle={handleToggleTranscription}
+              onReportPress={() => setShowReportModal(true)}
+              onAlbumPress={() => setShowAddToAlbum(true)}
+              onReactionPress={toggleReactions}
+              onReactionSelect={handleReaction}
+              userReaction={userReaction}
+              reactionCount={reactionCount}
+              isThinking={isThinking}
+              showTranscription={showTranscription}
+              theme={currentTheme}
+            />
+          </View>
+
+          {/* Transcription Section */}
+          <View style={styles.transcriptionContainer}>
+            {showTranscription && transcription && (
+              <MotiView
+                from={{ opacity: 0, translateY: 10 }}
+                animate={{ opacity: 1, translateY: 0 }}
+                style={[styles.transcriptionBox, { backgroundColor: currentTheme.colors.surfaceAlt, borderColor: currentTheme.colors.primary + '44' }]}
+              >
+                <Text style={[styles.transcriptionText, { color: currentTheme.colors.text }]}>
+                  {transcription}
+                </Text>
+              </MotiView>
+            )}
+
+            {showTranscription && !transcription && !isThinking && (
+              <MotiView
+                from={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                style={styles.noTranscriptionBox}
+              >
+                <Text style={[styles.noTranscriptionText, { color: currentTheme.colors.textMuted || "#64748B" }]}>
+                  Chưa có bản phiên âm cho âm thanh này.
+                </Text>
+              </MotiView>
+            )}
           </View>
         </Animated.View>
 
@@ -211,5 +246,46 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingTop: 6,
     paddingBottom: 2,
+  },
+  transcriptionContainer: {
+    marginTop: 12,
+    marginBottom: 4,
+    width: '100%',
+    paddingHorizontal: 20,
+  },
+  transcriptionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  transcriptionBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  transcriptionBox: {
+    marginTop: 8,
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  transcriptionText: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontStyle: 'italic',
+  },
+  noTranscriptionBox: {
+    marginTop: 8,
+    paddingHorizontal: 12,
+  },
+  noTranscriptionText: {
+    fontSize: 12,
+    fontStyle: 'italic',
   },
 });

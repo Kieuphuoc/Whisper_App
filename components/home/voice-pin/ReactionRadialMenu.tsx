@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { StyleSheet, View, Dimensions } from 'react-native';
 import Animated, { 
   useAnimatedStyle, 
@@ -38,12 +38,6 @@ export function ReactionRadialMenu({
   isDark,
   theme 
 }: ReactionRadialMenuProps) {
-  useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7563/ingest/7bee5893-5664-4b9f-a0df-553827003edb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a18a31'},body:JSON.stringify({sessionId:'a18a31',runId:'post-fix',hypothesisId:'H6',location:'ReactionRadialMenu.tsx:43',message:'ReactionRadialMenu mounted',data:{visible},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-  }, [visible]);
-  
   const containerStyle = useAnimatedStyle(() => {
     return {
       opacity: withSpring(visible ? 1 : 0, { damping: 20 }),
@@ -133,10 +127,10 @@ function ReactionItem({
   const blurStyle = useAnimatedStyle(() => {
     return {
       backgroundColor: isSelected.value 
-        ? (isDark ? 'rgba(124, 58, 237, 0.4)' : 'rgba(124, 58, 237, 0.2)')
+        ? reaction.color + '4D' // 30% opacity
         : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'),
       borderColor: isSelected.value 
-        ? (isDark ? 'rgba(139, 92, 246, 0.8)' : 'rgba(139, 92, 246, 0.6)')
+        ? reaction.color
         : (isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)'),
       borderWidth: isSelected.value ? 2 : 1,
     };
@@ -144,9 +138,9 @@ function ReactionItem({
 
   const iconStyle = useAnimatedStyle(() => {
     return {
-      color: isSelected.value ? '#FFFFFF' : (isDark ? '#E5E5E5' : '#475569'),
+      color: isSelected.value ? '#FFFFFF' : reaction.color,
       transform: [
-        { scale: isSelected.value ? 1.1 : 1 }
+        { scale: isSelected.value ? 1.2 : 1 }
       ]
     };
   });
@@ -165,15 +159,15 @@ function ReactionItem({
         tint={isDark ? "dark" : "light"} 
         style={[styles.itemBlur, blurStyle]}
       >
-        <AnimatedIonicons
+        <Ionicons
           name={reaction.icon} 
           size={24} 
-          style={iconStyle} 
+          color={isSelected.value ? '#FFFFFF' : reaction.color}
         />
       </AnimatedBlurView>
       <Animated.View style={[styles.labelContainer, labelStyle]}>
         <BlurView intensity={20} tint={isDark ? "dark" : "light"} style={styles.labelBlur}>
-          <Text style={[styles.labelText, { color: isDark ? '#FFF' : '#1E293B' }]}>
+          <Text style={[styles.labelText, { color: reaction.color }]}>
             {reaction.label}
           </Text>
         </BlurView>

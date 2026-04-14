@@ -34,6 +34,8 @@ export const endpoints = {
   userAvatar: "/user/me/avatar",
   userCover: "/user/me/cover",
   updateFcmToken: "/user/me/fcm-token",
+  myAchievements: "/user/me/achievements",
+  myDiscovered: "/user/me/discovered",
 
   // Voice Pins
   voice: "/voice/",

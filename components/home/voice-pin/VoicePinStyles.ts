@@ -54,7 +54,7 @@ export const styles = StyleSheet.create({
   authorAvatar: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: 7,
     overflow: "hidden",
   },
   avatarImg: {

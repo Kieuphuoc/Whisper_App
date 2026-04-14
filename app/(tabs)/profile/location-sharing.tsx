@@ -88,14 +88,14 @@ export default function LocationSharingScreen() {
                             centerCoordinate={[FALLBACK_LNG, FALLBACK_LAT]}
                             zoomLevel={12}
                         />
-                        <Mapbox.PointAnnotation
+                        <Mapbox.MarkerView
                             id="sharing-marker"
                             coordinate={[FALLBACK_LNG, FALLBACK_LAT]}
                         >
                             <View className="w-10 h-10 rounded-full bg-primary-500/20 items-center justify-center">
                                 <View className="w-5 h-5 rounded-full bg-primary-500 border-2 border-white" />
                             </View>
-                        </Mapbox.PointAnnotation>
+                        </Mapbox.MarkerView>
                     </Mapbox.MapView>
                     <View className="absolute bottom-4 left-4 right-4 bg-white/90 dark:bg-gray-900/90 py-3 px-4 rounded-xl flex-row items-center shadow-lg backdrop-blur-md">
                         <Ionicons name="information-circle" size={20} color="#7ea000" />

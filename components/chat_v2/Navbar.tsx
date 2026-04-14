@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 
-const Navbar = ({ title = "Whisper Chat", subtitle = "Messaging with Voice Intelligence", avatarUrl = "" }) => {
+const Navbar = ({ title = "Whisper Chat", subtitle = "Messaging with Voice Intelligence", avatarUrl = "", isOnline = false }) => {
     const router = useRouter();
     const scheme = useColorScheme() || 'light';
     const isDark = scheme === 'dark';
@@ -28,24 +28,6 @@ const Navbar = ({ title = "Whisper Chat", subtitle = "Messaging with Voice Intel
             >
                 <BlurView intensity={30} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
                 <View style={styles.headerRow}>
-                    <View style={styles.headerTitleWrap}>
-                        <View style={[styles.avatarRing, { borderColor: isDark ? 'rgba(167,139,250,0.55)' : 'rgba(139,92,246,0.35)' }]}>
-                            <Image source={{ uri: avatarUrl || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330' }} style={styles.avatar} />
-                        </View>
-                        <View style={styles.headerCopy}>
-                            <Text style={[styles.headerEyebrow, { color: isDark ? "#ffffff" : "#111827" }]} numberOfLines={1}>{title}</Text>
-                            <Text style={[styles.headerHint, { color: isDark ? "rgba(255,255,255,0.78)" : "#6B7280" }]} numberOfLines={1}>{subtitle}</Text>
-                            <View style={styles.metaRow}>
-                                <View style={[styles.metaPill, { backgroundColor: isDark ? 'rgba(139,92,246,0.28)' : 'rgba(139,92,246,0.12)' }]}>
-                                    <Text style={[styles.metaText, { color: isDark ? '#E9D5FF' : '#6D28D9' }]}>Aura</Text>
-                                </View>
-                                <View style={[styles.metaPill, { backgroundColor: isDark ? 'rgba(16,185,129,0.22)' : 'rgba(16,185,129,0.12)' }]}>
-                                    <Text style={[styles.metaText, { color: isDark ? '#D1FAE5' : '#047857' }]}>Tần số</Text>
-                                </View>
-                            </View>
-                        </View>
-                    </View>
-
                     <TouchableOpacity
                         activeOpacity={0.85}
                         onPress={() => router.back()}
@@ -54,8 +36,28 @@ const Navbar = ({ title = "Whisper Chat", subtitle = "Messaging with Voice Intel
                             borderColor: isDark ? "rgba(255,255,255,0.22)" : "rgba(17,24,39,0.12)",
                         }]}
                     >
-                        <Ionicons name="close" size={18} color={isDark ? "#e5e7eb" : "#111827"} />
+                        <Ionicons name="chevron-back" size={20} color={isDark ? "#e5e7eb" : "#111827"} />
                     </TouchableOpacity>
+
+                    <View style={styles.headerTitleWrap}>
+                        <View style={[styles.avatarRing, { borderColor: isDark ? 'rgba(167,139,250,0.55)' : 'rgba(139,92,246,0.35)' }]}>
+                            <Image source={{ uri: avatarUrl || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330' }} style={styles.avatar} />
+                            {isOnline && <View style={styles.onlineDot} />}
+                        </View>
+                        <View style={styles.headerCopy}>
+                            <Text style={[styles.headerEyebrow, { color: isDark ? "#ffffff" : "#111827" }]} numberOfLines={1}>{title}</Text>
+                            <View style={styles.statusRow}>
+                                {isOnline ? (
+                                    <>
+                                        <View style={styles.statusDot} />
+                                        <Text style={[styles.statusText, { color: isDark ? "#10b981" : "#059669" }]}>Đang hoạt động</Text>
+                                    </>
+                                ) : (
+                                    <Text style={[styles.headerHint, { color: isDark ? "rgba(255,255,255,0.78)" : "#6B7280" }]} numberOfLines={1}>{subtitle}</Text>
+                                )}
+                            </View>
+                        </View>
+                    </View>
                 </View>
             </LinearGradient>
         </View>
@@ -94,7 +96,7 @@ const styles = StyleSheet.create({
     avatarRing: {
         width: 46,
         height: 46,
-        borderRadius: 16,
+        borderRadius: 14,
         borderWidth: 1.5,
         alignItems: 'center',
         justifyContent: 'center',
@@ -102,7 +104,7 @@ const styles = StyleSheet.create({
     avatar: {
         width: 40.5,
         height: 40.5,
-        borderRadius: 14,
+        borderRadius: 12,
         backgroundColor: '#E5E7EB',
     },
     headerCopy: {
@@ -122,21 +124,34 @@ const styles = StyleSheet.create({
         letterSpacing: 0.25,
         textTransform: 'uppercase',
     },
-    metaRow: {
+    statusRow: {
         flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 3,
         gap: 6,
-        marginTop: 6,
     },
-    metaPill: {
-        paddingHorizontal: 9,
-        paddingVertical: 3,
-        borderRadius: 999,
+    statusDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: '#10b981',
     },
-    metaText: {
-        fontSize: 10,
+    statusText: {
+        fontSize: 11,
         fontWeight: '800',
-        letterSpacing: 0.6,
         textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    onlineDot: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: '#10b981',
+        borderWidth: 2,
+        borderColor: '#fff',
     },
     closeButton: {
         width: 36,

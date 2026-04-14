@@ -47,11 +47,20 @@ The application follows a "Glassmorphism" design style combined with "Avant-Gard
   - Tracking/Letter spacing adjustments for a premium feel.
   - Thematic labeling (e.g., "Aura" for covers, "Tín hiệu" for dates).
 - **Shape**: Rounded corners with large radii (range: `14px` to `36px`).
+- **Avatar Geometry**: All avatars must be square with rounded corners (radius approx. 25-30% of size). Circular avatars are deprecated.
 
-### 5. Terminology (Thematic Consistency)
-- **Aura**: Cover/Portrait background.
-- **Dị thường/Tần số**: Discovered items or voice logs.
-- **Tín hiệu**: Connection or activity timestamps.
+### 5. Terminology Strategy
+- **Professional Standard**: Replace thematic terms with standard, serious Vietnamese labels.
+  - "Tín hiệu" -> "Tin nhắn" or "Thông báo"
+  - "Phát tín hiệu" -> "Tham gia vào" (for dates) or "Gửi" (for actions)
+  - "Dị thường" -> "Khám phá" or "Hoạt động" (depending on context)
+- **Voice-First Focus**: "VoicePin" remains the core term for audio pins.
+
+### Key Vocabulary
+- **Tin nhắn**: General chat messages.
+- **Thông báo**: Notifications and alerts.
+- **Tham gia vào**: User join date indicator.
+- **Bản đồ**: The global interaction layer.
 
 ---
 *Note: This file serves as a reference for future UI/UX development to ensure visual consistency across the Whisper ecosystem.*

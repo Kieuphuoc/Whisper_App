@@ -43,6 +43,11 @@ export default function RadarOverlay({ isScanning }: { isScanning: boolean }) {
         opacity: interpolate(scale.value, [0, 0.8, 1], [0, 0.4, 0]),
     }));
 
+    const circleStyleInner = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value * 1.5 }],
+        opacity: interpolate(scale.value, [0, 0.8, 1], [0, 0.4, 0]),
+    }));
+
     if (!isScanning) return null;
 
     return (
@@ -57,7 +62,7 @@ export default function RadarOverlay({ isScanning }: { isScanning: boolean }) {
                 />
                 <Animated.View
                     className="w-80 h-80 rounded-full border-2 border-violet-300 opacity-10"
-                    style={[circleStyle, { transform: [{ scale: scale.value * 1.5 }] }]}
+                    style={circleStyleInner}
                 />
 
                 {/* Radar Sweep */}

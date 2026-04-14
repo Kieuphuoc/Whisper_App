@@ -339,7 +339,7 @@ const cardStyles = StyleSheet.create({
   authorAvatar: {
     width: 20,
     height: 20,
-    borderRadius: 10,
+    borderRadius: 6,
     marginRight: 8,
     overflow: 'hidden',
     justifyContent: 'center',

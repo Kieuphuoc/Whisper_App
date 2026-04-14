@@ -64,7 +64,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
             {showDateHeader && (
                 <View style={styles.dateHeaderWrap}>
                     <View style={[styles.dateHeaderPill, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(17,24,39,0.05)' }]}>
-                        <Text style={[styles.dateHeaderLabel, { color: isDark ? 'rgba(216,180,254,0.95)' : '#6d28d9' }]}>Tín hiệu</Text>
+                        <Text style={[styles.dateHeaderLabel, { color: isDark ? 'rgba(216,180,254,0.95)' : '#6d28d9' }]}>Thời gian</Text>
                         <Text style={[styles.dateHeaderText, { color: isDark ? 'rgba(255,255,255,0.56)' : '#6B7280' }]}>
                             {formatDateHeader(createdAt)}
                         </Text>
@@ -81,7 +81,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
                     <View style={[styles.avatarWrapper, { paddingBottom: showTimestamp ? 22 : 2 }]}>
                         {showAvatar ? (
                             <Image
-                                source={{ uri: senderAvatar || "https://images.unsplash.com/photo-1494790108377-be9c29b29330" }}
+                                source={senderAvatar ? { uri: senderAvatar } : require('@/assets/images/avatar.png')}
                                 style={styles.avatar}
                             />
                         ) : <View style={styles.avatarSpacer} />}
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     avatar: {
         width: 32,
         height: 32,
-        borderRadius: 16,
+        borderRadius: 9,
         backgroundColor: '#E5E7EB',
         borderWidth: 1.2,
         borderColor: 'rgba(255,255,255,0.65)',

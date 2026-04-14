@@ -202,7 +202,7 @@ export default function UserProfileScreen() {
                 return;
             }
 
-            router.push(`/(tabs)/home/chat/${roomId}`);
+            router.push(`/chat/${roomId}`);
         } catch (e: any) {
             console.error('Start chat error:', e);
             Alert.alert('Lỗi', e.response?.data?.message || 'Không thể bắt đầu cuộc trò chuyện');
@@ -224,7 +224,7 @@ export default function UserProfileScreen() {
     const joinDate = useMemo(() => {
         if (!user?.createdAt) return 'Vô định';
         const date = new Date(user.createdAt);
-        return `Phát tín hiệu: ${date.getMonth() + 1}/${date.getFullYear()}`;
+        return `Tham gia vào: ${date.getMonth() + 1}/${date.getFullYear()}`;
     }, [user]);
 
     const contentAnim = useAnimatedStyle(() => {
@@ -513,7 +513,7 @@ export default function UserProfileScreen() {
                     {/* GLASS VIBE SECTION */}
                     <View style={styles.glassRow}>
                         {[
-                            { icon: "search", label: `${stats?.discoveredVoicesCount || 0} Dị thường` },
+                            { icon: "search", label: `${stats?.discoveredVoicesCount || 0} Khám phá` },
                             { icon: "time-outline", label: joinDate }
                         ].map((item, i) => (
                             <MotiView
@@ -574,7 +574,7 @@ export default function UserProfileScreen() {
                         <VoicePinCarouselLegacy
                             title="Ký ức công khai"
                             pins={publicPins}
-                            onSelectPin={(pin) => router.push({ pathname: '/(tabs)/home/voiceDetail', params: { id: pin.id.toString() } })}
+                            onSelectPin={(pin) => router.push({ pathname: '/voiceDetail', params: { id: pin.id.toString() } })}
                             onSeeAll={() => router.push({ pathname: '/(tabs)/memory/grid', params: { title: 'Ký ức công khai', userId: id } })}
                             currentTheme={currentTheme}
                             icon="mic"

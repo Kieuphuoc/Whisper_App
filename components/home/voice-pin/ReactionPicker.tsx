@@ -29,29 +29,28 @@ export function ReactionPicker({ reactionAnim, toggleReactions, handleReaction, 
         <TouchableOpacity
           key={index}
           onPress={() => { toggleReactions(); handleReaction(r.type); }}
-          style={[styles.reactionBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}
+          style={[styles.reactionBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}
           activeOpacity={0.6}
         >
           <MotiView
-            from={{ scale: 0, translateY: 15 }}
-            animate={{ scale: 1, translateY: 0 }}
-            transition={{ type: 'spring', delay: index * 40 }}
+            from={{ scale: 0, translateY: 25, opacity: 0 }}
+            animate={{ scale: 1, translateY: 0, opacity: 1 }}
+            transition={{ type: 'spring', damping: 15, delay: index * 60 }}
             style={styles.reactionBtnInner}
           >
             <MotiView
-               animate={{
-                 scale: [1, 1.15, 1],
-                 opacity: [0.8, 1, 0.8],
-               }}
-               transition={{
-                 loop: true,
-                 duration: 2500,
-                 delay: index * 150,
-               }}
+              animate={{
+                scale: [1, 1.25, 1],
+              }}
+              transition={{
+                loop: true,
+                duration: 2000,
+                delay: index * 200,
+              }}
             >
-              <Ionicons name={r.icon} size={22} color={isDark ? theme.colors.primary : theme.colors.primary} />
+              <Ionicons name={r.icon as any} size={26} color={r.color} />
             </MotiView>
-            <Text style={[styles.reactionLabel, { color: isDark ? "#A3A3A3" : "#64748B" }]}>{r.label}</Text>
+            <Text style={[styles.reactionLabel, { color: r.color, opacity: 0.9 }]}>{r.label}</Text>
           </MotiView>
         </TouchableOpacity>
       ))}
@@ -62,12 +61,12 @@ export function ReactionPicker({ reactionAnim, toggleReactions, handleReaction, 
 const styles = StyleSheet.create({
   reactionPicker: {
     position: "absolute",
-    bottom: 120,
+    bottom: 150,
     alignSelf: "center",
     flexDirection: "row",
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 35,
+    borderRadius: 28,
     borderWidth: 1,
     elevation: 10,
     shadowColor: "#000",

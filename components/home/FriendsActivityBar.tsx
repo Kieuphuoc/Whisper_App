@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     avatarCircle: {
         width: 50,
         height: 50,
-        borderRadius: 25,
+        borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1.5,
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
     avatar: {
         width: 48,
         height: 48,
-        borderRadius: 24,
+        borderRadius: 13,
         backgroundColor: 'rgba(255,255,255,0.5)',
     },
     placeholderAvatar: {
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         width: 52,
         height: 52,
-        borderRadius: 26,
+        borderRadius: 14,
         borderWidth: 2,
     },
     newIndicator: {

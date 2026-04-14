@@ -47,7 +47,8 @@ interface PendingRequest {
 
 // ─── Avatar Component ──────────────────────────────────────
 function Avatar({ user, size = 48 }: { user: FriendUser; size?: number }) {
-    const initials = (user.displayName ?? user.username).slice(0, 2).toUpperCase();
+    if (!user) return <View style={{ width: size, height: size, borderRadius: size / 2.2, backgroundColor: '#e2e8f0' }} />;
+    const initials = (user.displayName ?? user.username ?? '??').slice(0, 2).toUpperCase();
     return (
         <View style={[avStyle.avatarContainer, { width: size, height: size }]}>
             {user.avatar ? (
@@ -299,7 +300,8 @@ export default function FriendsModal({ visible, onClose }: Props) {
                                     contentContainerStyle={styles.listContent}
                                     showsVerticalScrollIndicator={false}
                                     renderItem={({ item, index }) => {
-                                        const who = item.direction === 'received' ? item.sender! : item.receiver!;
+                                        const who = item.direction === 'received' ? item.sender : item.receiver;
+                                        if (!who) return null;
                                         return (
                                             <MotiView
                                                 from={{ opacity: 0, scale: 0.9, translateX: 20 }}

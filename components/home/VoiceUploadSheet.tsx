@@ -7,13 +7,13 @@ import {
     Alert,
     Modal,
     StyleSheet,
-    Text,
     TouchableOpacity,
     View,
     useColorScheme,
     Dimensions,
     Animated,
 } from 'react-native';
+import { Text } from '@/components/ui/text';
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { authApis, endpoints } from '../../configs/Apis';
 import { Visibility } from '../../types';
@@ -62,7 +62,7 @@ export default function VoiceUploadSheet({
     
     const armRotate = armRotateAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: ['0deg', '25deg']
+        outputRange: ['-10deg', '5deg']
     });
 
     useEffect(() => {
@@ -85,11 +85,10 @@ export default function VoiceUploadSheet({
     };
 
     const animateArm = (toValue: number) => {
-        Animated.spring(armRotateAnim, {
+        Animated.timing(armRotateAnim, {
             toValue,
             useNativeDriver: true,
-            tension: 20,
-            friction: 5,
+            duration: 400,
         }).start();
     };
 
@@ -246,7 +245,7 @@ export default function VoiceUploadSheet({
                             >
                                 <BlurView intensity={20} tint="dark" style={styles.uploadingBlur}>
                                     <ActivityIndicator size="small" color="#fff" />
-                                    <Text style={styles.uploadingText}>Truyền tín hiệu...</Text>
+                                    <Text style={styles.uploadingText}>Đang tải lên...</Text>
                                 </BlurView>
                             </MotiView>
                         )}

@@ -1,3 +1,4 @@
+import React from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator, useColorScheme } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Ionicons } from "@expo/vector-icons";
@@ -6,17 +7,21 @@ import { theme } from "@/constants/Theme";
 type QuickActionsProps = {
     onExplore?: () => void;
     onFriends?: () => void;
+    onNotifications?: () => void;
     onTrending?: () => void;
     isScanning?: boolean;
     receivedCount?: number;
+    unreadCount?: number;
 };
 
 const QuickActions: React.FC<QuickActionsProps> = ({
     onExplore,
     onFriends,
+    onNotifications,
     onTrending,
     isScanning,
     receivedCount = 0,
+    unreadCount = 0,
 }) => {
     const colorScheme = useColorScheme() || "light";
     const currentTheme = theme[colorScheme];
@@ -34,19 +39,17 @@ const QuickActions: React.FC<QuickActionsProps> = ({
                         <Ionicons name="compass" size={20} color="#8b5cf6" />
                     )}
                 </View>
-                <Text style={[styles.quickActionText, { color: currentTheme.colors.textSecondary }]}>{isScanning ? "Đang quét..." : "Khám phá"}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.quickActionButton} onPress={onFriends}>
+            <TouchableOpacity style={styles.quickActionButton} onPress={onNotifications ?? onFriends}>
                 <View style={styles.quickActionIcon}>
-                    <Ionicons name="people" size={20} color="#8b5cf6" />
-                    {receivedCount > 0 && (
+                    <Ionicons name="notifications" size={20} color="#8b5cf6" />
+                    {(unreadCount > 0 || receivedCount > 0) && (
                         <View style={styles.badge}>
-                            <Text style={styles.badgeText}>{receivedCount}</Text>
+                            <Text style={styles.badgeText}>{unreadCount || receivedCount}</Text>
                         </View>
                     )}
                 </View>
-                <Text style={[styles.quickActionText, { color: currentTheme.colors.textSecondary }]}>Bạn bè</Text>
             </TouchableOpacity>
 
         </View>
@@ -84,13 +87,6 @@ const styles = StyleSheet.create({
         backgroundColor: "rgba(139, 92, 246, 0.1)",
         justifyContent: "center",
         alignItems: "center",
-        marginBottom: 4,
-    },
-
-    quickActionText: {
-        fontSize: 14,
-        color: "#6b7280",
-        fontWeight: "600",
     },
     badge: {
         position: 'absolute',

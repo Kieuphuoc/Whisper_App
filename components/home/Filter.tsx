@@ -1,4 +1,3 @@
-import { Colors } from '@/constants/Colors';
 import { theme } from '@/constants/Theme';
 import { Visibility } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -52,8 +51,9 @@ const FilterToggle: React.FC<FilterToggleProps> = ({
         <View style={[
             styles.container,
             {
-                backgroundColor: currentTheme.colors.surfaceAlt,
-                shadowColor: colorScheme === 'dark' ? '#000' : 'rgba(0,0,0,0.1)',
+                backgroundColor: currentTheme.colors.background + 'F2',
+                borderColor: currentTheme.colors.primary + '1A',
+                shadowColor: '#000',
             }
         ]}>
             {/* Animated Background Selector */}
@@ -62,7 +62,8 @@ const FilterToggle: React.FC<FilterToggleProps> = ({
                     styles.selector,
                     {
                         width: SEGMENT_WIDTH,
-                        backgroundColor: Colors.primary,
+                        backgroundColor: 'rgba(139, 92, 246, 0.14)',
+                        borderColor: currentTheme.colors.primary + '33',
                         transform: [{ translateX }],
                     },
                 ]}
@@ -79,17 +80,22 @@ const FilterToggle: React.FC<FilterToggleProps> = ({
                         onPress={() => onChange(opt.value)}
                     >
                         <View style={styles.content}>
-                            <Ionicons
-                                name={opt.icon}
-                                size={14}
-                                color={isActive ? Colors.white : currentTheme.colors.textMuted}
-                            />
+                            <View style={[
+                                styles.iconBubble,
+                                isActive && styles.iconBubbleActive,
+                            ]}>
+                                <Ionicons
+                                    name={opt.icon}
+                                    size={14}
+                                    color={isActive ? currentTheme.colors.primary : currentTheme.colors.textMuted}
+                                />
+                            </View>
                             <Text
                                 numberOfLines={1}
                                 style={[
                                     styles.text,
-                                    { color: currentTheme.colors.textMuted },
-                                    isActive && { color: Colors.white, fontWeight: '700' }
+                                    { color: currentTheme.colors.textSecondary },
+                                    isActive && { color: currentTheme.colors.primary, fontWeight: '700' }
                                 ]}
                             >
                                 {opt.label}
@@ -112,21 +118,23 @@ const styles = StyleSheet.create({
         right: CONTAINER_MARGIN,
         flexDirection: 'row',
         borderRadius: 24,
-        padding: 4,
+        padding: 6,
         height: 48,
         alignItems: 'center',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 6,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
+        elevation: 8,
+        borderWidth: 1,
         zIndex: 100,
     },
     selector: {
         position: 'absolute',
-        height: 40,
-        left: 4,
-        borderRadius: 20,
+        height: 36,
+        left: 6,
+        borderRadius: 18,
         zIndex: 0,
+        borderWidth: 1,
     },
     button: {
         flex: 1,
@@ -139,6 +147,17 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
+    },
+    iconBubble: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    iconBubbleActive: {
+        backgroundColor: 'rgba(139, 92, 246, 0.2)',
     },
     text: {
         fontSize: 13,

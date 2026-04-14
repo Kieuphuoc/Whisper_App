@@ -10,7 +10,6 @@ import React, { useCallback, useContext, useMemo, useState, useEffect } from 're
 import {
     ActivityIndicator,
     Dimensions,
-    Image,
     LayoutAnimation,
     Platform,
     RefreshControl,
@@ -25,7 +24,6 @@ import {
 } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { MyUserContext } from '@/configs/Context';
-import { BASE_URL } from '@/configs/Apis';
 import { VoicePinCarouselCard as MemoryCard } from '@/components/memory/VoicePinCarouselCard';
 export { MemoryCard };
 import Animated, {
@@ -42,7 +40,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { MotiView } from 'moti';
 import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -75,16 +72,29 @@ function FilterChips({ active, onChange, currentTheme }: { active: FilterType; o
                             style={filterStyles.chipWrapper}
                             activeOpacity={0.8}
                         >
-                            <BlurView intensity={isActive ? 50 : 20} tint="light" style={[filterStyles.chipBlur, isActive && { borderColor: '#fff' }]}>
-                                {isActive && (
-                                    <LinearGradient
-                                        colors={['rgba(255,255,255,0.3)', 'transparent']}
-                                        style={StyleSheet.absoluteFill}
-                                    />
-                                )}
-                                <Ionicons name={f.icon} size={14} color="#fff" />
-                                <Text style={[filterStyles.chipText, isActive && filterStyles.chipTextActive]}>{f.label}</Text>
-                            </BlurView>
+                            <View
+                                style={[
+                                    filterStyles.chipBlur,
+                                    {
+                                        backgroundColor: isActive ? currentTheme.colors.primary + '14' : currentTheme.colors.surface,
+                                        borderColor: isActive ? currentTheme.colors.primary + '33' : 'rgba(0,0,0,0.08)',
+                                    }
+                                ]}
+                            >
+                                <Ionicons
+                                    name={f.icon}
+                                    size={14}
+                                    color={isActive ? currentTheme.colors.primary : currentTheme.colors.textMuted}
+                                />
+                                <Text
+                                    style={[
+                                        filterStyles.chipText,
+                                        { color: isActive ? currentTheme.colors.primary : currentTheme.colors.textSecondary }
+                                    ]}
+                                >
+                                    {f.label}
+                                </Text>
+                            </View>
                         </TouchableOpacity>
                     </MotiView>
                 );
@@ -97,9 +107,6 @@ const filterStyles = StyleSheet.create({
     row: { paddingHorizontal: 20, gap: 10, paddingVertical: 10 },
     chipWrapper: {
         borderRadius: 20,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
     },
     chipBlur: {
         flexDirection: 'row',
@@ -107,9 +114,10 @@ const filterStyles = StyleSheet.create({
         gap: 6,
         paddingHorizontal: 16,
         paddingVertical: 10,
+        borderRadius: 20,
+        borderWidth: 1,
     },
-    chipText: { fontWeight: '700', color: 'rgba(255,255,255,0.7)', fontSize: 13 },
-    chipTextActive: { color: '#fff' },
+    chipText: { fontWeight: '700', fontSize: 13 },
 });
 
 export default function MemoryScreen() {
@@ -142,19 +150,6 @@ export default function MemoryScreen() {
         onScroll: (event) => {
             scrollY.value = event.contentOffset.y;
         },
-    });
-
-    const bannerAnim = useAnimatedStyle(() => {
-        return {
-            transform: [
-                {
-                    translateY: interpolate(scrollY.value, [-height, 0, height], [-height / 2, 0, 0], Extrapolate.CLAMP),
-                },
-                {
-                    scale: interpolate(scrollY.value, [-height, 0], [1.5, 1], Extrapolate.CLAMP),
-                },
-            ],
-        };
     });
 
     const headerTextAnim = useAnimatedStyle(() => {
@@ -260,12 +255,6 @@ export default function MemoryScreen() {
         return result;
     }, [filtered, activeFilter]);
 
-    const coverUri = useMemo(() => {
-        if (!user?.cover) return 'https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=2071&auto=format&fit=crop';
-        if (user.cover.startsWith('http')) return user.cover;
-        return `${BASE_URL}${user.cover.startsWith('/') ? '' : '/'}${user.cover}`;
-    }, [user]);
-
     if (selectedPin) {
         return (
             <View style={{ flex: 1 }}>
@@ -279,22 +268,8 @@ export default function MemoryScreen() {
     }
 
     return (
-        <View style={[styles.container, { backgroundColor: '#000' }]}>
-            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-
-            {/* FULL SCREEN BACKGROUND */}
-            <View style={StyleSheet.absoluteFill}>
-                <Animated.Image
-                    source={{ uri: coverUri }}
-                    style={[styles.fullscreenBackground, bannerAnim]}
-                    blurRadius={10}
-                />
-                <LinearGradient
-                    colors={['rgba(0,0,0,0.4)', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.95)']}
-                    locations={[0, 0.5, 1]}
-                    style={StyleSheet.absoluteFill}
-                />
-            </View>
+        <View style={[styles.container, { backgroundColor: currentTheme.colors.background }]}>
+            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
 
             <Animated.ScrollView
                 onScroll={onScroll}
@@ -314,9 +289,9 @@ export default function MemoryScreen() {
                                 animate={{ opacity: 1, translateX: 0 }}
                                 transition={{ type: 'spring', damping: 12 }}
                             >
-                                <Text style={styles.title}>Ký Ức</Text>
+                                <Text style={[styles.title, { color: currentTheme.colors.text }]}>Ký Ức</Text>
                                 <View style={styles.subtitleRow}>
-                                    <Text style={styles.subtitle}>Dòng thời gian đang vang vọng</Text>
+                                    <Text style={[styles.subtitle, { color: currentTheme.colors.textSecondary }]}>Dòng thời gian đang vang vọng</Text>
                                 </View>
                             </MotiView>
                         </Animated.View>
@@ -329,9 +304,9 @@ export default function MemoryScreen() {
                                 transition={{ delay: 300, type: 'spring' }}
                                 style={[styles.statBubble, styles.bubbleLarge]}
                             >
-                                <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFill, { backgroundColor: '#7c3aed50' }]} />
-                                <Text style={styles.bubbleValue}>{pins.length}</Text>
-                                <Text style={styles.bubbleLabel}>Chốt</Text>
+                                <BlurView intensity={18} tint={isDark ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: currentTheme.colors.surface + 'CC' }]} />
+                                <Text style={[styles.bubbleValue, { color: currentTheme.colors.text }]}>{pins.length}</Text>
+                                <Text style={[styles.bubbleLabel, { color: currentTheme.colors.textSecondary }]}>Chốt</Text>
                             </MotiView>
 
                             <MotiView
@@ -340,11 +315,11 @@ export default function MemoryScreen() {
                                 transition={{ delay: 450, type: 'spring' }}
                                 style={[styles.statBubble, styles.bubbleSmall, { bottom: -10, left: 10 }]}
                             >
-                                <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFill, { backgroundColor: '#10b98150' }]} />
-                                <Text style={styles.bubbleValueSmall}>
+                                <BlurView intensity={18} tint={isDark ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: currentTheme.colors.surface + 'CC' }]} />
+                                <Text style={[styles.bubbleValueSmall, { color: currentTheme.colors.text }]}>
                                     {pins.filter(p => p.visibility === 'PRIVATE').length}
                                 </Text>
-                                <Text style={styles.bubbleLabelSmall}>Ẩn</Text>
+                                <Text style={[styles.bubbleLabelSmall, { color: currentTheme.colors.textSecondary }]}>Ẩn</Text>
                             </MotiView>
                         </View>
                     </View>
@@ -355,23 +330,27 @@ export default function MemoryScreen() {
                     from={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 200 }}
-                    style={styles.searchWrapper}
+                    style={[
+                        styles.searchWrapper,
+                        {
+                            backgroundColor: currentTheme.colors.background + 'F2',
+                            borderColor: currentTheme.colors.primary + '1A',
+                        }
+                    ]}
                 >
-                    <BlurView intensity={20} tint="light" style={styles.searchBlur}>
-                        <Ionicons name="search-outline" size={20} color="rgba(255,255,255,0.6)" />
-                        <TextInput
-                            style={styles.searchInput}
-                            placeholder="Tìm kiếm tần số ký ức..."
-                            placeholderTextColor="rgba(255,255,255,0.4)"
-                            value={searchQuery}
-                            onChangeText={setSearchQuery}
-                        />
-                        {searchQuery.length > 0 && (
-                            <TouchableOpacity onPress={() => setSearchQuery('')}>
-                                <Ionicons name="close-circle" size={18} color="rgba(255,255,255,0.4)" />
-                            </TouchableOpacity>
-                        )}
-                    </BlurView>
+                    <Ionicons name="search-outline" size={18} color={currentTheme.colors.textMuted} />
+                    <TextInput
+                        style={[styles.searchInput, { color: currentTheme.colors.text }]}
+                        placeholder="Tìm kiếm tần số ký ức..."
+                        placeholderTextColor={currentTheme.colors.textMuted}
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                    />
+                    {searchQuery.length > 0 && (
+                        <TouchableOpacity onPress={() => setSearchQuery('')}>
+                            <Ionicons name="close-circle" size={18} color={currentTheme.colors.textMuted} />
+                        </TouchableOpacity>
+                    )}
                 </MotiView>
 
                 {/* Filter Chips */}
@@ -401,10 +380,7 @@ export default function MemoryScreen() {
                                 iconColor={s.iconColor}
                                 pins={s.pins}
                                 onSelectPin={p => setSelectedPin(p)}
-                                currentTheme={{
-                                    ...currentTheme,
-                                    colors: { ...currentTheme.colors, text: '#fff', icon: 'rgba(255,255,255,0.6)' }
-                                }}
+                                currentTheme={currentTheme}
                                 limit={10}
                                 onSeeAll={() => {
                                     router.push({
@@ -422,12 +398,12 @@ export default function MemoryScreen() {
                             animate={{ opacity: 1 }}
                             style={styles.calendarWrapper}
                         >
-                            <BlurView intensity={15} tint="light" style={styles.calendarBlur}>
+                            <BlurView intensity={12} tint={isDark ? "dark" : "light"} style={styles.calendarBlur}>
                                 <HistoryCalendar
                                     pins={filtered}
                                     currentTheme={{
                                         ...currentTheme,
-                                        colors: { ...currentTheme.colors, background: 'transparent', surfaceAlt: 'transparent', text: '#fff' }
+                                        colors: { ...currentTheme.colors, background: 'transparent', surfaceAlt: 'transparent' }
                                     }}
                                     onSelectPin={(p) => setSelectedPin(p)}
                                     startDate={user?.createdAt}
@@ -445,18 +421,18 @@ export default function MemoryScreen() {
                                 transition={{ type: 'spring' }}
                                 style={styles.emptyIconCircle}
                             >
-                                <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFill} />
-                                <Ionicons name="infinite-outline" size={50} color="#7c3aed" />
+                                <BlurView intensity={10} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+                                <Ionicons name="infinite-outline" size={50} color={currentTheme.colors.primary} />
                             </MotiView>
-                            <Text style={styles.emptyTitle}>Lặng Im</Text>
-                            <Text style={styles.emptySubtitle}>Không gian ký ức của bạn còn trống.{'\n'}Hãy bắt đầu ghi lại thanh âm cuộc sống.</Text>
+                            <Text style={[styles.emptyTitle, { color: currentTheme.colors.text }]}>Lặng Im</Text>
+                            <Text style={[styles.emptySubtitle, { color: currentTheme.colors.textSecondary }]}>Không gian ký ức của bạn còn trống.{'\n'}Hãy bắt đầu ghi lại thanh âm cuộc sống.</Text>
                         </View>
                     )}
 
                     {!loading && pins.length > 0 && filtered.length === 0 && (
                         <View style={styles.center}>
-                            <Ionicons name="pulse" size={48} color="rgba(255,255,255,0.2)" />
-                            <Text style={styles.noResultsText}>Không tìm thấy tần số phù hợp</Text>
+                            <Ionicons name="pulse" size={48} color={currentTheme.colors.textMuted} />
+                            <Text style={[styles.noResultsText, { color: currentTheme.colors.textSecondary }]}>Không tìm thấy tần số phù hợp</Text>
                         </View>
                     )}
                 </View>
@@ -469,11 +445,6 @@ export default function MemoryScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    fullscreenBackground: {
-        width: '100%',
-        height: '100%',
-        resizeMode: 'cover',
-    },
     scrollContent: { paddingTop: 60 },
     header: {
         paddingHorizontal: 25,
@@ -511,24 +482,24 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     searchWrapper: {
-        paddingHorizontal: 20,
+        marginHorizontal: 20,
         marginBottom: 20,
-    },
-    searchBlur: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 15,
-        paddingVertical: 12,
+        paddingVertical: 10,
         borderRadius: 24,
-        overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.15)',
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
+        elevation: 4,
     },
     searchInput: {
         flex: 1,
         marginLeft: 10,
-        color: '#fff',
+        color: '#111827',
         fontSize: 16,
         fontWeight: '500',
     },
@@ -546,8 +517,8 @@ const styles = StyleSheet.create({
         borderRadius: 40,
         overflow: 'hidden',
         borderWidth: 1.5,
-        borderColor: 'rgba(255,255,255,0.2)',
-        backgroundColor: 'rgba(0,0,0,0.3)',
+        borderColor: 'rgba(0,0,0,0.08)',
+        backgroundColor: 'rgba(255,255,255,0.6)',
         paddingTop: 10,
         paddingBottom: 20,
     },
@@ -574,7 +545,7 @@ const styles = StyleSheet.create({
         marginBottom: 25,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
+        borderColor: 'rgba(0,0,0,0.08)',
     },
     emptyTitle: {
         fontSize: 28,
@@ -611,7 +582,7 @@ const styles = StyleSheet.create({
         borderRadius: 100,
         overflow: 'hidden',
         borderWidth: 1.5,
-        borderColor: 'rgba(255,255,255,0.3)',
+        borderColor: 'rgba(124, 58, 237, 0.2)',
     },
     bubbleLarge: {
         width: 70,

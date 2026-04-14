@@ -11,14 +11,15 @@
     "jsEngine": "hermes",
     "ios": {
       "supportsTablet": true,
-      "jsEngine": "hermes"
+      "jsEngine": "hermes",
+      "bundleIdentifier": "com.phuocnguyenkieu.App"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "googleServicesFile": "./google-services.json",
+
       "edgeToEdgeEnabled": true,
       "permissions": [
         "android.permission.RECORD_AUDIO",
@@ -63,10 +64,19 @@
       ],
       "expo-web-browser",
       "expo-font",
+      "./plugins/withModularHeaders",
       [
         "@rnmapbox/maps",
         {
           "RNMapboxMapsImpl": "mapbox"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
         }
       ]
     ],

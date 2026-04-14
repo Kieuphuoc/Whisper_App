@@ -19,24 +19,6 @@ import CharmanderOverlay from "@/components/voice-ar/CharmanderOverlay";
 
 type Params = { pinId?: string };
 
-function dbg(runId: string, hypothesisId: string, location: string, message: string, data?: Record<string, unknown>) {
-  // #region agent log
-  fetch("http://127.0.0.1:7563/ingest/7bee5893-5664-4b9f-a0df-553827003edb", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "4a5a19" },
-    body: JSON.stringify({
-      sessionId: "4a5a19",
-      runId,
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion agent log
-}
-
 export default function VoiceARCameraScreen() {
   const scheme = useColorScheme() || "light";
   const isDark = scheme === "dark";
@@ -49,12 +31,6 @@ export default function VoiceARCameraScreen() {
   const [deltaDeg, setDeltaDeg] = useState<number | null>(null);
   const [unlocked, setUnlocked] = useState(false);
   const [placed, setPlaced] = useState(false);
-
-  useEffect(() => {
-    dbg("run1", "H1", "app/voice-ar/camera.tsx:57", "screen_mount", { pinId: pinId ?? null });
-    return () => dbg("run1", "H1", "app/voice-ar/camera.tsx:58", "screen_unmount");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const posSubRef = useRef<Location.LocationSubscription | null>(null);
   const headSubRef = useRef<Location.LocationSubscription | null>(null);
@@ -205,11 +181,7 @@ export default function VoiceARCameraScreen() {
         </View>
         <TouchableOpacity
           onPress={() => {
-            setPlaced((v) => {
-              const next = !v;
-              dbg("run1", "H5", "app/voice-ar/camera.tsx:209", "toggle_place", { next });
-              return next;
-            });
+            setPlaced((v) => !v);
           }}
           style={[styles.iconBtn, { backgroundColor: placed ? "rgba(139,92,246,0.45)" : "rgba(0,0,0,0.35)" }]}
           hitSlop={12}

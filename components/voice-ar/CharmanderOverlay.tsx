@@ -13,24 +13,6 @@ type Props = {
 
 const MODEL_ASSET = require("../../assets/models/charmander.glb");
 
-function dbg(runId: string, hypothesisId: string, location: string, message: string, data?: Record<string, unknown>) {
-  // #region agent log
-  fetch("http://127.0.0.1:7563/ingest/7bee5893-5664-4b9f-a0df-553827003edb", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "4a5a19" },
-    body: JSON.stringify({
-      sessionId: "4a5a19",
-      runId,
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion agent log
-}
-
 export default function CharmanderOverlay({ xOffsetPx, intensity, placed }: Props) {
   const glRef = useRef<any>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -51,18 +33,11 @@ export default function CharmanderOverlay({ xOffsetPx, intensity, placed }: Prop
   const effectiveX = placed ? placedXRef.current : xOffsetPx;
 
   useEffect(() => {
-    dbg("run1", "H1", "components/voice-ar/CharmanderOverlay.tsx:62", "mount", {
-      placed,
-      xOffsetPx,
-      intensity: clampedIntensity,
-    });
     return () => {
       if (frameRef.current != null) cancelAnimationFrame(frameRef.current);
       frameRef.current = null;
       lastTsRef.current = null;
-      dbg("run1", "H1", "components/voice-ar/CharmanderOverlay.tsx:72", "unmount");
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const startLoop = () => {
@@ -98,10 +73,6 @@ export default function CharmanderOverlay({ xOffsetPx, intensity, placed }: Prop
     try {
       glRef.current = gl;
       const { drawingBufferWidth: width, drawingBufferHeight: height } = gl;
-      dbg("run1", "H2", "components/voice-ar/CharmanderOverlay.tsx:120", "gl_context_created", {
-        width,
-        height,
-      });
 
       gl.canvas = {
         width,
@@ -134,7 +105,6 @@ export default function CharmanderOverlay({ xOffsetPx, intensity, placed }: Prop
       const asset = Asset.fromModule(MODEL_ASSET);
       await asset.downloadAsync();
       const uri = asset.localUri ?? asset.uri;
-      dbg("run1", "H3", "components/voice-ar/CharmanderOverlay.tsx:159", "asset_ready", { hasLocal: !!asset.localUri });
 
       const loader = new GLTFLoader();
       const gltf = await loader.loadAsync(uri);
@@ -148,15 +118,10 @@ export default function CharmanderOverlay({ xOffsetPx, intensity, placed }: Prop
       model.position.y += 0.05;
       model.rotation.y = Math.PI * 0.15;
       scene.add(model);
-      dbg("run1", "H3", "components/voice-ar/CharmanderOverlay.tsx:175", "model_loaded", {
-        boxSize: box.getSize(new THREE.Vector3()).toArray(),
-      });
 
       startLoop();
-    } catch (e: any) {
-      dbg("run1", "H4", "components/voice-ar/CharmanderOverlay.tsx:183", "overlay_error", {
-        message: String(e?.message ?? e),
-      });
+    } catch {
+      // GL/model init failed; overlay stays empty
     }
   };
 
@@ -173,7 +138,6 @@ export default function CharmanderOverlay({ xOffsetPx, intensity, placed }: Prop
     renderer.setSize(width, height);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
-    dbg("run1", "H2", "components/voice-ar/CharmanderOverlay.tsx:205", "resize", { width, height, dpr });
   }, [layout]);
 
   return (

@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useContext } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions, useColorScheme, StatusBar, Image } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions, useColorScheme, StatusBar } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,11 +8,10 @@ import { VoicePin } from '@/types';
 import VoicePinTurntable from '@/components/home/VoicePinCard';
 import { theme } from '@/constants/Theme';
 import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 
 import { MyUserContext } from '@/configs/Context';
-import { authApis, BASE_URL, endpoints } from '@/configs/Apis';
+import { authApis, endpoints } from '@/configs/Apis';
 import { VoicePinCarouselCard as MemoryCard } from '@/components/memory/VoicePinCarouselCard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -45,12 +44,6 @@ export default function MemoryGridScreen() {
     }, [userId]);
 
     const pins = userId ? externalPins : myPins;
-
-    const coverUri = useMemo(() => {
-        if (!user?.cover) return 'https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=2071&auto=format&fit=crop';
-        if (user.cover.startsWith('http')) return user.cover;
-        return `${BASE_URL}${user.cover.startsWith('/') ? '' : '/'}${user.cover}`;
-    }, [user]);
 
     const filteredPins = useMemo(() => {
         let list = pins;
@@ -115,26 +108,16 @@ export default function MemoryGridScreen() {
     }
 
     return (
-        <View style={[styles.container, { backgroundColor: '#000' }]}>
-            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-
-            {/* FULL SCREEN BACKGROUND */}
-            <View style={StyleSheet.absoluteFill}>
-                <Image
-                    source={{ uri: coverUri }}
-                    style={styles.fullscreenBackground}
-                    blurRadius={15}
-                />
-                <LinearGradient
-                    colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.9)']}
-                    style={StyleSheet.absoluteFill}
-                />
-            </View>
+        <View style={[styles.container, { backgroundColor: currentTheme.colors.background }]}>
+            <StatusBar barStyle={colorScheme === "dark" ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
 
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-                    <BlurView intensity={30} tint="light" style={styles.backBtn}>
-                        <Ionicons name="chevron-back" size={24} color="#fff" />
+                <TouchableOpacity
+                    onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/memory'))}
+                    activeOpacity={0.7}
+                >
+                    <BlurView intensity={15} tint={colorScheme === "dark" ? "dark" : "light"} style={[styles.backBtn, { borderColor: currentTheme.colors.primary + '1A', backgroundColor: currentTheme.colors.background + 'F2' }]}>
+                        <Ionicons name="chevron-back" size={22} color={currentTheme.colors.primary} />
                     </BlurView>
                 </TouchableOpacity>
                 <MotiView
@@ -142,8 +125,8 @@ export default function MemoryGridScreen() {
                     animate={{ opacity: 1, translateX: 0 }}
                     style={{ flex: 1, marginLeft: 15 }}
                 >
-                    <Text style={styles.title}>{title || 'Tất cả ký ức'}</Text>
-                    <Text style={styles.subtitle}>{filteredPins.length} kết quả</Text>
+                    <Text style={[styles.title, { color: currentTheme.colors.text }]}>{title || 'Tất cả ký ức'}</Text>
+                    <Text style={[styles.subtitle, { color: currentTheme.colors.textSecondary }]}>{filteredPins.length} kết quả</Text>
                 </MotiView>
             </View>
 
@@ -165,10 +148,7 @@ export default function MemoryGridScreen() {
                             onPress={() => setSelectedPin(item)}
                             cardWidth={CARD_WIDTH}
                             cardSpacing={0}
-                            currentTheme={{
-                                ...currentTheme,
-                                colors: { ...currentTheme.colors, text: '#fff' }
-                            }}
+                            currentTheme={currentTheme}
                             isGrid={true}
                         />
                     </MotiView>
@@ -180,11 +160,6 @@ export default function MemoryGridScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    fullscreenBackground: {
-        width: '100%',
-        height: '100%',
-        resizeMode: 'cover',
-    },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -198,18 +173,17 @@ const styles = StyleSheet.create({
         borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
-        overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
+        overflow: 'hidden',
     },
     title: {
-        color: '#fff',
+        color: '#111827',
         fontSize: 24,
         fontWeight: '900',
         letterSpacing: -0.5,
     },
     subtitle: {
-        color: 'rgba(255,255,255,0.5)',
+        color: '#6b7280',
         fontSize: 13,
         fontWeight: '600',
     },
