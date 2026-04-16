@@ -1,4 +1,5 @@
 import "../global.css";
+import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
 import { MyDispatchContext, MyUserContext, userReducer } from "@/configs/Context";
 import { SocketProvider } from "@/configs/SocketContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -19,6 +20,8 @@ import {
 import { setCustomText, setCustomTextInput } from 'react-native-global-props';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+configureReanimatedLogger({ level: ReanimatedLogLevel.warn, strict: false });
 
 const queryClient = new QueryClient();
 

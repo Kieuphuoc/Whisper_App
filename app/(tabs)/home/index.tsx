@@ -5,7 +5,6 @@ import { StyleSheet, TouchableOpacity, View, Alert, useColorScheme } from "react
 import MapView, { Region } from "react-native-maps";
 
 import MapContainer from "@/components/home/MapContainer";
-import MapboxContainer from "@/components/home/MapboxContainer";
 import VoiceButton from "@/components/home/VoiceButton";
 import VoiceCameraCapture from "@/components/home/VoiceCameraCapture";
 import VoiceUploadSheet from "@/components/home/VoiceUploadSheet";
@@ -42,7 +41,6 @@ const USER_PIN_RETAIN_RADIUS_M = 1600;
 const MAX_ACCUMULATED_PINS = 450;
 const EMPTY_PINS: VoicePin[] = [];
 
-const USE_MAPBOX = false; // Chuyển thành true sau khi đã điền đủ Token và Build lại app
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme() || "light";
@@ -103,6 +101,8 @@ export default function HomeScreen() {
         
         const initialCount = pins.length;
         pins = pins.filter((p) => {
+          // Keep pins whose coordinates couldn't be resolved — don't evict them
+          if (p.latitude == null || p.longitude == null) return true;
           if (pointInBoundingBox(p.latitude, p.longitude, expanded)) return true;
           if (uLat != null && uLng != null) {
             const d = haversineDistanceMeters(
@@ -136,6 +136,9 @@ export default function HomeScreen() {
 
       if (__DEV__) {
         console.log(`[HomeScreen] BBox pins fetched: ${pinsToProcess.length}, Accumulated: ${pins.length}`);
+        if (pinsToProcess.length > 0 && pins.length === 0) {
+          console.warn(`[HomeScreen] All ${pinsToProcess.length} fetched pins were evicted! bbox=${JSON.stringify(bbox)}, location=${JSON.stringify(location?.coords)}`);
+        }
       }
 
       // If the array content is exactly the same as before, don't update to avoid re-renders
@@ -308,14 +311,6 @@ export default function HomeScreen() {
 
   const recenterMap = () => {
     if (location && mapRef.current) {
-      if (USE_MAPBOX) {
-        // Mapbox animate to point
-        (mapRef.current as any).setCamera({
-          centerCoordinate: [location.coords.longitude, location.coords.latitude],
-          zoomLevel: 14,
-          animationDuration: 1000,
-        });
-      } else {
         const region = {
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
@@ -323,7 +318,6 @@ export default function HomeScreen() {
           longitudeDelta: 0.01,
         };
         (mapRef.current as any).animateToRegion(region, 1000);
-      }
     } else if (!location) {
       Alert.alert("Vị trí", "Đang lấy vị trí của bạn...");
     }
@@ -366,20 +360,6 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {USE_MAPBOX ? (
-        <MapboxContainer
-          location={location}
-          pins={accumulatedPins}
-          isScanning={isScanning}
-          discoveredPin={discoveredPin}
-          onPressDiscoveredPin={handlePressDiscoveredPin}
-          externalSelectedPin={externalSelectedPin}
-          onSelectPin={handleSelectMapPin}
-          autoPlayPin={autoPlayPin}
-          onRegionChangeComplete={handleRegionChangeComplete}
-          ref={mapRef as any}
-        />
-      ) : (
         <MapContainer
           location={location}
           pins={accumulatedPins}
@@ -392,7 +372,6 @@ export default function HomeScreen() {
           onRegionChangeComplete={handleRegionChangeComplete}
           ref={mapRef as any}
         />
-      )}
 
 
 

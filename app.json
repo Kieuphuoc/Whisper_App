@@ -66,12 +66,6 @@
       "expo-font",
       "./plugins/withModularHeaders",
       [
-        "@rnmapbox/maps",
-        {
-          "RNMapboxMapsImpl": "mapbox"
-        }
-      ],
-      [
         "expo-build-properties",
         {
           "ios": {
