@@ -101,23 +101,25 @@ export default function VoicePinCarousel({
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <View style={[styles.iconDot, { backgroundColor: iconColor + '18' }]}>
-            <Ionicons name={icon} size={16} color={iconColor} />
+      {title ? (
+        <View style={styles.header}>
+          <View style={styles.titleRow}>
+            <View style={[styles.iconDot, { backgroundColor: iconColor + (currentTheme.dark ? '30' : '15') }]}>
+              <Ionicons name={icon} size={16} color={iconColor} />
+            </View>
+            <View>
+              <Text style={[styles.title, { color: currentTheme.colors.text }]}>{title}</Text>
+              {subtitle && <Text style={[subtitleStyles.text, { color: currentTheme.colors.textMuted }]}>{subtitle}</Text>}
+            </View>
           </View>
-          <View>
-            <Text style={[styles.title, { color: currentTheme.colors.text }]}>{title}</Text>
-            {subtitle && <Text style={[subtitleStyles.text, { color: currentTheme.colors.icon }]}>{subtitle}</Text>}
-          </View>
+          {onSeeAll && (
+            <TouchableOpacity onPress={onSeeAll} style={styles.seeAllBtn}>
+              <Text style={[styles.seeAllText, { color: currentTheme.colors.primary }]}>Xem tất cả</Text>
+              <Ionicons name="chevron-forward" size={16} color={currentTheme.colors.primary} />
+            </TouchableOpacity>
+          )}
         </View>
-        {onSeeAll && (
-          <TouchableOpacity onPress={onSeeAll} style={styles.seeAllBtn}>
-            <Text style={[styles.seeAllText, { color: currentTheme.colors.primary }]}>Xem tất cả</Text>
-            <Ionicons name="chevron-forward" size={16} color={currentTheme.colors.primary} />
-          </TouchableOpacity>
-        )}
-      </View>
+      ) : null}
 
       <Animated.FlatList
         data={displayPins}
@@ -163,8 +165,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     marginBottom: 16,
   },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconDot: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  iconDot: { 
+    width: 36, 
+    height: 36, 
+    borderRadius: 18, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    backgroundColor: 'rgba(139, 92, 246, 0.1)' // Default translucent primary
+  },
   title: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
   subtitle: { fontSize: 13, fontWeight: '500', marginTop: 1 },
   seeAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },

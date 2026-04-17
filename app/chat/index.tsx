@@ -275,7 +275,7 @@ export default function ChatListScreen() {
                                 <Ionicons
                                     name="chatbubbles"
                                     size={60}
-                                    color={isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6'}
+                                    color={isDark ? 'rgba(255,255,255,0.5)' : '#f3f4f6'}
                                 />
                             </MotiView>
                             <Text style={styles.emptyText}>Chưa có cuộc trò chuyện nào.</Text>

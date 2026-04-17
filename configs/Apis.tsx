@@ -1,23 +1,7 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import Constants from "expo-constants";
-
-// Helper function to resolve the local backend IP automatically based on Metro's host IP
-const getLocalIP = () => {
-  try {
-    const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest?.hostUri || (Constants as any).manifest2?.extra?.expoGo?.debuggerHost;
-    if (hostUri) {
-      return hostUri.split(':')[0];
-    }
-  } catch (e) {
-    console.error("Could not determine local IP from Expo Constants", e);
-  }
-  return "192.168.68.202"; // Ultimate fallback
-};
-
-// Priority: Environmental Variable > Local IP Fallback (Dynamic based on WiFi)
-export const BASE_URL = process.env.EXPO_PUBLIC_API_URL || `http://${getLocalIP()}:5000`;
+export const BASE_URL = process.env.EXPO_PUBLIC_API_URL
 
 export const endpoints = {
   // Auth
@@ -36,6 +20,9 @@ export const endpoints = {
   updateFcmToken: "/user/me/fcm-token",
   myAchievements: "/user/me/achievements",
   myDiscovered: "/user/me/discovered",
+  userAchievements: (id: string | number) => `/user/${id}/achievements`,
+  userDiscovered: (id: string | number) => `/user/${id}/discovered`,
+  searchUsers: (q: string) => `/user/search?q=${q}`,
 
   // Voice Pins
   voice: "/voice/",

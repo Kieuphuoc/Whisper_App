@@ -215,15 +215,31 @@ export function VinylRecord({
         {formattedDate ? (
           <View style={styles.emotionTagCenter}>
             <BlurView intensity={20} tint={isDark ? "dark" : "light"} style={styles.emotionTagPill}>
-              <Ionicons
-                name="calendar-outline"
-                size={10}
-                color={isDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.5)"}
-                style={{ marginRight: 4 }}
-              />
-              <Text style={[styles.emotionTagText, { color: isDark ? "#F5F5F4" : "#1E293B" }]}>
-                {formattedDate}
-              </Text>
+              {pin.status && pin.status !== 'APPROVED' ? (
+                <>
+                  <Ionicons
+                    name={pin.status === 'REJECTED' ? 'alert-circle' : 'time'}
+                    size={10}
+                    color={pin.status === 'REJECTED' ? '#EF4444' : '#F59E0B'}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={[styles.emotionTagText, { color: pin.status === 'REJECTED' ? '#EF4444' : '#F59E0B' }]}>
+                    {pin.status === 'REJECTED' ? 'Bị từ chối' : 'Đang duyệt'}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={10}
+                    color={isDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.5)"}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={[styles.emotionTagText, { color: isDark ? "#F5F5F4" : "#1E293B" }]}>
+                    {formattedDate}
+                  </Text>
+                </>
+              )}
             </BlurView>
           </View>
         ) : null}
@@ -329,7 +345,9 @@ export function VinylRecord({
                 {pin.user?.displayName || "Anonymous"}
               </Text>
               <Text style={[styles.profileBio, { color: isDark ? "#A3A3A3" : "#64748B" }]} numberOfLines={1}>
-                {pin.user?.bio || pin.emotionLabel || "Tap record to play"}
+                {pin.status === 'REJECTED' && pin.moderationReason 
+                  ? `Lý do: ${pin.moderationReason}` 
+                  : (pin.user?.bio || pin.emotionLabel || "Tap record to play")}
               </Text>
             </View>
           </TouchableOpacity>

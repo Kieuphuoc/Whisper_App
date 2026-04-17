@@ -101,6 +101,10 @@ export interface VoicePin {
     user?: UserBasic;
     images?: Image[];
 
+    // --- Moderation ---
+    status: 'PENDING' | 'APPROVED' | 'REJECTED';
+    moderationReason?: string;
+
     // --- System ---
     createdAt: string;
     updatedAt?: string;

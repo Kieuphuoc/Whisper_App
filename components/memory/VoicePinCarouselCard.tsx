@@ -136,7 +136,11 @@ export function VoicePinCarouselCard({
         activeOpacity={1}
         style={[
           styles.container,
-          { height: cardHeight, borderRadius: isGrid ? 20 : 32 }
+          { 
+            height: cardHeight, 
+            borderRadius: isGrid ? 20 : 32,
+            backgroundColor: currentTheme.dark ? '#000' : '#FFF',
+          }
         ]}
       >
         {/* Glow Effect Background */}
@@ -151,51 +155,84 @@ export function VoicePinCarouselCard({
         />
 
         {/* Main Content Area */}
-        <View style={[styles.cardInner, { borderRadius: isGrid ? 20 : 32 }]}>
+        <View style={[styles.cardInner, { 
+            borderRadius: isGrid ? 20 : 32,
+            borderColor: currentTheme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+        }]}>
           {/* Background Image/Fallback */}
           {imgUrl ? (
             <Image source={imgUrl} style={StyleSheet.absoluteFill} contentFit="cover" transition={400} />
           ) : (
             <LinearGradient
-              colors={['#1A1A2E', '#16213E']}
+              colors={currentTheme.dark ? ['#1A1A2E', '#16213E'] : ['#F3F4F6', '#E5E7EB']}
               style={StyleSheet.absoluteFill}
             />
           )}
 
           {/* Aesthetic Overlay */}
           <LinearGradient
-            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.8)', '#000000']}
+            colors={currentTheme.dark ? 
+                ['rgba(0,0,0,0)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.8)', '#000000'] :
+                ['rgba(255,255,255,0)', 'rgba(255,255,255,0.1)', 'rgba(255,255,255,0.4)', 'rgba(255,255,255,0.8)']}
             locations={[0, 0.3, 0.7, 1]}
             style={StyleSheet.absoluteFill}
           />
 
           {/* Top Header Section */}
           <View style={styles.topSection}>
-            <BlurView intensity={30} tint="dark" style={styles.moodBadge}>
-               <MotiView
-                  from={{ scale: 0.8 }}
-                  animate={{ scale: 1 }}
-                  transition={{ loop: true, type: 'spring' }}
-               >
-                  <Ionicons name={meta.icon} size={isGrid ? 12 : 16} color={meta.color} />
-               </MotiView>
-               {!isGrid && <Text style={[styles.moodText, { color: '#FFF' }]}>{meta.vi}</Text>}
-            </BlurView>
+            <View style={{ flexDirection: 'row', gap: 8, flex: 1 }}>
+                <BlurView intensity={30} tint={currentTheme.dark ? "dark" : "light"} style={[styles.moodBadge, { borderColor: currentTheme.dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)' }]}>
+                   <MotiView
+                      from={{ scale: 0.8 }}
+                      animate={{ scale: 1 }}
+                      transition={{ loop: true, type: 'spring' }}
+                   >
+                      <Ionicons name={meta.icon} size={isGrid ? 12 : 16} color={meta.color} />
+                   </MotiView>
+                   {!isGrid && <Text style={[styles.moodText, { color: currentTheme.dark ? '#FFF' : currentTheme.colors.text }]}>{meta.vi}</Text>}
+                </BlurView>
 
-            <View style={styles.dateBadge}>
-                <Text style={styles.dateText}>{dateStr}</Text>
+                {pin.status !== 'APPROVED' && (
+                    <BlurView intensity={40} tint={currentTheme.dark ? "dark" : "light"} style={[styles.moodBadge, { borderColor: pin.status === 'REJECTED' ? '#EF4444' : '#F59E0B' }]}>
+                        <Ionicons 
+                            name={pin.status === 'REJECTED' ? 'alert-circle' : 'time'} 
+                            size={isGrid ? 12 : 14} 
+                            color={pin.status === 'REJECTED' ? '#EF4444' : '#F59E0B'} 
+                        />
+                        {!isGrid && (
+                            <Text style={{ color: currentTheme.dark ? '#FFF' : currentTheme.colors.text, fontSize: 10, fontWeight: '700' }}>
+                                {pin.status === 'REJECTED' ? 'Bị từ chối' : 'Đang duyệt'}
+                            </Text>
+                        )}
+                    </BlurView>
+                )}
+            </View>
+
+            <View style={[styles.dateBadge, { backgroundColor: currentTheme.dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.05)' }]}>
+                <Text style={[styles.dateText, { color: currentTheme.dark ? '#FFF' : currentTheme.colors.text }]}>{dateStr}</Text>
             </View>
           </View>
 
           {/* Bottom Info Section */}
           <View style={styles.bottomSection}>
             <View style={styles.contentRow}>
-                <Text style={[styles.title, { fontSize: isGrid ? 16 : 22 }]} numberOfLines={1}>
+                <Text style={[styles.title, { 
+                    fontSize: isGrid ? 16 : 22,
+                    color: currentTheme.dark ? '#FFF' : currentTheme.colors.text 
+                }]} numberOfLines={1}>
                     {pin.content || 'Memory Echo'}
                 </Text>
+                {pin.status === 'REJECTED' && pin.moderationReason && !isGrid && (
+                    <View style={styles.reasonRow}>
+                        <Ionicons name="information-circle-outline" size={12} color="#EF4444" />
+                        <Text style={styles.reasonText} numberOfLines={2}>
+                            {pin.moderationReason}
+                        </Text>
+                    </View>
+                )}
                 <View style={styles.locationContainer}>
-                    <Ionicons name="location-sharp" size={10} color="rgba(255,255,255,0.6)" />
-                    <Text style={styles.locationText} numberOfLines={1}>
+                    <Ionicons name="location-sharp" size={10} color={currentTheme.dark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.5)"} />
+                    <Text style={[styles.locationText, { color: currentTheme.dark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.5)" }]} numberOfLines={1}>
                         {pin.address?.split(',')[0] || 'Unknown Aura'}
                     </Text>
                 </View>
@@ -205,17 +242,17 @@ export function VoicePinCarouselCard({
                 <View style={styles.statsRow}>
                     <View style={styles.statItem}>
                         <Ionicons name="mic-outline" size={14} color={meta.color} />
-                        <Text style={styles.statText}>{pin.audioDuration ?? 0}s</Text>
+                        <Text style={[styles.statText, { color: currentTheme.dark ? '#FFF' : currentTheme.colors.text }]}>{pin.audioDuration ?? 0}s</Text>
                     </View>
-                    <View style={styles.statDivider} />
+                    <View style={[styles.statDivider, { backgroundColor: currentTheme.dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]} />
                     <View style={styles.statItem}>
-                        <Ionicons name="headset-outline" size={14} color="rgba(255,255,255,0.6)" />
-                        <Text style={styles.statText}>{pin.listensCount ?? 0}</Text>
+                        <Ionicons name="headset-outline" size={14} color={currentTheme.dark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.5)"} />
+                        <Text style={[styles.statText, { color: currentTheme.dark ? '#FFF' : currentTheme.colors.text }]}>{pin.listensCount ?? 0}</Text>
                     </View>
-                    <View style={styles.statDivider} />
+                    <View style={[styles.statDivider, { backgroundColor: currentTheme.dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]} />
                     <View style={styles.statItem}>
-                        <Ionicons name="heart-outline" size={14} color="rgba(255,255,255,0.6)" />
-                        <Text style={styles.statText}>{pin.reactionsCount ?? 0}</Text>
+                        <Ionicons name="heart-outline" size={14} color={currentTheme.dark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.5)"} />
+                        <Text style={[styles.statText, { color: currentTheme.dark ? '#FFF' : currentTheme.colors.text }]}>{pin.reactionsCount ?? 0}</Text>
                     </View>
                 </View>
             )}
@@ -233,7 +270,7 @@ export function VoicePinCarouselCard({
                 transition={{ delay: 300 }}
                 style={styles.avatarContainer}
             >
-                <BlurView intensity={40} tint="light" style={styles.avatarBlur}>
+                <BlurView intensity={40} tint={currentTheme.dark ? "dark" : "light"} style={[styles.avatarBlur, { borderColor: currentTheme.dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)' }]}>
                     <Image 
                         source={resolveAsset(pin.user.avatar) || undefined} 
                         style={styles.avatarImg} 
@@ -322,6 +359,24 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
+  },
+  reasonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginBottom: 6,
+    borderWidth: 0.5,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+  },
+  reasonText: {
+    color: '#FCA5A5',
+    fontSize: 10,
+    fontWeight: '600',
+    flex: 1,
   },
   locationContainer: {
     flexDirection: 'row',

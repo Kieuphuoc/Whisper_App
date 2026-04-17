@@ -40,6 +40,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { BlurView } from 'expo-blur';
 import VoicePinCarousel from '@/components/memory/VoicePinCarousel';
 import VoicePinTurntable from '@/components/home/VoicePinCard';
+import FriendsModal from '@/components/FriendsModal';
 
 const MASCOT_ICONS: { [key: string]: any } = {
     first_voice: require('@/assets/images/achievements/first_voice.png'),
@@ -73,6 +74,7 @@ export default function ProfileScreen() {
     const [discoveredVoices, setDiscoveredVoices] = useState<any[]>([]);
     const [tabLoading, setTabLoading] = useState(false);
     const [selectedPin, setSelectedPin] = useState<VoicePin | null>(null);
+    const [friendsVisible, setFriendsVisible] = useState(false);
 
     const scrollY = useSharedValue(0);
     const shimmerProgress = useSharedValue(0);
@@ -235,8 +237,8 @@ export default function ProfileScreen() {
 
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images'],
-            allowsEditing: true,
-            aspect: type === 'avatar' ? [1, 1] : [16, 9],
+            allowsEditing: type === 'avatar',
+            aspect: type === 'avatar' ? [1, 1] : [9, 16],
             quality: 0.8,
         });
 
@@ -344,6 +346,8 @@ export default function ProfileScreen() {
     return (
         <View style={[styles.container, { backgroundColor: currentTheme.colors.background }]}>
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
+
+            <FriendsModal visible={friendsVisible} onClose={() => setFriendsVisible(false)} />
 
             {/* FULL SCREEN BACKGROUND IMAGE */}
             <View style={StyleSheet.absoluteFill}>
@@ -477,16 +481,21 @@ export default function ProfileScreen() {
                                 <Text style={[styles.bubbleLabelMedium, { color: isDark ? '#fff' : currentTheme.colors.textMuted }]}>Voices</Text>
                             </MotiView>
 
-                            <MotiView
-                                from={{ scale: 0, translateY: -20 }}
-                                animate={{ scale: 1, translateY: 0 }}
-                                transition={{ delay: 600 }}
-                                style={[styles.statBubble, styles.bubbleSmall, { right: -10, top: -35 }]}
+                            <TouchableOpacity
+                                onPress={() => setFriendsVisible(true)}
+                                activeOpacity={0.7}
                             >
-                                <BlurView intensity={40} tint={isDark ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: '#10b981' + (isDark ? '50' : '20') }]} />
-                                <Text style={[styles.bubbleValueSmall, { color: isDark ? '#fff' : '#059669' }]}>{stats?.friendCount || 0}</Text>
-                                <Text style={[styles.bubbleLabelSmall, { color: isDark ? '#fff' : currentTheme.colors.textMuted }]}>Friends</Text>
-                            </MotiView>
+                                <MotiView
+                                    from={{ scale: 0, translateY: -20 }}
+                                    animate={{ scale: 1, translateY: 0 }}
+                                    transition={{ delay: 600 }}
+                                    style={[styles.statBubble, styles.bubbleSmall, { right: -10, top: -35 }]}
+                                >
+                                    <BlurView intensity={40} tint={isDark ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: '#10b981' + (isDark ? '50' : '20') }]} />
+                                    <Text style={[styles.bubbleValueSmall, { color: isDark ? '#fff' : '#059669' }]}>{stats?.friendCount || 0}</Text>
+                                    <Text style={[styles.bubbleLabelSmall, { color: isDark ? '#fff' : currentTheme.colors.textMuted }]}>Friends</Text>
+                                </MotiView>
+                            </TouchableOpacity>
                         </View>
                     </View>
 
@@ -501,14 +510,14 @@ export default function ProfileScreen() {
                                 from={{ opacity: 0, scale: 0.8 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: 700 + i * 150 }}
-                                style={[styles.glassStrangeCard, { 
+                                style={[styles.glassStrangeCard, {
                                     backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.7)',
-                                    borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' 
+                                    borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'
                                 }]}
                             >
                                 <BlurView intensity={isDark ? 30 : 20} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
-                                <Ionicons name={item.icon as any} size={14} color={isDark ? "#fff" : currentTheme.colors.primary} />
-                                <Text style={[styles.glassStrangeText, { color: isDark ? "#fff" : currentTheme.colors.text }]}>{item.label}</Text>
+                                <Ionicons name={item.icon as any} size={14} color="#fff" />
+                                <Text style={[styles.glassStrangeText, { color: "#fff" }]}>{item.label}</Text>
                             </MotiView>
                         ))}
                     </View>
@@ -632,8 +641,8 @@ export default function ProfileScreen() {
                         </View>
                     </MotiView>
 
-                    {/* NEW: LEVEL PROGRESS BAR */}
-                    <MotiView
+                    {/* Hiding Level Bar temporarily as requested */}
+                    {/* <MotiView
                         from={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 500 }}
@@ -664,12 +673,12 @@ export default function ProfileScreen() {
                                 </MotiView>
                             </View>
                         </View>
-                    </MotiView>
+                    </MotiView> */}
 
                     {/* NEW: CONTENT FEED TABS */}
-                    <View style={[styles.tabHeaderContainer, { 
+                    <View style={[styles.tabHeaderContainer, {
                         backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.7)',
-                        borderColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.1)' 
+                        borderColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.1)'
                     }]}>
                         <BlurView intensity={isDark ? 10 : 5} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
                         <View style={styles.tabHeader}>
@@ -684,8 +693,8 @@ export default function ProfileScreen() {
                                     style={[
                                         styles.tabItem,
                                         activeTab === tab.id && [
-                                            styles.activeTabItem, 
-                                            { 
+                                            styles.activeTabItem,
+                                            {
                                                 borderColor: currentTheme.colors.primary,
                                                 backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : currentTheme.colors.primary + '15'
                                             }
@@ -723,7 +732,6 @@ export default function ProfileScreen() {
                                         key="voices"
                                     >
                                         <VoicePinCarousel
-                                            title="VoicePin của tôi"
                                             pins={myVoices}
                                             onSelectPin={(p) => setSelectedPin(p)}
                                             currentTheme={currentTheme}
@@ -740,7 +748,6 @@ export default function ProfileScreen() {
                                         key="discovered"
                                     >
                                         <VoicePinCarousel
-                                            title="AR đã tìm thấy"
                                             pins={discoveredVoices?.map(d => d.voicePin) || []}
                                             onSelectPin={(p) => setSelectedPin(p)}
                                             currentTheme={currentTheme}

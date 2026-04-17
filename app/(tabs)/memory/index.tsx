@@ -127,6 +127,7 @@ export default function MemoryScreen() {
     const router = useRouter();
     const user = useContext(MyUserContext);
     const { pins, loading, error, refetch } = useMyPins();
+    console.log('[DEBUG] Memory pins sample:', pins.length > 0 ? pins[0] : 'No pins');
     const [selectedPin, setSelectedPin] = useState<VoicePin | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState<FilterType>('time');
@@ -396,15 +397,18 @@ export default function MemoryScreen() {
                         <MotiView
                             from={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            style={styles.calendarWrapper}
+                            style={[
+                                styles.calendarWrapper,
+                                {
+                                    backgroundColor: currentTheme.colors.surface + '99',
+                                    borderColor: currentTheme.colors.primary + '33'
+                                }
+                            ]}
                         >
                             <BlurView intensity={12} tint={isDark ? "dark" : "light"} style={styles.calendarBlur}>
                                 <HistoryCalendar
                                     pins={filtered}
-                                    currentTheme={{
-                                        ...currentTheme,
-                                        colors: { ...currentTheme.colors, background: 'transparent', surfaceAlt: 'transparent' }
-                                    }}
+                                    currentTheme={currentTheme}
                                     onSelectPin={(p) => setSelectedPin(p)}
                                     startDate={user?.createdAt}
                                     onPressAddToday={() => router.replace('/home')}
@@ -517,8 +521,6 @@ const styles = StyleSheet.create({
         borderRadius: 40,
         overflow: 'hidden',
         borderWidth: 1.5,
-        borderColor: 'rgba(0,0,0,0.08)',
-        backgroundColor: 'rgba(255,255,255,0.6)',
         paddingTop: 10,
         paddingBottom: 20,
     },

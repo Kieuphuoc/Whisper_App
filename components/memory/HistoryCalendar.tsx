@@ -1,12 +1,12 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   Dimensions,
   Image,
   TouchableOpacity,
 } from 'react-native';
+import { Text } from '@/components/ui/text';
 import { Ionicons } from '@expo/vector-icons';
 import { VoicePin } from '@/types';
 import { BASE_URL } from '@/configs/Apis';
@@ -17,7 +17,7 @@ import Animated, { useAnimatedStyle, withRepeat, withTiming, withSequence, withD
 
 const { width } = Dimensions.get('window');
 const GRID_COLS = 7;
-const WEEKDAY_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+
 
 function startOfDay(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -117,9 +117,13 @@ const HistoryCalendar: React.FC<HistoryCalendarProps> = ({
             <TouchableOpacity 
                 onPress={prevMonth} 
                 disabled={selectedMonthIdx >= monthRange.length - 1}
-                style={[styles.navBtn, selectedMonthIdx >= monthRange.length - 1 && { opacity: 0.3 }]}
+                style={[
+                    styles.navBtn, 
+                    { backgroundColor: currentTheme.colors.surface, borderColor: currentTheme.colors.primary + '33' },
+                    selectedMonthIdx >= monthRange.length - 1 && { opacity: 0.3 }
+                ]}
             >
-                <Ionicons name="chevron-back" size={24} color="#fff" />
+                <Ionicons name="chevron-back" size={24} color={currentTheme.colors.text} />
             </TouchableOpacity>
 
             <MotiView
@@ -129,7 +133,7 @@ const HistoryCalendar: React.FC<HistoryCalendarProps> = ({
                 style={styles.monthInfo}
             >
                 <View style={styles.glowDot} />
-                <Text style={[styles.monthTitle, { color: '#fff' }]}>
+                <Text style={[styles.monthTitle, { color: currentTheme.colors.text }]}>
                     {activeMonth.label}
                 </Text>
             </MotiView>
@@ -137,9 +141,13 @@ const HistoryCalendar: React.FC<HistoryCalendarProps> = ({
             <TouchableOpacity 
                 onPress={nextMonth}
                 disabled={selectedMonthIdx === 0}
-                style={[styles.navBtn, selectedMonthIdx === 0 && { opacity: 0.3 }]}
+                style={[
+                    styles.navBtn, 
+                    { backgroundColor: currentTheme.colors.surface, borderColor: currentTheme.colors.primary + '33' },
+                    selectedMonthIdx === 0 && { opacity: 0.3 }
+                ]}
             >
-                <Ionicons name="chevron-forward" size={24} color="#fff" />
+                <Ionicons name="chevron-forward" size={24} color={currentTheme.colors.text} />
             </TouchableOpacity>
         </View>
 
@@ -152,12 +160,7 @@ const HistoryCalendar: React.FC<HistoryCalendarProps> = ({
         >
           <View style={[styles.monthCard]}>
             <View style={styles.grid}>
-              {/* Weekday header */}
-              {WEEKDAY_LABELS.map((label) => (
-                <View key={`weekday-${label}`} style={[styles.dayCell, styles.weekdayCell]}>
-                  <Text style={styles.weekdayText}>{label}</Text>
-                </View>
-              ))}
+              {/* Date cells */}
 
               {(() => {
                 const firstOfMonth = new Date(activeMonth.year, activeMonth.month, 1);
@@ -245,25 +248,31 @@ const HistoryCalendar: React.FC<HistoryCalendarProps> = ({
                         <TouchableOpacity
                           activeOpacity={0.85}
                           onPress={onPressAddToday}
-                          style={styles.addWrapper}
+                          style={[
+                            styles.addWrapper,
+                            { borderColor: currentTheme.colors.primary + '66', backgroundColor: currentTheme.colors.primary + '10' }
+                          ]}
                         >
                           <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFill} />
                           <LinearGradient
                             colors={[currentTheme.colors.primary + '40', 'transparent']}
                             style={StyleSheet.absoluteFill}
                           />
-                          <Ionicons name="add" size={24} color="#fff" />
-                          <Text style={styles.todayText}>Nay</Text>
+                          <Ionicons name="add" size={24} color={currentTheme.colors.primary} />
+                          <Text style={[styles.todayText, { color: currentTheme.colors.primary }]}>Nay</Text>
                         </TouchableOpacity>
                       ) : isFuture ? (
-                        <View style={styles.futurePlaceholder}>
+                        <View style={[
+                          styles.futurePlaceholder,
+                          { borderColor: currentTheme.colors.textMuted + '20', backgroundColor: currentTheme.colors.surface + '80' }
+                        ]}>
                           <BlurView intensity={5} tint="light" style={StyleSheet.absoluteFill} />
-                          <Text style={styles.futureDateText}>{day}</Text>
+                          <Text style={[styles.futureDateText, { color: currentTheme.colors.textMuted + '40' }]}>{day}</Text>
                         </View>
                       ) : (
                         <View style={styles.pastEmpty}>
-                          <View style={[styles.dot, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
-                          <Text style={styles.pastDateText}>{day}</Text>
+                          <View style={[styles.dot, { backgroundColor: currentTheme.colors.textMuted + '20' }]} />
+                          <Text style={[styles.pastDateText, { color: currentTheme.colors.textMuted + '60' }]}>{day}</Text>
                         </View>
                       )}
                     </MotiView>
@@ -305,11 +314,9 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
   },
   monthInfo: {
       flexDirection: 'row',
@@ -342,18 +349,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dayCell: {
-    width: (width - 30 - 30 - 6 * (GRID_COLS - 1)) / GRID_COLS,
+    // total horizontal space = width - 30 (wrapper margin) - 20 (blur padding) - 30 (container padding) = width - 80
+    // We use a small extra buffer (2px) and floor to prevent sub-pixel wrapping issues
+    width: Math.floor((width - 82 - 6 * (GRID_COLS - 1)) / GRID_COLS),
     aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  weekdayCell: {
-    aspectRatio: 0.6,
-  },
-  weekdayText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 11,
-    fontWeight: '700',
   },
   emptyDayCell: {
     opacity: 0,
@@ -366,7 +367,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     position: 'relative',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(0,0,0,0.1)',
   },
   pinImage: {
     width: '100%',
@@ -394,7 +395,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
     borderStyle: 'dashed',
   },
   todayText: {
@@ -411,8 +411,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    backgroundColor: 'rgba(255,255,255,0.02)',
   },
   futureDateText: {
     color: 'rgba(255,255,255,0.2)',

@@ -41,12 +41,23 @@ const QuickActions: React.FC<QuickActionsProps> = ({
                 </View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.quickActionButton} onPress={onNotifications ?? onFriends}>
+            <TouchableOpacity style={styles.quickActionButton} onPress={onNotifications}>
                 <View style={styles.quickActionIcon}>
                     <Ionicons name="notifications" size={20} color="#8b5cf6" />
-                    {(unreadCount > 0 || receivedCount > 0) && (
+                    {unreadCount > 0 && (
                         <View style={styles.badge}>
-                            <Text style={styles.badgeText}>{unreadCount || receivedCount}</Text>
+                            <Text style={styles.badgeText}>{unreadCount}</Text>
+                        </View>
+                    )}
+                </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.quickActionButton} onPress={onFriends}>
+                <View style={styles.quickActionIcon}>
+                    <Ionicons name="people" size={20} color="#8b5cf6" />
+                    {receivedCount > 0 && (
+                        <View style={styles.badge}>
+                            <Text style={styles.badgeText}>{receivedCount}</Text>
                         </View>
                     )}
                 </View>
