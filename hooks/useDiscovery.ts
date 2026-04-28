@@ -18,9 +18,9 @@ export function useDiscovery() {
             }
 
             const api = authApis(token);
-            // radius set to 5km by default
+            // radius set to 1km by default
             const res = await api.get(endpoints.voiceRandom, {
-                params: { lat, lng, radius: 5 }
+                params: { lat, lng, radius: 1 }
             });
 
             if (res.data?.data) {

@@ -129,7 +129,6 @@ export default function MemoryScreen() {
     const { pins, loading, error, refetch } = useMyPins();
     console.log('[DEBUG] Memory pins sample:', pins.length > 0 ? pins[0] : 'No pins');
     const [selectedPin, setSelectedPin] = useState<VoicePin | null>(null);
-    const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState<FilterType>('time');
     const [refreshing, setRefreshing] = useState(false);
 
@@ -178,15 +177,7 @@ export default function MemoryScreen() {
         setRefreshing(false);
     }, [refetch]);
 
-    const filtered = useMemo(() => {
-        if (!searchQuery.trim()) return pins;
-        const q = searchQuery.toLowerCase();
-        return pins.filter(p =>
-            (p.content?.toLowerCase().includes(q)) ||
-            (p.address?.toLowerCase().includes(q)) ||
-            (p.emotionLabel?.toLowerCase().includes(q))
-        );
-    }, [pins, searchQuery]);
+
 
     const sections = useMemo(() => {
         const now = new Date();
@@ -194,14 +185,14 @@ export default function MemoryScreen() {
 
         if (activeFilter === 'time') {
             const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            const recent = filtered
+            const recent = pins
                 .filter(p => new Date(p.createdAt) >= sevenDaysAgo)
                 .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
             if (recent.length > 0) {
                 result.push({ key: 'recent', title: 'Mới thêm gần đây', icon: 'time-outline', iconColor: '#7c3aed', pins: recent });
             }
 
-            const thisMonth = filtered
+            const thisMonth = pins
                 .filter(p => {
                     const d = new Date(p.createdAt);
                     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
@@ -214,7 +205,7 @@ export default function MemoryScreen() {
             // Gom các pin cũ hơn theo từng tháng để không bị mất
             const shownIds = new Set([...recent, ...thisMonth].map(p => p.id));
             const olderByMonth: Record<string, VoicePin[]> = {};
-            for (const p of filtered) {
+            for (const p of pins) {
                 if (shownIds.has(p.id)) continue;
                 const d = new Date(p.createdAt);
                 const label = d.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
@@ -236,7 +227,7 @@ export default function MemoryScreen() {
 
         if (activeFilter === 'visibility') {
             const visMap: Record<string, VoicePin[]> = {};
-            for (const p of filtered) {
+            for (const p of pins) {
                 const key = p.visibility ?? 'PRIVATE';
                 (visMap[key] = visMap[key] ?? []).push(p);
             }
@@ -254,7 +245,7 @@ export default function MemoryScreen() {
         }
 
         return result;
-    }, [filtered, activeFilter]);
+    }, [pins, activeFilter]);
 
     if (selectedPin) {
         return (
@@ -326,33 +317,7 @@ export default function MemoryScreen() {
                     </View>
                 </View>
 
-                {/* Search Glass Bar */}
-                <MotiView
-                    from={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 200 }}
-                    style={[
-                        styles.searchWrapper,
-                        {
-                            backgroundColor: currentTheme.colors.background + 'F2',
-                            borderColor: currentTheme.colors.primary + '1A',
-                        }
-                    ]}
-                >
-                    <Ionicons name="search-outline" size={18} color={currentTheme.colors.textMuted} />
-                    <TextInput
-                        style={[styles.searchInput, { color: currentTheme.colors.text }]}
-                        placeholder="Tìm kiếm tần số ký ức..."
-                        placeholderTextColor={currentTheme.colors.textMuted}
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                    />
-                    {searchQuery.length > 0 && (
-                        <TouchableOpacity onPress={() => setSearchQuery('')}>
-                            <Ionicons name="close-circle" size={18} color={currentTheme.colors.textMuted} />
-                        </TouchableOpacity>
-                    )}
-                </MotiView>
+
 
                 {/* Filter Chips */}
                 <View style={styles.filterContainer}>
@@ -386,7 +351,7 @@ export default function MemoryScreen() {
                                 onSeeAll={() => {
                                     router.push({
                                         pathname: '/(tabs)/memory/grid',
-                                        params: { title: s.title, sectionKey: s.key, filter: activeFilter, query: searchQuery }
+                                        params: { title: s.title, sectionKey: s.key, filter: activeFilter }
                                     });
                                 }}
                             />
@@ -407,7 +372,7 @@ export default function MemoryScreen() {
                         >
                             <BlurView intensity={12} tint={isDark ? "dark" : "light"} style={styles.calendarBlur}>
                                 <HistoryCalendar
-                                    pins={filtered}
+                                    pins={pins}
                                     currentTheme={currentTheme}
                                     onSelectPin={(p) => setSelectedPin(p)}
                                     startDate={user?.createdAt}
@@ -433,12 +398,7 @@ export default function MemoryScreen() {
                         </View>
                     )}
 
-                    {!loading && pins.length > 0 && filtered.length === 0 && (
-                        <View style={styles.center}>
-                            <Ionicons name="pulse" size={48} color={currentTheme.colors.textMuted} />
-                            <Text style={[styles.noResultsText, { color: currentTheme.colors.textSecondary }]}>Không tìm thấy tần số phù hợp</Text>
-                        </View>
-                    )}
+
                 </View>
 
                 <View style={{ height: 100 }} />

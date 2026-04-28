@@ -148,6 +148,7 @@ export default function VoicePinTurntable({
               playing={playing}
               spin={spin}
               armRotate={armRotate}
+              verticalDateLabel={new Date(pin.createdAt || new Date()).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join(' . ')}
               onPress={() => {
                 if (!player) return;
                 playing ? player.pause() : player.play();
@@ -173,7 +174,7 @@ export default function VoicePinTurntable({
                 animate={{ opacity: 1, translateY: 0 }}
                 style={[styles.transcriptionBox, { backgroundColor: currentTheme.colors.surfaceAlt, borderColor: currentTheme.colors.primary + '44' }]}
               >
-                <Text style={[styles.transcriptionText, { color: currentTheme.colors.text }]}>
+                <Text style={[styles.transcriptionText, { color: currentTheme.colors.primary }]}>
                   {transcription}
                 </Text>
               </MotiView>

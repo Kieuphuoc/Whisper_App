@@ -35,6 +35,7 @@ interface VinylRecordProps {
   spin: any;
   armRotate: any;
   onPress: () => void;
+  verticalDateLabel?: string;
   onTranscriptionToggle?: () => void;
   isThinking?: boolean;
   showTranscription?: boolean;
@@ -57,6 +58,7 @@ export function VinylRecord({
   spin,
   armRotate,
   onPress,
+  verticalDateLabel,
   onTranscriptionToggle,
   isThinking,
   showTranscription,
@@ -184,14 +186,26 @@ export function VinylRecord({
   };
 
   return (
-    <View style={[styles.playerContainer, { backgroundColor: isDark ? "#121212" : "#FFFFFF" }, isCreationMode && { elevation: 0, shadowOpacity: 0 }]}>
+    <View style={[styles.playerContainer, isCreationMode && { elevation: 0, shadowOpacity: 0 }]}>
+      <BlurView 
+        intensity={0} 
+        tint={isDark ? "dark" : "light"} 
+        style={[StyleSheet.absoluteFill, { borderRadius: 38, overflow: 'hidden', backgroundColor: isDark ? "#121212" : "#FFFFFF" }]} 
+      />
+      {verticalDateLabel ? (
+        <View style={styles.verticalDateContainer}>
+          <Text style={[styles.verticalDateText, { color: theme.colors.text + "88" }]}>
+            {verticalDateLabel}
+          </Text>
+        </View>
+      ) : null}
       {/* Top Row: Re-enabled for Creation Mode with customizations */}
       <View style={styles.topRow}>
         <TouchableOpacity
           onPress={onTranscriptionToggle}
           style={[styles.deckIconButton, {
-            backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)",
-            borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.1)"
+            backgroundColor: isDark ? "rgba(124, 58, 237, 0.15)" : "rgba(124, 58, 237, 0.08)",
+            borderColor: theme.colors.primary + '55'
           }]}
           activeOpacity={0.75}
         >
@@ -201,20 +215,30 @@ export function VinylRecord({
               animate={{ rotate: "360deg" }}
               transition={{ loop: true, duration: 1000, type: "timing", easing: ReanimatedEasing.linear }}
             >
-              <Ionicons name="sparkles" size={18} color={isDark ? "#F5F5F4" : "#475569"} />
+              <Ionicons name="sparkles" size={18} color={theme.colors.primary} />
             </MotiView>
           ) : (
             <Ionicons
               name={showTranscription ? "eye-off-outline" : "language-outline"}
               size={18}
-              color={isDark ? "#F5F5F4" : "#475569"}
+              color={theme.colors.primary}
             />
           )}
         </TouchableOpacity>
 
-        {formattedDate ? (
+        {pin.emotionLabel ? (
           <View style={styles.emotionTagCenter}>
-            <BlurView intensity={20} tint={isDark ? "dark" : "light"} style={styles.emotionTagPill}>
+            <BlurView 
+              intensity={30} 
+              tint={isDark ? "dark" : "light"} 
+              style={[
+                styles.emotionTagPill, 
+                { 
+                  backgroundColor: emotionColor + '25', 
+                  borderColor: emotionColor + '66'
+                }
+              ]}
+            >
               {pin.status && pin.status !== 'APPROVED' ? (
                 <>
                   <Ionicons
@@ -229,14 +253,9 @@ export function VinylRecord({
                 </>
               ) : (
                 <>
-                  <Ionicons
-                    name="calendar-outline"
-                    size={10}
-                    color={isDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.5)"}
-                    style={{ marginRight: 4 }}
-                  />
-                  <Text style={[styles.emotionTagText, { color: isDark ? "#F5F5F4" : "#1E293B" }]}>
-                    {formattedDate}
+                  <View style={[styles.emotionDot, { backgroundColor: emotionColor }]} />
+                  <Text style={[styles.emotionTagText, { color: emotionColor }]}>
+                    {pin.emotionLabel}
                   </Text>
                 </>
               )}
@@ -340,18 +359,18 @@ export function VinylRecord({
               </MotiView>
             </MotiView>
 
-            <View style={styles.userTextInfo}>
-              <Text style={[styles.profileDisplayName, { color: isDark ? "#F5F5F4" : "#1E293B" }]} numberOfLines={1}>
-                {pin.user?.displayName || "Anonymous"}
-              </Text>
-              <Text style={[styles.profileBio, { color: isDark ? "#A3A3A3" : "#64748B" }]} numberOfLines={1}>
-                {pin.status === 'REJECTED' && pin.moderationReason 
-                  ? `Lý do: ${pin.moderationReason}` 
-                  : (pin.user?.bio || pin.emotionLabel || "Tap record to play")}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </View>
+              <View style={styles.userTextInfo}>
+                <Text style={[styles.profileDisplayName, { color: isDark ? "#F5F5F4" : "#1E293B" }]} numberOfLines={1}>
+                  {pin.user?.displayName || "Anonymous"}
+                </Text>
+                <Text style={[styles.profileBio, { color: isDark ? "#A3A3A3" : "#64748B" }]} numberOfLines={1}>
+                  {pin.status === 'REJECTED' && pin.moderationReason 
+                    ? `Lý do: ${pin.moderationReason}` 
+                    : (isCreationMode ? pin.emotionLabel : (pin.user?.bio || pin.emotionLabel || "Tap record to play"))}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
 
         <View style={styles.actionsGroup}>
           {isCreationMode ? (
@@ -486,6 +505,26 @@ const styles = StyleSheet.create({
     shadowRadius: 28,
     elevation: 16,
   },
+  verticalDateContainer: {
+    position: "absolute",
+    left: 2,
+    top: 0,
+    bottom: 0,
+    width: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 5,
+  },
+  verticalDateText: {
+    fontSize: 10,
+    fontWeight: "300",
+    letterSpacing: 6,
+    transform: [{ rotate: "-90deg" }],
+    width: 400,
+    textAlign: "center",
+    textTransform: "uppercase",
+    opacity: 0.8,
+  },
   topRow: {
     position: "absolute",
     top: 16,
@@ -614,6 +653,7 @@ const styles = StyleSheet.create({
   },
   userProfileGlass: {
     flex: 1,
+    flexShrink: 1,
     marginRight: 12,
     borderRadius: 20,
     overflow: "hidden",
@@ -682,6 +722,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    flexShrink: 0,
   },
   actionButtonContainer: {
     width: 36,

@@ -40,7 +40,14 @@ const EMOTION_META: Record<string, { color: string; gradient: string[]; icon: ke
 const DEFAULT_META = { color: '#A855F7', gradient: ['#A855F7', '#7C3AED'], icon: 'mic' as any, vi: 'Cảm xúc' };
 
 function getMeta(label?: string) {
-  return label ? (EMOTION_META[label] ?? DEFAULT_META) : DEFAULT_META;
+  if (!label) return DEFAULT_META;
+  // Normalize label (e.g., "happy" -> "Happy") for lookup
+  const normalized = label.charAt(0).toUpperCase() + label.slice(1).toLowerCase();
+  const mapped = EMOTION_META[normalized] || EMOTION_META[label];
+  
+  if (mapped) return mapped;
+  // Fallback: use the original label as display text instead of generic "Cảm xúc"
+  return { ...DEFAULT_META, vi: label };
 }
 
 function resolveAsset(path?: string) {
@@ -59,6 +66,7 @@ export interface VoicePinCarouselCardProps {
   cardWidth: number;
   cardSpacing: number;
   isGrid?: boolean;
+  fallbackAuraUrl?: string | null;
 }
 
 export function VoicePinCarouselCard({
@@ -70,6 +78,7 @@ export function VoicePinCarouselCard({
   cardWidth,
   cardSpacing,
   isGrid = false,
+  fallbackAuraUrl,
 }: VoicePinCarouselCardProps) {
   const isHidden = pin.isAnonymous || pin.type === 'HIDDEN_AR';
   const meta = isHidden ? { color: '#C084FC', icon: 'sparkles' as any, vi: 'Bí ẩn', gradient: ['#C084FC', '#9333EA'] } : getMeta(pin.emotionLabel);
@@ -108,13 +117,12 @@ export function VoicePinCarouselCard({
 
       targetScale = interpolate(distance, [0, range], [1, 0.85], Extrapolation.CLAMP);
       targetOpacity = interpolate(distance, [0, range], [1, 0.7], Extrapolation.CLAMP);
-      targetRotate = interpolate(distance, [-range, 0, range], [-5, 0, 5], Extrapolation.CLAMP);
+      targetRotate = 0;
     }
 
     return {
       transform: [
         { scale: withSpring(targetScale * pressedScale.value) },
-        { rotateZ: `${targetRotate}deg` }
       ],
       opacity: targetOpacity,
     };
@@ -139,7 +147,7 @@ export function VoicePinCarouselCard({
           { 
             height: cardHeight, 
             borderRadius: isGrid ? 20 : 32,
-            backgroundColor: currentTheme.dark ? '#000' : '#FFF',
+            backgroundColor: currentTheme.colors.background,
           }
         ]}
       >
@@ -160,11 +168,17 @@ export function VoicePinCarouselCard({
             borderColor: currentTheme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
         }]}>
           {/* Background Image/Fallback */}
-          {imgUrl ? (
-            <Image source={imgUrl} style={StyleSheet.absoluteFill} contentFit="cover" transition={400} />
+          {imgUrl || fallbackAuraUrl ? (
+            <Image 
+              source={imgUrl || fallbackAuraUrl} 
+              style={StyleSheet.absoluteFill} 
+              contentFit="cover" 
+              transition={400} 
+              blurRadius={!imgUrl && fallbackAuraUrl ? 10 : 0}
+            />
           ) : (
             <LinearGradient
-              colors={currentTheme.dark ? ['#1A1A2E', '#16213E'] : ['#F3F4F6', '#E5E7EB']}
+              colors={currentTheme.dark ? ['#1A1A2E', '#0a0a14'] : ['#F3F4F6', '#E5E7EB']}
               style={StyleSheet.absoluteFill}
             />
           )}
@@ -172,7 +186,7 @@ export function VoicePinCarouselCard({
           {/* Aesthetic Overlay */}
           <LinearGradient
             colors={currentTheme.dark ? 
-                ['rgba(0,0,0,0)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.8)', '#000000'] :
+                ['rgba(10,10,20,0)', 'rgba(10,10,20,0.2)', 'rgba(10,10,20,0.8)', '#0a0a14'] :
                 ['rgba(255,255,255,0)', 'rgba(255,255,255,0.1)', 'rgba(255,255,255,0.4)', 'rgba(255,255,255,0.8)']}
             locations={[0, 0.3, 0.7, 1]}
             style={StyleSheet.absoluteFill}
@@ -258,7 +272,7 @@ export function VoicePinCarouselCard({
             )}
 
             {/* Premium Border Bottom Glow */}
-            <View style={[styles.bottomGlow, { backgroundColor: meta.color }]} />
+            <View style={[styles.bottomGlow, { backgroundColor: meta.color, shadowColor: meta.color }]} />
           </View>
         </View>
 
@@ -285,7 +299,6 @@ export function VoicePinCarouselCard({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#000',
     overflow: 'hidden',
     ...Platform.select({
       ios: {
@@ -303,7 +316,6 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   topSection: {
     flexDirection: 'row',
@@ -335,7 +347,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   dateText: {
-    color: '#FFF',
     fontSize: 10,
     fontWeight: '600',
     opacity: 0.8,
@@ -352,13 +363,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
-    color: '#FFF',
     fontWeight: '800',
     letterSpacing: -0.5,
     marginBottom: 4,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
   },
   reasonRow: {
     flexDirection: 'row',
@@ -399,7 +406,6 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   statText: {
-    color: '#FFF',
     fontSize: 12,
     fontWeight: '600',
     opacity: 0.9,
@@ -418,7 +424,6 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     opacity: 0.6,
     shadowRadius: 10,
-    shadowColor: '#FFF',
   },
   avatarContainer: {
     position: 'absolute',

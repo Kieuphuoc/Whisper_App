@@ -12,6 +12,7 @@ export { spacing, fontSize, fontWeight, borderRadius, shadow, animation, size, f
 
 export const theme = {
     light: {
+        dark: false,
         colors: {
             ...Colors.light,
             primary: Colors.primary,
@@ -41,6 +42,7 @@ export const theme = {
         },
     },
     dark: {
+        dark: true,
         colors: {
             ...Colors.dark,
             primary: Colors.primary,

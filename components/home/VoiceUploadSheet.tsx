@@ -58,7 +58,12 @@ export default function VoiceUploadSheet({
     
     // Audio Player using new expo-audio API
     const player = useAudioPlayer(audioUri || "");
-    const { playing } = useAudioPlayerStatus(player);
+    const { playing, status } = useAudioPlayerStatus(player);
+    
+    const [transcription, setTranscription] = useState<string | null>(null);
+    const [emotionLabel, setEmotionLabel] = useState<string>("NEW RECORD");
+    const [isThinking, setIsThinking] = useState(false);
+    const [showTranscription, setShowTranscription] = useState(false);
     
     const armRotate = armRotateAnim.interpolate({
         inputRange: [0, 1],
@@ -79,9 +84,66 @@ export default function VoiceUploadSheet({
         if (playing) {
             player.pause();
         } else {
+            // If finished or near end, seek to start
+            if (player.currentTime >= player.duration - 0.1) {
+                player.seekTo(0);
+            }
             player.play();
         }
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    };
+
+    const handleToggleTranscription = async () => {
+        if (showTranscription) {
+            setShowTranscription(false);
+            return;
+        }
+
+        if (transcription) {
+            setShowTranscription(true);
+            return;
+        }
+
+        if (!audioUri) return;
+
+        try {
+            setIsThinking(true);
+            const token = await AsyncStorage.getItem('token');
+            const api = authApis(token || undefined);
+
+            const formData = new FormData();
+            const audioFileUri = audioUri.startsWith('file://') ? audioUri : `file://${audioUri}`;
+            
+            formData.append('file', {
+                uri: audioFileUri,
+                name: 'audio.m4a',
+                type: 'audio/m4a',
+            } as any);
+
+            const res = await api.post(endpoints.voiceAnalyze, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            if (res.data?.data) {
+                const { transcript, emotion_label } = res.data.data;
+                if (!transcript || transcript.trim().length === 0) {
+                    setTranscription("Không tìm thấy nội dung trong đoạn ghi âm này...");
+                    setEmotionLabel("SILENT");
+                } else {
+                    setTranscription(transcript);
+                    if (emotion_label) setEmotionLabel(emotion_label);
+                }
+                setShowTranscription(true);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            }
+        } catch (err) {
+            console.error('Transcription failed:', err);
+            setTranscription("Rất tiếc, AI không thể xử lý âm thanh này lúc này. Hãy thử lại nhé!");
+            setShowTranscription(true);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        } finally {
+            setIsThinking(false);
+        }
     };
 
     const animateArm = (toValue: number) => {
@@ -173,7 +235,15 @@ export default function VoiceUploadSheet({
             Alert.alert('Đã đăng!', 'Giọng nói của bạn đã lên bản đồ.');
         } catch (err: any) {
             console.error('Upload failed:', err.response?.data || err.message);
-            Alert.alert('Đăng thất bại', 'Không thể tải lên giọng nói. Vui lòng thử lại.');
+            
+            const serverMessage = err.response?.data?.message;
+            if (serverMessage && serverMessage.includes('too quiet')) {
+                Alert.alert('Âm thanh quá nhỏ', 'Mình chưa nghe rõ. Bạn thử nói to hơn hoặc kiểm tra micro nhé!');
+            } else if (serverMessage && serverMessage.includes('moderationReason')) {
+                Alert.alert('Lỗi Database', 'Có lỗi xảy ra khi lưu dữ liệu. Hãy báo cho admin hoặc thử lại sau.');
+            } else {
+                Alert.alert('Đăng thất bại', 'Không thể tải lên giọng nói lúc này. Vui lòng thử lại sau.');
+            }
         } finally {
             setUploading(false);
         }
@@ -182,8 +252,9 @@ export default function VoiceUploadSheet({
     const mockPin = {
         images: photoUri ? [{ imageUrl: photoUri }] : [],
         user: user,
-        emotionLabel: "NEW RECORD",
+        emotionLabel: emotionLabel,
         listensCount: 0,
+        transcription: transcription,
     };
 
     const handleClose = () => {
@@ -195,7 +266,8 @@ export default function VoiceUploadSheet({
 
     return (
         <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-            <View style={styles.overlay}>
+            <Animated.View style={[styles.overlay, { backgroundColor: isDark ? "rgba(15, 23, 42, 0.55)" : "rgba(255, 255, 255, 0.4)" }]}>
+                <BlurView intensity={50} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
                 <TouchableOpacity
                     activeOpacity={1}
                     style={StyleSheet.absoluteFill}
@@ -216,9 +288,10 @@ export default function VoiceUploadSheet({
 
                     {/* The Vinyl Record */}
                     <MotiView
-                        from={{ scale: 0.9, opacity: 0, translateY: 40 }}
-                        animate={{ scale: 1, opacity: 1, translateY: 0 }}
-                        transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+                        from={{ opacity: 0, scale: 0.9, translateY: 20 }}
+                        animate={{ opacity: 1, scale: 1, translateY: 0 }}
+                        transition={{ type: 'spring', damping: 15 }}
+                        style={styles.cardContainer}
                     >
                         <VinylRecord
                             pin={mockPin}
@@ -226,12 +299,32 @@ export default function VoiceUploadSheet({
                             spin={null} 
                             armRotate={armRotate} 
                             onPress={togglePlayback} 
+                            verticalDateLabel={new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join(' . ')}
                             isCreationMode={true}
                             visibility={selectedVisibility}
                             onVisibilityChange={handleToggleVisibility} 
                             onPost={handleUpload}
                             theme={currentTheme}
+                            onTranscriptionToggle={handleToggleTranscription}
+                            isThinking={isThinking}
+                            showTranscription={showTranscription}
                         />
+
+                        {/* Transcription Content Display (Matched with VoicePinCard) */}
+                        <AnimatePresence>
+                            {showTranscription && transcription && (
+                                <MotiView
+                                    from={{ opacity: 0, translateY: 10 }}
+                                    animate={{ opacity: 1, translateY: 0 }}
+                                    exit={{ opacity: 0, translateY: 5 }}
+                                    style={[styles.transcriptionBox, { backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.02)", borderColor: currentTheme.colors.primary + '44' }]}
+                                >
+                                    <Text style={[styles.transcriptionText, { color: currentTheme.colors.primary }]}>
+                                        "{transcription}"
+                                    </Text>
+                                </MotiView>
+                            )}
+                        </AnimatePresence>
                     </MotiView>
 
                     {/* Progress Indicator when uploading */}
@@ -251,7 +344,7 @@ export default function VoiceUploadSheet({
                         )}
                     </AnimatePresence>
                 </View>
-            </View>
+            </Animated.View>
         </Modal>
     );
 }
@@ -298,5 +391,19 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 14,
         fontWeight: '800',
+    },
+    transcriptionBox: {
+        marginTop: 16,
+        padding: 16,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderStyle: 'dashed',
+        width: width * 0.85,
+    },
+    transcriptionText: {
+        fontSize: 14,
+        fontStyle: 'italic',
+        textAlign: 'center',
+        lineHeight: 22,
     },
 });

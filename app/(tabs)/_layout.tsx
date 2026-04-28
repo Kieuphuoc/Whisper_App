@@ -6,7 +6,10 @@ import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApis, endpoints } from '@/configs/Apis';
 import { useSocket } from '@/hooks/useSocket';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform, Dimensions } from 'react-native';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const TAB_BAR_WIDTH = 220;
 import { registerForPushNotificationsAsync, addNotificationResponseListener } from '@/services/notificationService';
 import { useRouter } from 'expo-router';
 
@@ -88,20 +91,46 @@ export default function TabLayout() {
                 tabBarStyle: {
                     position: 'absolute',
                     bottom: 24,
-                    left: 20,
-                    right: 20,
-                    height: 72,
-                    borderRadius: 36,
-                    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                    left: 0,
+                    right: 0,
+                    height: 68,
+                    backgroundColor: 'transparent',
                     borderTopWidth: 0,
                     elevation: 0,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 10 },
-                    shadowOpacity: 0.08,
-                    shadowRadius: 20,
+                    shadowOpacity: 0,
+                    paddingHorizontal: (Dimensions.get('window').width - 220) / 2,
                 },
                 tabBarBackground: () => (
-                    <BlurView tint="light" intensity={60} style={{ ...StyleSheet.absoluteFillObject, borderRadius: 36, overflow: 'hidden' }} />
+                    <View style={{ 
+                        flex: 1, 
+                        justifyContent: 'center', 
+                        alignItems: 'center',
+                        backgroundColor: 'transparent',
+                    }}>
+                        <View style={{
+                            width: 220, 
+                            height: 68, 
+                            borderRadius: 34,
+                            backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'rgba(255, 255, 255, 0.9)',
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 10 },
+                            shadowOpacity: 0.15,
+                            shadowRadius: 20,
+                            elevation: 10,
+                        }}>
+                            <BlurView 
+                                tint="light" 
+                                intensity={80} 
+                                style={{ 
+                                    ...StyleSheet.absoluteFillObject,
+                                    borderRadius: 34, 
+                                    overflow: 'hidden',
+                                    borderWidth: 1,
+                                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                                }} 
+                            />
+                        </View>
+                    </View>
                 ),
             }}
         >

@@ -24,7 +24,7 @@ export default function MemoryGridScreen() {
     const colorScheme = useColorScheme() || 'light';
     const currentTheme = theme[colorScheme];
     const router = useRouter();
-    const { title, sectionKey, filter, query, userId } = useLocalSearchParams();
+    const { title, sectionKey, filter, userId } = useLocalSearchParams();
     const { pins: myPins } = useMyPins();
     const [externalPins, setExternalPins] = useState<VoicePin[]>([]);
     const [selectedPin, setSelectedPin] = useState<VoicePin | null>(null);
@@ -42,19 +42,11 @@ export default function MemoryGridScreen() {
         };
         load();
     }, [userId]);
-
     const pins = userId ? externalPins : myPins;
 
     const filteredPins = useMemo(() => {
         let list = pins;
-        if (query) {
-            const q = String(query).toLowerCase();
-            list = list.filter(p =>
-                (p.content?.toLowerCase().includes(q)) ||
-                (p.address?.toLowerCase().includes(q)) ||
-                (p.emotionLabel?.toLowerCase().includes(q))
-            );
-        }
+
 
         if (!sectionKey) return list;
         const sKey = String(sectionKey);
@@ -96,7 +88,7 @@ export default function MemoryGridScreen() {
         }
 
         return list;
-    }, [pins, query, sectionKey]);
+    }, [pins, sectionKey]);
 
     if (selectedPin) {
         return (

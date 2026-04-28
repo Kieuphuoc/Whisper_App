@@ -7,6 +7,7 @@ export const endpoints = {
   // Auth
   login: "/auth/login/",
   register: "/auth/register/",
+  googleLogin: "/auth/google",
 
   // User
   userMe: "/user/me",
@@ -37,6 +38,7 @@ export const endpoints = {
   voiceBBox: "/voice/bbox",
   voiceDiscover: (id: string | number) => `/voice/${id}/discover`,
   voiceReactions: (id: string | number): string => `/voice/${id}/reactions/`,
+  voiceAnalyze: "/voice/analyze/",
   voiceComments: (id: string | number): string => `/voice/${id}/comments/`,
   commentReplies: (commentId: string | number): string => `/comments/${commentId}/replies/`,
 

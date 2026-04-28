@@ -39,6 +39,7 @@ interface VoicePinCarouselProps {
   cardWidth?: number;
   cardSpacing?: number;
   emptyText?: string;
+  fallbackAuraUrl?: string | null;
 }
 
 export default function VoicePinCarousel({
@@ -53,7 +54,8 @@ export default function VoicePinCarousel({
   limit = 10,
   cardWidth = DEFAULT_CARD_WIDTH,
   cardSpacing = DEFAULT_CARD_SPACING,
-  emptyText = 'Chưa có ký ức nào'
+  emptyText = 'Chưa có ký ức nào',
+  fallbackAuraUrl,
 }: VoicePinCarouselProps) {
   const scrollX = useSharedValue(0);
 
@@ -145,6 +147,7 @@ export default function VoicePinCarousel({
             currentTheme={currentTheme}
             cardWidth={cardWidth}
             cardSpacing={cardSpacing}
+            fallbackAuraUrl={fallbackAuraUrl}
           />
         )}
       />

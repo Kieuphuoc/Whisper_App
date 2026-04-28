@@ -304,6 +304,14 @@ export default function NotificationScreen() {
         return notifs.filter(n => n.type !== 'FRIEND_REQUEST' && n.type !== 'FRIEND_ACCEPTED');
     }, [notifs, activeTab]);
 
+    // Extra safety: refresh data if tab is switched to 'requests' or 'interactions' and they are empty
+    useEffect(() => {
+        if (activeTab !== 'all' && filteredNotifs.length === 0 && !loading && !refreshing) {
+            // If the filtered list is empty, try one more fetch to be sure
+            load();
+        }
+    }, [activeTab]);
+
     const sectionedData = useMemo(() => {
         const today: Notification[] = [];
         const yesterday: Notification[] = [];

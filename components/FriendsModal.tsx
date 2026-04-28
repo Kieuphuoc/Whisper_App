@@ -5,7 +5,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState, useContext } from 'react';
+import React, { useCallback, useEffect, useState, useContext, useMemo } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -18,6 +18,7 @@ import {
     Dimensions,
     useColorScheme,
     TextInput,
+    RefreshControl,
 } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { BlurView } from 'expo-blur';
@@ -162,7 +163,7 @@ export default function FriendsModal({ visible, onClose }: Props) {
         } finally {
             setLoading(false);
         }
-    }, [user]);
+    }, [user, user?.id]);
 
     useEffect(() => { if (visible) load(); }, [visible, load]);
 
@@ -226,16 +227,51 @@ export default function FriendsModal({ visible, onClose }: Props) {
         ]);
     };
 
-    const safeP = Array.isArray(pending) ? pending : [];
-    const received = safeP.filter((r: any) => r._dir === 'received' || (r.sender?.id !== user?.id && r.status === 'PENDING'));
-    const sent = safeP.filter((r: any) => r._dir === 'sent' || (r.sender?.id === user?.id && r.status === 'PENDING'));
+    // ─── Derived Data ───────────────────────────────────────
+    const { received, sent, safeFriends } = useMemo(() => {
+        const safeP = Array.isArray(pending) ? pending : [];
+        const f = Array.isArray(friends) ? friends : [];
+        
+        // Robust filtering even if _dir is missing
+        const r = safeP.filter((req: any) => {
+            if (req._dir === 'received') return true;
+            if (req._dir === 'sent') return false;
+            // Fallback: check senderId with Number() cast for safety
+            const sId = Number(req.senderId || req.sender?.id);
+            const myId = Number(user?.id);
+            return sId !== myId;
+        });
+        
+        const s = safeP.filter((req: any) => {
+            if (req._dir === 'sent') return true;
+            if (req._dir === 'received') return false;
+            // Fallback: check senderId with Number() cast for safety
+            const sId = Number(req.senderId || req.sender?.id);
+            const myId = Number(user?.id);
+            return sId === myId;
+        });
+
+        return { 
+            received: r, 
+            sent: s, 
+            safeFriends: f 
+        };
+    }, [pending, friends, user?.id]);
+
+    // Extra safety: refresh data if tab is switched to 'requests' and it's empty
+    useEffect(() => {
+        if (visible && tab === 'requests' && received.length === 0 && sent.length === 0 && !loading) {
+            // Only refresh if we haven't just refreshed (simple debounce/throttle)
+            load();
+        }
+    }, [tab, visible]);
 
     const isPending = (targetId: number) => {
-        return safeP.some(p => p.sender?.id === targetId || p.receiver?.id === targetId);
+        return (Array.isArray(pending) ? pending : []).some(p => p.sender?.id === targetId || p.receiver?.id === targetId || p.senderId === targetId || p.receiverId === targetId);
     };
 
     const isFriend = (targetId: number) => {
-        return friends.some(f => f.id === targetId);
+        return safeFriends.some(f => f.id === targetId);
     };
 
     return (
@@ -321,7 +357,7 @@ export default function FriendsModal({ visible, onClose }: Props) {
                         </View>
                     )}
 
-                    <AnimatePresence exitBeforeEnter>
+                    <AnimatePresence>
                         {loading ? (
                             <MotiView 
                                 key="loading"
@@ -340,10 +376,18 @@ export default function FriendsModal({ visible, onClose }: Props) {
                                 style={{ flex: 1 }}
                             >
                                 <FlatList
-                                    data={friends}
+                                    data={safeFriends}
                                     keyExtractor={f => String(f.id)}
                                     contentContainerStyle={styles.listContent}
                                     showsVerticalScrollIndicator={false}
+                                    refreshControl={
+                                        <RefreshControl 
+                                            refreshing={loading} 
+                                            onRefresh={load} 
+                                            tintColor="#8b5cf6"
+                                            colors={['#8b5cf6']}
+                                        />
+                                    }
                                     renderItem={({ item, index }) => (
                                         <MotiView
                                             from={{ opacity: 0, scale: 0.9, translateX: -20 }}
@@ -407,11 +451,20 @@ export default function FriendsModal({ visible, onClose }: Props) {
                                         ...received.map(r => ({ ...r, direction: 'received' as const })),
                                         ...sent.map(r => ({ ...r, direction: 'sent' as const })),
                                     ]}
-                                    keyExtractor={r => `${r.direction}-${r.id}`}
+                                    keyExtractor={r => `${r.direction || 'req'}-${r.id}`}
                                     contentContainerStyle={styles.listContent}
                                     showsVerticalScrollIndicator={false}
+                                    refreshControl={
+                                        <RefreshControl 
+                                            refreshing={loading} 
+                                            onRefresh={load} 
+                                            tintColor="#8b5cf6"
+                                            colors={['#8b5cf6']}
+                                        />
+                                    }
                                     renderItem={({ item, index }) => {
-                                        const who = item.direction === 'received' ? item.sender : item.receiver;
+                                        const direction = item.direction || (item.senderId === user?.id ? 'sent' : 'received');
+                                        const who = direction === 'received' ? item.sender : item.receiver;
                                         if (!who) return null;
                                         return (
                                             <MotiView
@@ -429,11 +482,11 @@ export default function FriendsModal({ visible, onClose }: Props) {
                                                     <View style={styles.cardInfo}>
                                                         <Text style={styles.cardName}>{who.displayName ?? who.username}</Text>
                                                         <Text style={styles.cardSub}>
-                                                            {item.direction === 'received' ? 'Gửi lời mời kết bạn' : 'Đã gửi lời mời'}
+                                                            {direction === 'received' ? 'Gửi lời mời kết bạn' : 'Đã gửi lời mời'}
                                                         </Text>
                                                     </View>
                                                     
-                                                    {item.direction === 'received' ? (
+                                                    {direction === 'received' ? (
                                                         <View style={styles.reqRowActions}>
                                                             <TouchableOpacity 
                                                                 style={[styles.smallActionBtn, styles.acceptBtn]}

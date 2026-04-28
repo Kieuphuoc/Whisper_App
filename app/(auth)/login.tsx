@@ -4,9 +4,14 @@ import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
 import React, { useState, useContext } from 'react';
 import { Image, StatusBar, TextInput, TouchableOpacity, View, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import { makeRedirectUri } from 'expo-auth-session';
 import { Text } from '@/components/ui/text';
 import Apis, { endpoints } from '../../configs/Apis';
 import { MyDispatchContext } from '../../configs/Context';
+
+WebBrowser.maybeCompleteAuthSession();
 
 type UserLogin = {
   username?: string;
@@ -26,6 +31,24 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState<boolean>(false);
   const dispatch = useContext(MyDispatchContext);
   const [msg, setMsg] = useState<string | null>(null);
+
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    androidClientId: process.env.EXPO_PUBLIC_ANDROID_CLIENT_ID,
+    iosClientId: process.env.EXPO_PUBLIC_IOS_CLIENT_ID,
+    webClientId: process.env.EXPO_PUBLIC_WEB_CLIENT_ID,
+    // Thêm dòng này để tự động tạo redirectUri tương thích với Expo Go
+    redirectUri: makeRedirectUri({
+      scheme: 'app',
+      preferLocalhost: true,
+    }),
+  });
+
+  React.useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      handleGoogleLogin(id_token);
+    }
+  }, [response]);
 
   const info: InfoField[] = [
     {
@@ -81,6 +104,29 @@ export default function LoginScreen() {
       const errorMsg = err.response?.data?.message || "Tài khoản hoặc mật khẩu không chính xác.";
       setMsg(errorMsg);
       Alert.alert("Thất bại", errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async (idToken: string) => {
+    try {
+      setLoading(true);
+      const res = await Apis.post(endpoints.googleLogin, { idToken });
+      const data = res.data;
+
+      await AsyncStorage.setItem('token', data.token);
+      await AsyncStorage.setItem('user', JSON.stringify(data.user));
+
+      if (dispatch) {
+        dispatch({ type: "SET_USER", payload: data.user });
+      }
+
+      Alert.alert("Thành công", `Chào mừng ${data.user.displayName || data.user.username}!`);
+      router.replace('/(tabs)/home');
+    } catch (err: any) {
+      console.error('Lỗi Google login:', err.message);
+      Alert.alert("Thất bại", "Đăng nhập Google không thành công.");
     } finally {
       setLoading(false);
     }
@@ -204,7 +250,11 @@ export default function LoginScreen() {
 
           {/* Social Login */}
           <View className="flex-row gap-3 mb-6">
-            <TouchableOpacity className="social-button">
+            <TouchableOpacity 
+              className="social-button"
+              onPress={() => promptAsync()}
+              disabled={!request || loading}
+            >
               <Ionicons name="logo-google" size={20} color="#ea4335" />
               <Text className="ml-2 text-sm font-medium text-neutral-700">Google</Text>
             </TouchableOpacity>

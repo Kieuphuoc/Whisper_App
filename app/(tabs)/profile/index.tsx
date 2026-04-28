@@ -502,7 +502,6 @@ export default function ProfileScreen() {
                     {/* GLASS VIBE SECTION */}
                     <View style={styles.glassRow}>
                         {[
-                            { icon: "search", label: `${stats?.discoveredVoicesCount || 0} Khám phá` },
                             { icon: "time-outline", label: joinDate }
                         ].map((item, i) => (
                             <MotiView
@@ -516,8 +515,8 @@ export default function ProfileScreen() {
                                 }]}
                             >
                                 <BlurView intensity={isDark ? 30 : 20} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
-                                <Ionicons name={item.icon as any} size={14} color="#fff" />
-                                <Text style={[styles.glassStrangeText, { color: "#fff" }]}>{item.label}</Text>
+                                <Ionicons name={item.icon as any} size={14} color={isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.7)'} />
+                                <Text style={[styles.glassStrangeText, { fontSize: 15, color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.7)' }]}>{item.label}</Text>
                             </MotiView>
                         ))}
                     </View>
@@ -736,6 +735,7 @@ export default function ProfileScreen() {
                                             onSelectPin={(p) => setSelectedPin(p)}
                                             currentTheme={currentTheme}
                                             emptyText="Bạn chưa có VoicePin nào"
+                                            fallbackAuraUrl={coverUri}
                                         />
                                     </MotiView>
                                 )}
@@ -754,6 +754,7 @@ export default function ProfileScreen() {
                                             emptyText="Bạn chưa khám phá được AR nào"
                                             icon="sparkles"
                                             iconColor="#f59e0b"
+                                            fallbackAuraUrl={coverUri}
                                         />
                                     </MotiView>
                                 )}

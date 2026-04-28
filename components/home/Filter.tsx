@@ -6,11 +6,12 @@ import {
     Animated,
     Dimensions,
     StyleSheet,
-    Text,
     TouchableOpacity,
     View,
     useColorScheme,
 } from 'react-native';
+import { Text } from '@/components/ui/text';
+import { BlurView } from 'expo-blur';
 
 type FilterToggleProps = {
     value: Visibility;
@@ -18,15 +19,15 @@ type FilterToggleProps = {
 };
 
 const OPTIONS: { value: Visibility; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-    { value: 'PRIVATE', label: 'Cá nhân', icon: 'lock-closed' },
-    { value: 'FRIENDS', label: 'Bạn bè', icon: 'people' },
-    { value: 'PUBLIC', label: 'Khám phá', icon: 'globe-outline' },
+    { value: 'PRIVATE', label: 'Personal', icon: 'lock-closed' },
+    { value: 'FRIENDS', label: 'Friends', icon: 'people' },
+    { value: 'PUBLIC', label: 'Public', icon: 'globe-outline' },
 ];
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CONTAINER_MARGIN = 16;
+const CONTAINER_MARGIN = 20;
 const CONTAINER_WIDTH = SCREEN_WIDTH - CONTAINER_MARGIN * 2;
-const SEGMENT_WIDTH = (CONTAINER_WIDTH - 8) / 3; // 8 is padding * 2
+const SEGMENT_WIDTH = (CONTAINER_WIDTH - 8) / 3;
 
 const FilterToggle: React.FC<FilterToggleProps> = ({
     value,
@@ -34,6 +35,7 @@ const FilterToggle: React.FC<FilterToggleProps> = ({
 }) => {
     const colorScheme = useColorScheme() || 'light';
     const currentTheme = theme[colorScheme];
+    const isDark = colorScheme === 'dark';
 
     const translateX = useRef(new Animated.Value(0)).current;
 
@@ -42,68 +44,72 @@ const FilterToggle: React.FC<FilterToggleProps> = ({
         Animated.spring(translateX, {
             toValue: index * SEGMENT_WIDTH,
             useNativeDriver: true,
-            bounciness: 8,
-            speed: 12,
+            bounciness: 4,
+            speed: 10,
         }).start();
     }, [value, translateX]);
 
     return (
-        <View style={[
-            styles.container,
-            {
-                backgroundColor: currentTheme.colors.background + 'F2',
-                borderColor: currentTheme.colors.primary + '1A',
-                shadowColor: '#000',
-            }
-        ]}>
-            {/* Animated Background Selector */}
-            <Animated.View
+        <View style={styles.outerContainer}>
+            <View
                 style={[
-                    styles.selector,
+                    styles.container,
                     {
-                        width: SEGMENT_WIDTH,
-                        backgroundColor: 'rgba(139, 92, 246, 0.14)',
-                        borderColor: currentTheme.colors.primary + '33',
-                        transform: [{ translateX }],
-                    },
+                        backgroundColor: isDark ? 'rgba(18,18,18,0.9)' : 'rgba(255,255,255,0.95)',
+                        borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                        overflow: 'hidden',
+                    }
                 ]}
-            />
+            >
+                <BlurView
+                    intensity={isDark ? 20 : 40}
+                    tint={isDark ? 'dark' : 'light'}
+                    style={StyleSheet.absoluteFill}
+                />
+                
+                {/* Animated Background Selector */}
+                <Animated.View
+                    style={[
+                        styles.selector,
+                        {
+                            width: SEGMENT_WIDTH,
+                            backgroundColor: '#8b5cf6',
+                            transform: [{ translateX }],
+                        },
+                    ]}
+                />
 
-            {OPTIONS.map((opt) => {
-                const isActive = value === opt.value;
+                {OPTIONS.map((opt) => {
+                    const isActive = value === opt.value;
 
-                return (
-                    <TouchableOpacity
-                        key={opt.value}
-                        activeOpacity={0.7}
-                        style={styles.button}
-                        onPress={() => onChange(opt.value)}
-                    >
-                        <View style={styles.content}>
-                            <View style={[
-                                styles.iconBubble,
-                                isActive && styles.iconBubbleActive,
-                            ]}>
+                    return (
+                        <TouchableOpacity
+                            key={opt.value}
+                            activeOpacity={0.8}
+                            style={styles.button}
+                            onPress={() => onChange(opt.value)}
+                        >
+                            <View style={styles.content}>
                                 <Ionicons
                                     name={opt.icon}
-                                    size={14}
-                                    color={isActive ? currentTheme.colors.primary : currentTheme.colors.textMuted}
+                                    size={16}
+                                    color={isActive ? '#ffffff' : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)')}
+                                    style={{ marginRight: 6 }}
                                 />
+                                <Text
+                                    numberOfLines={1}
+                                    style={[
+                                        styles.text,
+                                        { color: isActive ? '#ffffff' : (isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)') }
+                                    ]}
+                                >
+                                    {opt.label}
+                                </Text>
                             </View>
-                            <Text
-                                numberOfLines={1}
-                                style={[
-                                    styles.text,
-                                    { color: currentTheme.colors.textSecondary },
-                                    isActive && { color: currentTheme.colors.primary, fontWeight: '700' }
-                                ]}
-                            >
-                                {opt.label}
-                            </Text>
-                        </View>
-                    </TouchableOpacity>
-                );
-            })}
+                        </TouchableOpacity>
+                    );
+                })}
+            </View>
         </View>
     );
 };
@@ -111,30 +117,34 @@ const FilterToggle: React.FC<FilterToggleProps> = ({
 export default FilterToggle;
 
 const styles = StyleSheet.create({
-    container: {
+    outerContainer: {
         position: 'absolute',
         top: 60,
-        left: CONTAINER_MARGIN,
-        right: CONTAINER_MARGIN,
+        left: 0,
+        right: 0,
+        zIndex: 100,
+        alignItems: 'center',
+    },
+    container: {
         flexDirection: 'row',
         borderRadius: 24,
-        padding: 6,
+        padding: 4,
         height: 48,
+        width: CONTAINER_WIDTH,
         alignItems: 'center',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.15,
-        shadowRadius: 16,
-        elevation: 8,
         borderWidth: 1,
-        zIndex: 100,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
+        elevation: 5,
     },
     selector: {
         position: 'absolute',
-        height: 36,
-        left: 6,
-        borderRadius: 18,
+        height: 40,
+        left: 4,
+        borderRadius: 20,
         zIndex: 0,
-        borderWidth: 1,
     },
     button: {
         flex: 1,
@@ -146,22 +156,14 @@ const styles = StyleSheet.create({
     content: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
-    },
-    iconBubble: {
-        width: 22,
-        height: 22,
-        borderRadius: 11,
-        backgroundColor: 'rgba(139, 92, 246, 0.1)',
         justifyContent: 'center',
-        alignItems: 'center',
-    },
-    iconBubbleActive: {
-        backgroundColor: 'rgba(139, 92, 246, 0.2)',
+        width: '100%',
     },
     text: {
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: '600',
-        letterSpacing: -0.2,
+        letterSpacing: 0.1,
     },
 });
+
+

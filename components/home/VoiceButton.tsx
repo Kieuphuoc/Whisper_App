@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { theme } from '@/constants/Theme';
+import { LinearGradient } from 'expo-linear-gradient';
 
 type VoiceButtonProps = {
     isRecording: boolean;
@@ -17,43 +18,42 @@ export default function VoiceButton({ isRecording, onPress }: VoiceButtonProps) 
     const scaleAnim = useRef(new Animated.Value(1)).current;
 
     useEffect(() => {
-        // 1. Animation nhấp nhô (Floating) khi ở trạng thái chờ
+        // Floating animation
         const float = Animated.loop(
             Animated.sequence([
                 Animated.timing(floatAnim, {
-                    toValue: -15, // Bay lên 15px
-                    duration: 1500,
+                    toValue: -8,
+                    duration: 2000,
                     easing: Easing.inOut(Easing.sin),
                     useNativeDriver: true,
                 }),
                 Animated.timing(floatAnim, {
                     toValue: 0,
-                    duration: 1500,
+                    duration: 2000,
                     easing: Easing.inOut(Easing.sin),
                     useNativeDriver: true,
                 }),
             ])
         );
 
-        // 2. Animation tỏa vòng tròn (Pulse) khi đang ghi âm
+        // Pulse animation
         const pulse = Animated.loop(
             Animated.timing(pulseAnim, {
                 toValue: 1,
-                duration: 1200,
+                duration: 1500,
                 easing: Easing.out(Easing.quad),
                 useNativeDriver: true,
             })
         );
 
         if (isRecording) {
-            float.stop(); // Ngừng nhấp nhô khi đang ghi
+            float.stop();
             floatAnim.setValue(0);
             pulse.start();
 
-            // Hiệu ứng "giật mình" nhẹ khi bắt đầu nhấn
             Animated.spring(scaleAnim, {
-                toValue: 1.1,
-                friction: 3,
+                toValue: 1.15,
+                friction: 4,
                 useNativeDriver: true,
             }).start();
         } else {
@@ -63,7 +63,7 @@ export default function VoiceButton({ isRecording, onPress }: VoiceButtonProps) 
 
             Animated.spring(scaleAnim, {
                 toValue: 1,
-                friction: 3,
+                friction: 4,
                 useNativeDriver: true,
             }).start();
         }
@@ -76,29 +76,31 @@ export default function VoiceButton({ isRecording, onPress }: VoiceButtonProps) 
 
     return (
         <View style={styles.container}>
-            {/* Vòng tròn tỏa ra phía sau (Chỉ hiện khi ghi âm) */}
+            {/* Pulse rings */}
             {isRecording && (
-                <Animated.View
-                    style={[
-                        styles.pulseRing,
-                        {
-                            borderRadius: currentTheme.radius.full,
-                            transform: [{
-                                scale: pulseAnim.interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: [1, 2.2]
-                                })
-                            }],
-                            opacity: pulseAnim.interpolate({
-                                inputRange: [0, 0.5, 1],
-                                outputRange: [0, 0.4, 0]
-                            }),
-                        },
-                    ]}
-                />
+                <>
+                    <Animated.View
+                        style={[
+                            styles.pulseRing,
+                            {
+                                transform: [{
+                                    scale: pulseAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [1, 2.5]
+                                    })
+                                }],
+                                opacity: pulseAnim.interpolate({
+                                    inputRange: [0, 0.5, 1],
+                                    outputRange: [0, 0.4, 0]
+                                }),
+                                backgroundColor: currentTheme.colors.primary,
+                            },
+                        ]}
+                    />
+                </>
             )}
 
-            {/* Nút chính */}
+            {/* Main Button */}
             <Animated.View
                 style={{
                     transform: [
@@ -109,19 +111,22 @@ export default function VoiceButton({ isRecording, onPress }: VoiceButtonProps) 
             >
                 <TouchableOpacity
                     activeOpacity={0.9}
-                    style={[
-                        styles.button,
-                        { borderRadius: currentTheme.radius.full },
-                        isRecording ? styles.recordingButton : currentTheme.shadows.lg,
-                        isRecording && styles.recordingButton
-                    ]}
                     onPress={onPress}
                 >
-                    <Ionicons
-                        name={isRecording ? 'stop' : 'mic'}
-                        size={30}
-                        color="white"
-                    />
+                    <LinearGradient
+                        colors={isRecording ? ['#ef4444', '#b91c1c'] : ['#8b5cf6', '#6d28d9']}
+                        style={[
+                            styles.button,
+                            { borderRadius: 35 },
+                            !isRecording && styles.shadow
+                        ]}
+                    >
+                        <Ionicons
+                            name={isRecording ? 'stop' : 'mic'}
+                            size={32}
+                            color="white"
+                        />
+                    </LinearGradient>
                 </TouchableOpacity>
             </Animated.View>
         </View>
@@ -139,22 +144,25 @@ const styles = StyleSheet.create({
         zIndex: 1000,
     },
     button: {
-        width: 75,
-        height: 75,
-        backgroundColor: Colors.primary,
+        width: 70,
+        height: 70,
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 4,
-        borderColor: Colors.white,
+        borderWidth: 3,
+        borderColor: 'rgba(255,255,255,0.3)',
     },
-    recordingButton: {
-        backgroundColor: Colors.error,
-        shadowColor: Colors.error,
+    shadow: {
+        shadowColor: '#8b5cf6',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.4,
+        shadowRadius: 15,
+        elevation: 12,
     },
     pulseRing: {
         position: 'absolute',
-        width: 75,
-        height: 75,
-        backgroundColor: Colors.error,
+        width: 70,
+        height: 70,
+        borderRadius: 35,
     },
 });
+
