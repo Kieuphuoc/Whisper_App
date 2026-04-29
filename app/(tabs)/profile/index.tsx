@@ -773,7 +773,7 @@ export default function ProfileScreen() {
                                                 const name = item.achievement?.name || "";
                                                 if (name.includes("Lời nói đầu tiên")) mascotIcon = MASCOT_ICONS.first_voice;
                                                 else if (name.includes("sưu tầm")) mascotIcon = MASCOT_ICONS.voice_collector;
-                                                else if (name.includes("bạn")) mascotIcon = MASCOT_ICONS.social_butterfly;
+                                                else if (name.includes("bạn") || name.toLowerCase().includes("giao thiệp")) mascotIcon = MASCOT_ICONS.social_butterfly;
                                                 else if (name.includes("thám hiểm")) mascotIcon = MASCOT_ICONS.explorer;
                                                 else if (name.includes("bình luận")) mascotIcon = MASCOT_ICONS.commenter;
                                                 else if (name.includes("phổ biến")) mascotIcon = MASCOT_ICONS.popular_voice;
@@ -1123,25 +1123,33 @@ const styles = StyleSheet.create({
     achievementBadge: {
         width: (width - 64) / 3,
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 20,
     },
     badgeIconBg: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
+        width: 95,
+        height: 95,
+        borderRadius: 28,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: 10,
+        borderWidth: 1.5,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
+        elevation: 4,
     },
     badgeIcon: {
-        width: 40,
-        height: 40,
+        width: 80,
+        height: 80,
         resizeMode: 'contain',
     },
     badgeName: {
         fontSize: 11,
-        fontWeight: '700',
+        fontWeight: '800',
         textAlign: 'center',
+        marginTop: 2,
     },
     emptyContainer: {
         alignItems: 'center',

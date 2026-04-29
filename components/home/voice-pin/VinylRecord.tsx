@@ -194,9 +194,11 @@ export function VinylRecord({
       />
       {verticalDateLabel ? (
         <View style={styles.verticalDateContainer}>
-          <Text style={[styles.verticalDateText, { color: theme.colors.text + "88" }]}>
-            {verticalDateLabel}
-          </Text>
+          <View style={{ transform: [{ rotate: "-90deg" }], width: 400, alignItems: 'center' }}>
+            <Text style={[styles.verticalDateText, { color: theme.colors.text + "88" }]}>
+              {verticalDateLabel}
+            </Text>
+          </View>
         </View>
       ) : null}
       {/* Top Row: Re-enabled for Creation Mode with customizations */}
@@ -519,8 +521,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "300",
     letterSpacing: 6,
-    transform: [{ rotate: "-90deg" }],
-    width: 400,
     textAlign: "center",
     textTransform: "uppercase",
     opacity: 0.8,

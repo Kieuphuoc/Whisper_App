@@ -198,7 +198,7 @@ export default function FriendsModal({ visible, onClose }: Props) {
         }
     };
 
-    const respondRequest = async (reqId: number, action: 'ACCEPTED' | 'REJECTED') => {
+    const respondRequest = async (reqId: number, action: 'accept' | 'reject') => {
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) return;
@@ -492,7 +492,7 @@ export default function FriendsModal({ visible, onClose }: Props) {
                                                                 style={[styles.smallActionBtn, styles.acceptBtn]}
                                                                 onPress={(e) => {
                                                                     e.stopPropagation();
-                                                                    respondRequest(item.id, 'ACCEPTED');
+                                                                    respondRequest(item.id, 'accept');
                                                                 }}
                                                             >
                                                                 <Ionicons name="checkmark" size={18} color="#fff" />
@@ -501,7 +501,7 @@ export default function FriendsModal({ visible, onClose }: Props) {
                                                                 style={[styles.smallActionBtn, styles.rejectBtn]}
                                                                 onPress={(e) => {
                                                                     e.stopPropagation();
-                                                                    respondRequest(item.id, 'REJECTED');
+                                                                    respondRequest(item.id, 'reject');
                                                                 }}
                                                             >
                                                                 <Ionicons name="close" size={18} color="#64748b" />

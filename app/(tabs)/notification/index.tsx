@@ -36,50 +36,6 @@ interface Notification {
 
 type TabType = 'all' | 'requests' | 'interactions';
 
-// ─── Mock fallback data ───────────────────────────────────
-const MOCK: Notification[] = [
-    { 
-        id: 1, 
-        type: 'FRIEND_REQUEST', 
-        isRead: false, 
-        createdAt: new Date().toISOString(),
-        userId: 1,
-        data: { senderName: 'Minh Tú', senderAvatar: 'https://i.pravatar.cc/150?u=1', friendshipId: 101 }
-    },
-    { 
-        id: 2, 
-        type: 'NEW_REACTION', 
-        isRead: false, 
-        createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-        userId: 1,
-        data: { reactorName: 'Hoàng Yến', reactorAvatar: 'https://i.pravatar.cc/150?u=2', reactionType: 'LOVE', voicePinId: 5 }
-    },
-    { 
-        id: 3, 
-        type: 'NEW_COMMENT', 
-        isRead: true, 
-        createdAt: new Date(Date.now() - 86400000).toISOString(),
-        userId: 1,
-        data: { commenterName: 'Tuấn Anh', commenterAvatar: 'https://i.pravatar.cc/150?u=3', snippet: 'Nhớ chỗ này lắm!', voicePinId: 5 }
-    },
-    { 
-        id: 4, 
-        type: 'FRIEND_ACCEPTED', 
-        isRead: true, 
-        createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-        userId: 1,
-        data: { accepterName: 'Lan Anh', accepterAvatar: 'https://i.pravatar.cc/150?u=4', friendshipId: 102 }
-    },
-    { 
-        id: 5, 
-        type: 'FRIEND_VOICEPIN', 
-        isRead: false, 
-        createdAt: new Date(Date.now() - 600000).toISOString(),
-        userId: 1,
-        data: { posterName: 'Quốc Bảo', posterAvatar: 'https://i.pravatar.cc/150?u=5', voicePinId: 10, voicePinContent: 'Phát hiện quán cafe này chill phết...' }
-    },
-];
-
 // ─── Transition helpers ───────────────────────────────────
 const NOTIF_CONFIG: Record<string, { icon: keyof typeof Ionicons.glyphMap; colors: string[]; label: string }> = {
     FRIEND_REQUEST: { icon: 'person-add', colors: ['#8b5cf6', '#6d28d9'], label: 'Lời mời kết bạn' },
@@ -248,22 +204,19 @@ export default function NotificationScreen() {
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [activeTab, setActiveTab] = useState<TabType>('all');
-    const [usedMock, setUsedMock] = useState(false);
 
     const load = useCallback(async (isRefresh = false) => {
         isRefresh ? setRefreshing(true) : setLoading(true);
         try {
             const token = await AsyncStorage.getItem('token');
-            if (!token) { setUsedMock(false); return; }
+            if (!token) return;
             const api = authApis(token);
             const res = await api.get(endpoints.notifications);
             const data = res.data?.notifications || res.data?.data || [];
             setNotifs(data);
-            setUsedMock(false);
         } catch (e) {
             console.error('Load notifications error:', e);
-            setUsedMock(true);
-            // Optional: alert('Không thể kết nối máy chủ. Đang hiển thị dữ liệu tạm thời.');
+            // Optional: alert('Không thể kết nối máy chủ.');
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -338,7 +291,6 @@ export default function NotificationScreen() {
 
     const handleRead = async (id: number) => {
         setNotifs(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-        if (usedMock) return;
         try {
             const token = await AsyncStorage.getItem('token');
             if (token) await authApis(token).put(endpoints.notificationRead(id));
@@ -346,11 +298,6 @@ export default function NotificationScreen() {
     };
 
     const handleAction = async (id: number, action: string, data: any) => {
-        if (usedMock) {
-            alert(`Tính năng này yêu cầu kết nối máy chủ (Action: ${action})`);
-            return;
-        }
-        
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) return;
@@ -369,7 +316,6 @@ export default function NotificationScreen() {
 
     const markAllRead = async () => {
         setNotifs(prev => prev.map(n => ({ ...n, isRead: true })));
-        if (usedMock) return;
         try {
             const token = await AsyncStorage.getItem('token');
             if (token) await authApis(token).put(endpoints.notificationsReadAll);

@@ -91,7 +91,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: "center",
     alignItems: "center",
-    zIndex: -1, // Behind the vinyl plate
     overflow: "visible",
   },
   rippleRing: {

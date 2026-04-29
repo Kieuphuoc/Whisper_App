@@ -19,9 +19,9 @@ type FilterToggleProps = {
 };
 
 const OPTIONS: { value: Visibility; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-    { value: 'PRIVATE', label: 'Personal', icon: 'lock-closed' },
-    { value: 'FRIENDS', label: 'Friends', icon: 'people' },
-    { value: 'PUBLIC', label: 'Public', icon: 'globe-outline' },
+    { value: 'PRIVATE', label: 'Cá nhân', icon: 'lock-closed' },
+    { value: 'FRIENDS', label: 'Bạn bè', icon: 'people' },
+    { value: 'PUBLIC', label: 'Công khai', icon: 'globe-outline' },
 ];
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');

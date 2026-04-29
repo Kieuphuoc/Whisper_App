@@ -114,10 +114,10 @@ export default function VoiceButton({ isRecording, onPress }: VoiceButtonProps) 
                     onPress={onPress}
                 >
                     <LinearGradient
-                        colors={isRecording ? ['#ef4444', '#b91c1c'] : ['#8b5cf6', '#6d28d9']}
+                        colors={isRecording ? ['#ff4b4b', '#dc2626'] : ['#a78bfa', '#7c3aed']}
                         style={[
                             styles.button,
-                            { borderRadius: 35 },
+                            { borderRadius: 36 },
                             !isRecording && styles.shadow
                         ]}
                     >
@@ -144,25 +144,25 @@ const styles = StyleSheet.create({
         zIndex: 1000,
     },
     button: {
-        width: 70,
-        height: 70,
+        width: 72,
+        height: 72,
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 3,
-        borderColor: 'rgba(255,255,255,0.3)',
+        borderWidth: 5,
+        borderColor: '#ffffff',
     },
     shadow: {
-        shadowColor: '#8b5cf6',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.4,
-        shadowRadius: 15,
-        elevation: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        elevation: 15,
     },
     pulseRing: {
         position: 'absolute',
-        width: 70,
-        height: 70,
-        borderRadius: 35,
+        width: 72,
+        height: 72,
+        borderRadius: 36,
     },
 });
 

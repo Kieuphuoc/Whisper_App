@@ -20,7 +20,6 @@ import { useDiscovery } from "@/hooks/useDiscovery";
 import VoicePinMiniCard from "@/components/discovery/VoicePinMiniCard";
 import { VoicePin } from "@/types";
 import { theme } from "@/constants/Theme";
-import StatsBento from "@/components/home/StatsBento";
 import FilterToggle from "@/components/home/Filter";
 import QuickActions from "@/components/home/QuickActions";
 import { useARProximity } from "@/hooks/useARProximity";
@@ -58,6 +57,7 @@ export default function HomeScreen() {
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Aligns with useVoicePins query key (4 decimals) — skip setState when viewport cell unchanged. */
   const lastBboxKeyRef = useRef<string | null>(null);
+  const currentRegionRef = useRef<Region | null>(null);
 
   const { data: latestPins = EMPTY_PINS, refetch, isFetching } = useVoicePins(visibility, bbox, { enabled: !!bbox });
   const [accumulatedPins, setAccumulatedPins] = useState<VoicePin[]>([]);
@@ -67,9 +67,10 @@ export default function HomeScreen() {
   // Change 'mockCount' to test different limits (e.g., 100, 300, 450, 600, 1000)
   // Remember to remove or comment this block when finished testing!
   // ===========================================================================
+  /*
   useEffect(() => {
     if (!location) return;
-    const mockCount = 600; // <--- THAY ĐỔI CON SỐ NÀY ĐỂ TEST HIỆU NĂNG
+    const mockCount = 450; // <--- THAY ĐỔI CON SỐ NÀY ĐỂ TEST HIỆU NĂNG
 
     const mockData = Array.from({ length: mockCount }).map((_, i) => ({
       id: 9999 + i,
@@ -85,6 +86,7 @@ export default function HomeScreen() {
 
     setAccumulatedPins(mockData as any);
   }, [location]);
+  */
   // ===========================================================================
 
   // Reset cache when changing filter
@@ -333,14 +335,20 @@ export default function HomeScreen() {
   };
 
   const recenterMap = () => {
-    if (location && mapRef.current) {
+    if (mapRef.current && location) {
       const region = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       };
-      (mapRef.current as any).animateToRegion(region, 1000);
+      // For MapViewClustering, sometimes we need to access the map methods via the ref
+      const map = mapRef.current as any;
+      if (map.animateToRegion) {
+        map.animateToRegion(region, 1000);
+      } else if (map.getMap && map.getMap().animateToRegion) {
+        map.getMap().animateToRegion(region, 1000);
+      }
     } else if (!location) {
       Alert.alert("Vị trí", "Đang lấy vị trí của bạn...");
     }
@@ -351,6 +359,7 @@ export default function HomeScreen() {
       clearTimeout(debounceTimerRef.current);
     }
 
+    currentRegionRef.current = region;
     debounceTimerRef.current = setTimeout(() => {
       const newBbox: BoundingBox = {
         minLat: region.latitude - region.latitudeDelta / 2,
@@ -377,8 +386,41 @@ export default function HomeScreen() {
   }, []);
 
   const handleSelectMapPin = useCallback((pin: VoicePin | null) => {
-    setExternalSelectedPin(pin);
-    if (!pin) setAutoPlayPin(false);
+    if (!pin) {
+      setExternalSelectedPin(null);
+      setAutoPlayPin(false);
+      return;
+    }
+
+    // 1. Check if already focused to avoid unnecessary delay
+    const currentRegion = currentRegionRef.current;
+    const isAlreadyFocused = currentRegion && 
+      Math.abs(currentRegion.latitude - pin.latitude) < 0.0001 &&
+      Math.abs(currentRegion.longitude - pin.longitude) < 0.0001 &&
+      currentRegion.latitudeDelta <= 0.0051;
+
+    const duration = isAlreadyFocused ? 0 : 800;
+
+    // 2. Focus if needed
+    if (mapRef.current && !isAlreadyFocused) {
+      const region = {
+        latitude: pin.latitude,
+        longitude: pin.longitude,
+        latitudeDelta: 0.005,
+        longitudeDelta: 0.005,
+      };
+      const map = mapRef.current as any;
+      if (map.animateToRegion) {
+        map.animateToRegion(region, duration);
+      } else if (map.getMap && map.getMap().animateToRegion) {
+        map.getMap().animateToRegion(region, duration);
+      }
+    }
+
+    // 3. Show card after focus (or immediately if already focused)
+    setTimeout(() => {
+      setExternalSelectedPin(pin);
+    }, duration);
   }, []);
 
   return (
@@ -433,7 +475,7 @@ export default function HomeScreen() {
                 <Ionicons name="compass" size={22} color="#8b5cf6" />
               )}
             </View>
-            <Text style={[styles.exploreLabel, { color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)' }]}>Explore</Text>
+            <Text style={[styles.exploreLabel, { color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)' }]}>Khám phá</Text>
           </TouchableOpacity>
 
           <View style={[styles.divider, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]} />
@@ -451,24 +493,37 @@ export default function HomeScreen() {
                 </View>
               )}
             </View>
-            <Text style={[styles.exploreLabel, { color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)' }]}>Friends</Text>
+            <Text style={[styles.exploreLabel, { color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)' }]}>Bạn bè</Text>
           </TouchableOpacity>
         </View>
       </View>
 
+      {/* Map Controls: Right side symmetrical to Explore bar */}
       <View style={styles.mapControls}>
-        <TouchableOpacity
-          style={[styles.controlButton, { backgroundColor: glassSurface, overflow: 'hidden' }]}
-          onPress={recenterMap}
-          activeOpacity={0.8}
-        >
+        <View style={[
+          styles.exploreBar,
+          {
+            backgroundColor: isDark ? 'rgba(18,18,18,0.9)' : 'rgba(255,255,255,0.95)',
+            borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+            overflow: 'hidden',
+          }
+        ]}>
           <BlurView
-            intensity={isDark ? 40 : 80}
+            intensity={isDark ? 20 : 40}
             tint={isDark ? 'dark' : 'light'}
             style={StyleSheet.absoluteFill}
           />
-          <Ionicons name="navigate" size={22} color={currentTheme.colors.primary} />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.exploreButton}
+            onPress={recenterMap}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.exploreIconContainer, { backgroundColor: isDark ? 'rgba(139, 92, 246, 0.2)' : 'rgba(139, 92, 246, 0.1)' }]}>
+              <Ionicons name="locate" size={24} color="#8b5cf6" />
+            </View>
+            <Text style={[styles.exploreLabel, { color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)', fontSize: 9 }]}>Hiện tại</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Bottom Section: Primary Action & Menu */}
@@ -548,27 +603,10 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  profileButton: {
-    position: "absolute",
-    top: 60,
-    right: 20,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1000,
-    borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
   mapControls: {
     position: "absolute",
     right: 20,
-    bottom: 125,
+    top: 135,
     zIndex: 1000,
   },
   exploreWrapper: {

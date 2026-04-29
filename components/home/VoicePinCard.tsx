@@ -21,9 +21,10 @@ import { ReportModal } from "./voice-pin/ReportModal";
 import { useVoicePinReport } from "./voice-pin/useVoicePinReport";
 import { useVoicePinTurntable } from "./voice-pin/useVoicePinTurntable";
 import { Easing as ReanimatedEasing } from "react-native-reanimated";
-import { View as MotiView } from "moti";
+import { View as MotiView, AnimatePresence } from "moti";
 import { Text } from "../ui/text";
 import { VinylRecord } from "./voice-pin/VinylRecord";
+import { LinearGradient } from "expo-linear-gradient";
 
 const { width, height } = Dimensions.get("window");
 const CARD_WIDTH = Math.min(width * 0.92, 430);
@@ -44,6 +45,8 @@ export default function VoicePinTurntable({
 
   const [isClosing, setIsClosing] = useState(false);
   const [showAddToAlbum, setShowAddToAlbum] = useState(false);
+
+
 
   const {
     player,
@@ -75,28 +78,26 @@ export default function VoicePinTurntable({
 
   useEffect(() => {
     overlayOpacity.setValue(0);
-    cardScale.setValue(0.94);
-    cardTranslateY.setValue(18);
+    cardScale.setValue(0.92);
+    cardTranslateY.setValue(20);
     setIsClosing(false);
 
     Animated.parallel([
       Animated.timing(overlayOpacity, {
         toValue: 1,
-        duration: 220,
-        easing: Easing.out(Easing.quad),
+        duration: 350,
         useNativeDriver: true,
       }),
       Animated.spring(cardScale, {
         toValue: 1,
-        damping: 18,
-        stiffness: 260,
-        mass: 1,
+        damping: 15,
+        stiffness: 100,
         useNativeDriver: true,
       }),
-      Animated.timing(cardTranslateY, {
+      Animated.spring(cardTranslateY, {
         toValue: 0,
-        duration: 260,
-        easing: Easing.out(Easing.cubic),
+        damping: 15,
+        stiffness: 100,
         useNativeDriver: true,
       }),
     ]).start();
@@ -109,20 +110,19 @@ export default function VoicePinTurntable({
     Animated.parallel([
       Animated.timing(overlayOpacity, {
         toValue: 0,
-        duration: 180,
-        easing: Easing.in(Easing.quad),
+        duration: 250,
         useNativeDriver: true,
       }),
       Animated.timing(cardScale, {
-        toValue: 0.97,
-        duration: 180,
-        easing: Easing.in(Easing.quad),
+        toValue: 0.9,
+        duration: 250,
+        easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
       Animated.timing(cardTranslateY, {
-        toValue: 10,
-        duration: 180,
-        easing: Easing.in(Easing.quad),
+        toValue: 20,
+        duration: 250,
+        easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
     ]).start(() => onClose());
@@ -138,10 +138,15 @@ export default function VoicePinTurntable({
           style={[
             styles.cardWrap,
             {
-              transform: [{ translateY: cardTranslateY }, { scale: cardScale }],
+              opacity: overlayOpacity,
+              transform: [
+                { translateY: cardTranslateY },
+                { scale: cardScale },
+              ],
             },
           ]}
         >
+
           <View style={styles.playerStage}>
             <VinylRecord
               pin={pin}
@@ -168,29 +173,37 @@ export default function VoicePinTurntable({
 
           {/* Transcription Section */}
           <View style={styles.transcriptionContainer}>
-            {showTranscription && transcription && (
-              <MotiView
-                from={{ opacity: 0, translateY: 10 }}
-                animate={{ opacity: 1, translateY: 0 }}
-                style={[styles.transcriptionBox, { backgroundColor: currentTheme.colors.surfaceAlt, borderColor: currentTheme.colors.primary + '44' }]}
-              >
-                <Text style={[styles.transcriptionText, { color: currentTheme.colors.primary }]}>
-                  {transcription}
-                </Text>
-              </MotiView>
-            )}
+            <AnimatePresence>
+              {showTranscription && transcription && (
+                <MotiView
+                  key="transcription-text"
+                  from={{ opacity: 0, translateY: 10 }}
+                  animate={{ opacity: 1, translateY: 0 }}
+                  exit={{ opacity: 0, translateY: 5, scale: 0.98 }}
+                  transition={{ type: 'timing', duration: 250 }}
+                  style={[styles.transcriptionBox, { backgroundColor: currentTheme.colors.surfaceAlt, borderColor: currentTheme.colors.primary + '44' }]}
+                >
+                  <Text style={[styles.transcriptionText, { color: currentTheme.colors.primary }]}>
+                    {transcription}
+                  </Text>
+                </MotiView>
+              )}
 
-            {showTranscription && !transcription && !isThinking && (
-              <MotiView
-                from={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                style={styles.noTranscriptionBox}
-              >
-                <Text style={[styles.noTranscriptionText, { color: currentTheme.colors.textMuted || "#64748B" }]}>
-                  Chưa có bản phiên âm cho âm thanh này.
-                </Text>
-              </MotiView>
-            )}
+              {showTranscription && !transcription && !isThinking && (
+                <MotiView
+                  key="transcription-empty"
+                  from={{ opacity: 0, translateY: 5 }}
+                  animate={{ opacity: 1, translateY: 0 }}
+                  exit={{ opacity: 0, translateY: 5 }}
+                  transition={{ type: 'timing', duration: 250 }}
+                  style={styles.noTranscriptionBox}
+                >
+                  <Text style={[styles.noTranscriptionText, { color: currentTheme.colors.textMuted || "#64748B" }]}>
+                    Chưa có bản phiên âm cho âm thanh này.
+                  </Text>
+                </MotiView>
+              )}
+            </AnimatePresence>
           </View>
         </Animated.View>
 
