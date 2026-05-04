@@ -61,6 +61,16 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
+    // Listen for unauthorized (401) errors from Axios and log out
+    const { onUnauthorized } = require('@/configs/Apis');
+    onUnauthorized(() => {
+      console.log("[RootLayout] Triggering LOGOUT due to 401");
+      dispatch({ type: "LOGOUT" });
+      // Navigation redirect is handled by the checkRedirect useEffect
+    });
+  }, []);
+
+  useEffect(() => {
     if (isReady && fontsLoaded) {
       SplashScreen.hideAsync();
     }

@@ -107,4 +107,29 @@ export const authApis = (token?: string) => {
   return axiosInstance;
 };
 
+// Global logout notification mechanism
+let onUnauthorizedCallback: () => void = () => { };
+
+export const onUnauthorized = (callback: () => void) => {
+  onUnauthorizedCallback = callback;
+};
+
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      console.log("[Axios Interceptor] 401 Unauthorized detected. Clearing storage and logging out.");
+      try {
+        await AsyncStorage.multiRemove(['token', 'user']);
+        if (onUnauthorizedCallback) {
+          onUnauthorizedCallback();
+        }
+      } catch (e) {
+        console.error("Error during auto-logout", e);
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default axiosInstance;

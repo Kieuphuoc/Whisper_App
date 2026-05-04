@@ -125,8 +125,8 @@ export default function ProfileScreen() {
                 await AsyncStorage.setItem('user', JSON.stringify(userData));
             }
 
-            // Fetch current tab data
-            fetchTabData(activeTab, token);
+            // Fetch current tab data using the newly loaded user info
+            fetchTabData(activeTab, token, userData.id);
         } catch (e) {
             console.error('Fetch profile error:', e);
             setStats(EMPTY_STATS);
@@ -137,21 +137,29 @@ export default function ProfileScreen() {
         }
     };
 
-    const fetchTabData = async (tab: string, token: string | null = null) => {
+    const fetchTabData = async (tab: string, token: string | null = null, forceUserId: string | number | null = null) => {
         setTabLoading(true);
         try {
             const authToken = token || await AsyncStorage.getItem('token');
             if (!authToken) return;
             const api = authApis(authToken);
 
+            const userId = forceUserId || user?.id;
+            // Guard: If we don't have a valid user ID (and it's not a special string the backend expects),
+            // skip the fetch to avoid 400/NaN errors.
+            if (!userId || userId === 'me' || userId === 0) {
+                console.log(`[ProfileScreen] Skipping fetch for tab ${tab} - user ID not ready`);
+                return;
+            }
+
             if (tab === 'voices') {
-                const res = await api.get(endpoints.voicePublicByUser(user?.id || 'me'));
+                const res = await api.get(endpoints.voicePublicByUser(userId));
                 setMyVoices(res.data?.data || []);
             } else if (tab === 'achievements') {
-                const res = await api.get(endpoints.myAchievements);
+                const res = await api.get(endpoints.userAchievements(userId));
                 setAchievements(res.data?.data || []);
             } else if (tab === 'discovered') {
-                const res = await api.get(endpoints.myDiscovered);
+                const res = await api.get(endpoints.userDiscovered(userId));
                 setDiscoveredVoices(res.data?.data || []);
             }
         } catch (e) {
