@@ -20,6 +20,7 @@ import {
 import { setCustomText, setCustomTextInput } from 'react-native-global-props';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { CelebrationProvider } from '@/components/ui/CelebrationOverlay';
 
 configureReanimatedLogger({ level: ReanimatedLogLevel.warn, strict: false });
 
@@ -89,9 +90,11 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <MyUserContext.Provider value={user}>
           <MyDispatchContext.Provider value={dispatch}>
-            <SocketProvider>
-              <RootLayoutNav user={user} />
-            </SocketProvider>
+            <CelebrationProvider>
+              <SocketProvider>
+                <RootLayoutNav user={user} />
+              </SocketProvider>
+            </CelebrationProvider>
           </MyDispatchContext.Provider>
         </MyUserContext.Provider>
       </QueryClientProvider>

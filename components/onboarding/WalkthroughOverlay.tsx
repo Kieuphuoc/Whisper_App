@@ -7,6 +7,7 @@ import {
   Dimensions,
   Modal,
   StatusBar,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MotiView, AnimatePresence } from 'moti';
@@ -48,7 +49,6 @@ export default function WalkthroughOverlay({ visible, steps, onFinish }: Walkthr
       <View style={styles.overlay}>
         <StatusBar barStyle="light-content" />
         
-        {/* Backdrop holes would be better but let's stick to a simple modal with highlight for now */}
         <AnimatePresence exitBeforeEnter>
           <MotiView
             key={currentStep.id}
@@ -59,10 +59,22 @@ export default function WalkthroughOverlay({ visible, steps, onFinish }: Walkthr
             style={[
               styles.card,
               currentStep.targetPos?.bottom 
-                ? { bottom: currentStep.targetPos.bottom + 100 } 
-                : { top: (currentStep.targetPos?.top || 200) + 80 }
+                ? { bottom: currentStep.targetPos.bottom + 120 } 
+                : { top: (currentStep.targetPos?.top || 200) + 100 }
             ]}
           >
+            <MotiView
+                from={{ translateY: 20, opacity: 0 }}
+                animate={{ translateY: 0, opacity: 1 }}
+                transition={{ delay: 200 }}
+                style={styles.mascotContainer}
+            >
+                <Image 
+                    source={require('@/assets/images/mascot_whispery.png')} 
+                    style={styles.mascot}
+                    resizeMode="contain"
+                />
+            </MotiView>
             <View style={styles.header}>
               <View style={styles.iconContainer}>
                 <Ionicons name={currentStep.icon as any} size={24} color="#fff" />
@@ -96,7 +108,6 @@ export default function WalkthroughOverlay({ visible, steps, onFinish }: Walkthr
           </MotiView>
         </AnimatePresence>
 
-        {/* Optional: Highlight circle */}
         {currentStep.targetPos && (
              <MotiView 
                 from={{ opacity: 0, scale: 0 }}
@@ -139,6 +150,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 20,
+    zIndex: 10,
+  },
+  mascotContainer: {
+    position: 'absolute',
+    top: -60,
+    right: 20,
+    width: 100,
+    height: 100,
+    zIndex: 20,
+  },
+  mascot: {
+    width: '100%',
+    height: '100%',
   },
   header: {
     flexDirection: 'row',

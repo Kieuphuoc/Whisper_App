@@ -41,6 +41,7 @@ import { BlurView } from 'expo-blur';
 import VoicePinCarousel from '@/components/memory/VoicePinCarousel';
 import VoicePinTurntable from '@/components/home/VoicePinCard';
 import FriendsModal from '@/components/FriendsModal';
+import { useNotifications } from '@/hooks/useNotifications';
 
 const MASCOT_ICONS: { [key: string]: any } = {
     first_voice: require('@/assets/images/achievements/first_voice.png'),
@@ -67,11 +68,10 @@ export default function ProfileScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [updatingImage, setUpdatingImage] = useState(false);
-    const [unreadCount, setUnreadCount] = useState(0);
-    const [activeTab, setActiveTab] = useState<'voices' | 'achievements' | 'discovered'>('voices');
+    const { unreadCount, refetch: refetchNotifs } = useNotifications();
+    const [activeTab, setActiveTab] = useState<'voices' | 'achievements'>('voices');
     const [myVoices, setMyVoices] = useState<VoicePin[]>([]);
     const [achievements, setAchievements] = useState<any[]>([]);
-    const [discoveredVoices, setDiscoveredVoices] = useState<any[]>([]);
     const [tabLoading, setTabLoading] = useState(false);
     const [selectedPin, setSelectedPin] = useState<VoicePin | null>(null);
     const [friendsVisible, setFriendsVisible] = useState(false);
@@ -158,9 +158,6 @@ export default function ProfileScreen() {
             } else if (tab === 'achievements') {
                 const res = await api.get(endpoints.userAchievements(userId));
                 setAchievements(res.data?.data || []);
-            } else if (tab === 'discovered') {
-                const res = await api.get(endpoints.userDiscovered(userId));
-                setDiscoveredVoices(res.data?.data || []);
             }
         } catch (e) {
             console.error(`Fetch ${tab} error:`, e);
@@ -175,23 +172,6 @@ export default function ProfileScreen() {
         }
     }, [activeTab]);
 
-    const fetchUnreadCount = async () => {
-        try {
-            const token = await AsyncStorage.getItem('token');
-            if (!token) return;
-            const api = authApis(token);
-            const res = await api.get(endpoints.notificationsUnread);
-            setUnreadCount(res.data?.unreadCount || 0);
-        } catch (e) {
-            console.error('Fetch unread count error:', e);
-        }
-    };
-
-    useFocusEffect(
-        useCallback(() => {
-            fetchUnreadCount();
-        }, [])
-    );
 
     useEffect(() => {
         fetchData();
@@ -299,10 +279,10 @@ export default function ProfileScreen() {
         }
     };
 
-    const avatarUri = useMemo(() => {
-        if (!user?.avatar) return 'https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg';
-        if (user.avatar.startsWith('http')) return user.avatar;
-        return `${BASE_URL}${user.avatar.startsWith('/') ? '' : '/'}${user.avatar}`;
+    const avatarSource = useMemo(() => {
+        if (!user?.avatar) return require('@/assets/images/avatar.png');
+        const uri = user.avatar.startsWith('http') ? user.avatar : `${BASE_URL}${user.avatar.startsWith('/') ? '' : '/'}${user.avatar}`;
+        return { uri };
     }, [user]);
 
     const coverUri = useMemo(() => {
@@ -412,12 +392,14 @@ export default function ProfileScreen() {
                     animate={{ scale: 1, opacity: 1, translateX: 0 }}
                     transition={{ delay: 1100, type: 'spring' }}
                 >
-                    <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={[styles.notiBlur, { borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]}>
-                        <LinearGradient
-                            colors={isDark ? ['rgba(255,255,255,0.1)', 'transparent'] : ['rgba(255,255,255,0.5)', 'transparent']}
-                            style={StyleSheet.absoluteFill}
-                        />
-                        <Ionicons name="notifications-outline" size={22} color={isDark ? "#fff" : currentTheme.colors.primary} />
+                    <View style={styles.notiContainer}>
+                        <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={[styles.notiBlur, { borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]}>
+                            <LinearGradient
+                                colors={isDark ? ['rgba(255,255,255,0.1)', 'transparent'] : ['rgba(255,255,255,0.5)', 'transparent']}
+                                style={StyleSheet.absoluteFill}
+                            />
+                            <Ionicons name="notifications-outline" size={22} color={isDark ? "#fff" : currentTheme.colors.primary} />
+                        </BlurView>
 
                         {unreadCount > 0 && (
                             <MotiView
@@ -428,7 +410,7 @@ export default function ProfileScreen() {
                                 <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
                             </MotiView>
                         )}
-                    </BlurView>
+                    </View>
                 </MotiView>
             </TouchableOpacity>
 
@@ -453,7 +435,18 @@ export default function ProfileScreen() {
                             style={[styles.avatarOuter, { borderColor: isDark ? '#fff' : '#1a1a1a' }]}
                         >
                             <TouchableOpacity onPress={() => handleUpdateImage('avatar')} activeOpacity={0.9}>
-                                <Image source={{ uri: avatarUri }} style={styles.avatar} />
+                                <Image source={avatarSource} style={styles.avatar} />
+                                {!user?.avatar && (
+                                    <MotiView
+                                        from={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ delay: 800, type: 'spring' }}
+                                        style={[styles.cameraIconContainer, { borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]}
+                                    >
+                                        <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+                                        <Ionicons name="camera" size={18} color={isDark ? "#fff" : "#1a1a1a"} />
+                                    </MotiView>
+                                )}
                                 <MotiView
                                     from={{ rotate: '45deg', scale: 0 }}
                                     animate={{ rotate: '-35deg', scale: 1 }}
@@ -691,7 +684,6 @@ export default function ProfileScreen() {
                         <View style={styles.tabHeader}>
                             {[
                                 { id: 'voices', icon: 'mic', label: 'VoicePin' },
-                                { id: 'discovered', icon: 'compass', label: 'AR đã khám phá' },
                                 { id: 'achievements', icon: 'trophy', label: 'Thành tựu' }
                             ].map((tab) => (
                                 <TouchableOpacity
@@ -748,24 +740,6 @@ export default function ProfileScreen() {
                                     </MotiView>
                                 )}
 
-                                {activeTab === 'discovered' && (
-                                    <MotiView
-                                        from={{ opacity: 0, translateY: 10 }}
-                                        animate={{ opacity: 1, translateY: 0 }}
-                                        transition={{ type: 'timing' }}
-                                        key="discovered"
-                                    >
-                                        <VoicePinCarousel
-                                            pins={discoveredVoices?.map(d => d.voicePin) || []}
-                                            onSelectPin={(p) => setSelectedPin(p)}
-                                            currentTheme={currentTheme}
-                                            emptyText="Bạn chưa khám phá được AR nào"
-                                            icon="sparkles"
-                                            iconColor="#f59e0b"
-                                            fallbackAuraUrl={coverUri}
-                                        />
-                                    </MotiView>
-                                )}
 
                                 {activeTab === 'achievements' && (
                                     <MotiView
@@ -869,6 +843,11 @@ const styles = StyleSheet.create({
         left: 20,
         zIndex: 1000,
     },
+    notiContainer: {
+        width: 50,
+        height: 50,
+        position: 'relative',
+    },
     notiBlur: {
         width: 50,
         height: 50,
@@ -880,8 +859,8 @@ const styles = StyleSheet.create({
     },
     badge: {
         position: 'absolute',
-        top: 0,
-        right: 0,
+        top: -2,
+        right: -2,
         backgroundColor: '#ef4444',
         minWidth: 20,
         height: 20,
@@ -1149,9 +1128,23 @@ const styles = StyleSheet.create({
         elevation: 4,
     },
     badgeIcon: {
-        width: 80,
-        height: 80,
+        width: '100%',
+        height: '100%',
         resizeMode: 'contain',
+    },
+    cameraIconContainer: {
+        position: 'absolute',
+        bottom: 5,
+        right: 5,
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 20,
+        overflow: 'hidden',
+        borderWidth: 1.5,
+        zIndex: 30,
+        backgroundColor: 'rgba(255,255,255,0.1)',
     },
     badgeName: {
         fontSize: 11,

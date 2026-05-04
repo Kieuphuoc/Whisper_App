@@ -4,7 +4,7 @@ import { Text } from '@/components/ui/text';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme as useNWColorScheme } from "nativewind";
 import { useRouter } from 'expo-router';
-import { SettingTabHeader } from '@/components/profile/SettingTabHeader';
+import { PageHeader } from '@/components/ui/PageHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MapView, { Marker } from 'react-native-maps';
 import { darkMapStyle } from '@/constants/MapStyles';
@@ -73,7 +73,7 @@ export default function LocationSharingScreen() {
     return (
         <View className="flex-1 bg-gray-50 dark:bg-gray-950">
             <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
-            <SettingTabHeader title="Chia sẻ vị trí" leftIcon="chevron-back" />
+            <PageHeader title="Chia sẻ vị trí" subtitle="Thiết lập quyền riêng tư về địa điểm" />
 
             <ScrollView contentContainerStyle={{ paddingBottom: 150 }}>
                 {/* Map Preview */}

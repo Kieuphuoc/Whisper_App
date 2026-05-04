@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme as useNWColorScheme } from "nativewind";
 import { useRouter } from 'expo-router';
 
-import { SettingTabHeader } from '@/components/profile/SettingTabHeader';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export default function AboutScreen() {
     const { colorScheme } = useNWColorScheme();
@@ -18,7 +18,7 @@ export default function AboutScreen() {
     return (
         <View className="flex-1 bg-white dark:bg-gray-950">
             <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
-            <SettingTabHeader title="Về chúng tôi" leftIcon="chevron-back" />
+            <PageHeader title="Về chúng tôi" subtitle="Tìm hiểu về hành trình của Whispery" />
 
             <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
                 <View className="items-center mt-8 mb-4">

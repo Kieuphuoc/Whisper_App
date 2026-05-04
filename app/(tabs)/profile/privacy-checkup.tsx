@@ -4,7 +4,7 @@ import { Text } from '@/components/ui/text';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme as useNWColorScheme } from "nativewind";
 import { useRouter } from 'expo-router';
-import { SettingTabHeader } from '@/components/profile/SettingTabHeader';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export default function PrivacyCheckupScreen() {
     const { colorScheme } = useNWColorScheme();
@@ -13,7 +13,7 @@ export default function PrivacyCheckupScreen() {
     return (
         <View className="flex-1 bg-white dark:bg-gray-950">
             <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
-            <SettingTabHeader title="Quyền riêng tư" leftIcon="chevron-back" />
+            <PageHeader title="Quyền riêng tư" subtitle="Kiểm tra mức độ an toàn của bạn" />
 
             <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
                 <View className="items-center mt-4 mb-8">

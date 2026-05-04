@@ -21,6 +21,8 @@ import { MyUserContext } from '@/configs/Context';
 import { authApis, endpoints } from '@/configs/Apis';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { theme } from '@/constants/Theme';
+import FriendsModal from '@/components/FriendsModal';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 const { width } = Dimensions.get('window');
 
@@ -47,6 +49,7 @@ export default function ChatListScreen() {
     const [rooms, setRooms] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [friendsModalVisible, setFriendsModalVisible] = useState(false);
 
     const fetchRooms = useCallback(async (isRefresh = false) => {
         isRefresh ? setRefreshing(true) : setLoading(true);
@@ -86,6 +89,21 @@ export default function ChatListScreen() {
     useEffect(() => {
         fetchRooms();
     }, [fetchRooms]);
+
+    const handleSelectFriend = async (friend: any) => {
+        setFriendsModalVisible(false);
+        try {
+            const token = await AsyncStorage.getItem('token');
+            if (!token) return;
+            const res = await authApis(token).post(endpoints.chatPrivate(friend.id));
+            const roomId = res.data?.data?.id || res.data?.id;
+            if (roomId) {
+                router.push({ pathname: '/chat/[id]', params: { id: roomId.toString() } });
+            }
+        } catch (e) {
+            console.error('Start chat error:', e);
+        }
+    };
 
     const renderRoomItem = ({ item, index }: { item: any; index: number }) => {
         const otherMember = item.members.find((m: any) => m.userId !== user?.id)?.user;
@@ -214,33 +232,12 @@ export default function ChatListScreen() {
             </View>
 
             {/* HEADER - exactly matching Notification page */}
-            <View style={styles.header}>
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                    style={[
-                        styles.backButton,
-                        {
-                            borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                        },
-                    ]}
-                >
-                    <Ionicons name="chevron-back" size={22} color={isDark ? '#fff' : '#111827'} />
-                </TouchableOpacity>
-
-                <View style={styles.headerTitleBlock}>
-                    <Text style={[styles.title, { color: isDark ? '#fff' : '#111827' }]}>Tin nhắn</Text>
-                    <Text style={styles.subtitle}>Lịch sử trò chuyện</Text>
-                </View>
-
-                <TouchableOpacity
-                    style={[
-                        styles.headerIconBtn,
-                        { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' },
-                    ]}
-                >
-                    <Ionicons name="create-outline" size={20} color={currentTheme.colors.primary} />
-                </TouchableOpacity>
-            </View>
+            <PageHeader 
+                title="Tin nhắn"
+                subtitle="Lịch sử trò chuyện"
+                rightIcon="create-outline"
+                onRightPress={() => setFriendsModalVisible(true)}
+            />
 
             {loading && !refreshing ? (
                 <View style={styles.center}>
@@ -286,6 +283,12 @@ export default function ChatListScreen() {
                     }
                 />
             )}
+
+            <FriendsModal 
+                visible={friendsModalVisible}
+                onClose={() => setFriendsModalVisible(false)}
+                onSelectFriend={handleSelectFriend}
+            />
         </View>
     );
 }

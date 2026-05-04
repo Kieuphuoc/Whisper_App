@@ -147,7 +147,7 @@ export function VoicePinCarouselCard({
           { 
             height: cardHeight, 
             borderRadius: isGrid ? 20 : 32,
-            backgroundColor: currentTheme.colors.background,
+            backgroundColor: currentTheme.dark ? 'rgba(20, 20, 30, 0.7)' : 'rgba(255, 255, 255, 0.6)',
           }
         ]}
       >
@@ -233,8 +233,8 @@ export function VoicePinCarouselCard({
                 <Text style={[styles.title, { 
                     fontSize: isGrid ? 16 : 22,
                     color: currentTheme.dark ? '#FFF' : currentTheme.colors.text 
-                }]} numberOfLines={1}>
-                    {pin.content || 'Memory Echo'}
+                }]} numberOfLines={2}>
+                    {pin.content || pin.transcription || 'Tiếng vọng Ký ức'}
                 </Text>
                 {pin.status === 'REJECTED' && pin.moderationReason && !isGrid && (
                     <View style={styles.reasonRow}>
@@ -420,10 +420,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 20,
     right: 20,
-    height: 3,
+    height: 4,
     borderRadius: 2,
-    opacity: 0.6,
-    shadowRadius: 10,
+    opacity: 0.8,
+    shadowRadius: 15,
+    shadowOpacity: 0.6,
   },
   avatarContainer: {
     position: 'absolute',

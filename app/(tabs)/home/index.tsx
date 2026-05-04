@@ -27,6 +27,7 @@ import ExploreOverlay from "@/components/voice-ar/ExploreOverlay";
 import { markPromptedAR } from "@/storage/voiceARProgress";
 import WalkthroughOverlay, { WalkthroughStep } from "@/components/onboarding/WalkthroughOverlay";
 import { Dimensions } from "react-native";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -220,6 +221,7 @@ export default function HomeScreen() {
   const mapRef = useRef<MapView>(null);
 
   const { friends, receivedCount, refetch: refetchFriends } = useFriends();
+  const { unreadCount, refetch: refetchNotifs } = useNotifications();
 
   const [walkthroughVisible, setWalkthroughVisible] = useState(false);
   const [walkthroughSteps, setWalkthroughSteps] = useState<WalkthroughStep[]>([]);
@@ -232,30 +234,30 @@ export default function HomeScreen() {
           {
             id: 'voice',
             title: 'Ghi âm Kỷ niệm',
-            description: 'Nhấn vào nút Micro để bắt đầu ghi lại những khoảnh khắc và tâm tư của bạn tại địa điểm này.',
+            description: 'Chào bạn! Tôi là Whispery. Hãy nhấn vào nút Micro lớn ở giữa để bắt đầu ghi lại những khoảnh khắc và tâm tư của bạn tại đây nhé!',
             icon: 'mic',
-            targetPos: { bottom: 125, left: SCREEN_WIDTH / 2 - 35, width: 70, height: 70 }
-          },
-          {
-            id: 'explore',
-            title: 'Khám phá & Bạn bè',
-            description: 'Sử dụng thanh công cụ bên phải để quét radar tìm nội dung mới hoặc quản lý danh sách bạn bè.',
-            icon: 'compass',
-            targetPos: { top: 124, right: 20, width: 52, height: 110 }
+            targetPos: { bottom: 110, left: SCREEN_WIDTH / 2 - 36, width: 72, height: 72 }
           },
           {
             id: 'dock',
-            title: 'Trung tâm Thông tin',
-            description: 'Truy cập nhanh vào Thông báo và các cuộc trò chuyện của bạn tại đây.',
+            title: 'Trung tâm Phím tắt',
+            description: 'Góc trái này là nơi bạn truy cập nhanh vào Thông báo và Tin nhắn để giữ liên lạc với mọi người.',
             icon: 'grid',
-            targetPos: { bottom: 125, left: 20, width: 56, height: 56 }
+            targetPos: { bottom: 110, left: 20, width: 56, height: 56 }
+          },
+          {
+            id: 'explore',
+            title: 'Khám phá Thế giới',
+            description: 'Sử dụng thanh công cụ này để quét radar tìm những VoicePin ẩn giấu xung quanh bạn.',
+            icon: 'compass',
+            targetPos: { top: 135, left: 20, width: 68, height: 110 }
           },
           {
             id: 'recenter',
             title: 'Định vị lại',
-            description: 'Nhấn vào đây bất cứ lúc nào để quay lại vị trí hiện tại của bạn trên bản đồ.',
+            description: 'Nếu bạn bị lạc trên bản đồ, chỉ cần nhấn vào đây để quay lại vị trí hiện tại của mình ngay lập tức!',
             icon: 'navigate',
-            targetPos: { bottom: 125, right: 20, width: 48, height: 48 }
+            targetPos: { top: 135, right: 20, width: 68, height: 60 }
           }
         ]);
         setWalkthroughVisible(true);
@@ -537,7 +539,7 @@ export default function HomeScreen() {
         onNotifications={() => router.push('/(tabs)/notification')}
         onChat={() => router.push("/chat")}
         receivedCount={receivedCount}
-        unreadCount={receivedCount}
+        unreadCount={unreadCount}
       />
 
       {isMiniCardOpen && discoveredPin && (

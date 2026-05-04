@@ -38,8 +38,11 @@ import Animated, {
     withSequence,
     withDelay,
 } from 'react-native-reanimated';
-import { MotiView } from 'moti';
+import { MotiView, AnimatePresence } from 'moti';
+import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { Svg, Path, G, Circle } from 'react-native-svg';
+import * as Haptics from 'expo-haptics';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -48,11 +51,10 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 const { width, height } = Dimensions.get('window');
 
 // ─── Filter chips ─────────────────────────────────────────
-type FilterType = 'time' | 'diary' | 'visibility';
+type FilterType = 'time' | 'diary';
 const FILTERS: { key: FilterType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
     { key: 'time', label: 'Dòng thời gian', icon: 'time-outline' },
     { key: 'diary', label: 'Nhật ký lịch', icon: 'calendar-outline' },
-    { key: 'visibility', label: 'Riêng tư', icon: 'lock-closed-outline' },
 ];
 
 function FilterChips({ active, onChange, currentTheme }: { active: FilterType; onChange: (f: FilterType) => void; currentTheme: any }) {
@@ -76,20 +78,24 @@ function FilterChips({ active, onChange, currentTheme }: { active: FilterType; o
                                 style={[
                                     filterStyles.chipBlur,
                                     {
-                                        backgroundColor: isActive ? currentTheme.colors.primary + '14' : currentTheme.colors.surface,
-                                        borderColor: isActive ? currentTheme.colors.primary + '33' : 'rgba(0,0,0,0.08)',
+                                        backgroundColor: isActive ? currentTheme.colors.primary : currentTheme.colors.surface,
+                                        borderColor: isActive ? currentTheme.colors.primary : 'rgba(0,0,0,0.1)',
+                                        shadowColor: isActive ? currentTheme.colors.primary : '#000',
+                                        shadowOpacity: isActive ? 0.3 : 0.05,
+                                        shadowRadius: isActive ? 10 : 5,
+                                        elevation: isActive ? 5 : 2,
                                     }
                                 ]}
                             >
                                 <Ionicons
                                     name={f.icon}
                                     size={14}
-                                    color={isActive ? currentTheme.colors.primary : currentTheme.colors.textMuted}
+                                    color={isActive ? '#FFF' : currentTheme.colors.textMuted}
                                 />
                                 <Text
                                     style={[
                                         filterStyles.chipText,
-                                        { color: isActive ? currentTheme.colors.primary : currentTheme.colors.textSecondary }
+                                        { color: isActive ? '#FFF' : currentTheme.colors.textSecondary }
                                     ]}
                                 >
                                     {f.label}
@@ -120,6 +126,151 @@ const filterStyles = StyleSheet.create({
     chipText: { fontWeight: '700', fontSize: 13 },
 });
 
+// ─── Chart Helpers ───────────────────────────────────────────
+function EmptyChart({ currentTheme }: { currentTheme: any }) {
+    return (
+        <View style={styles.emptyChart}>
+            <Ionicons name="pulse-outline" size={32} color={currentTheme.colors.textMuted} />
+            <Text style={{ color: currentTheme.colors.textMuted, fontSize: 13, marginTop: 10 }}>Đang phân tích dữ liệu tâm trạng...</Text>
+        </View>
+    );
+}
+
+function PieChartData({ stats, size, isDark }: { stats: any[], size: number, isDark: boolean }) {
+    const center = size / 2;
+    const radius = size * 0.35;
+    const strokeWidth = size * 0.2;
+    const circumference = 2 * Math.PI * radius;
+    
+    let currentOffset = 0;
+    
+    return (
+        <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
+            <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+                <G rotation="-90" origin={`${center}, ${center}`}>
+                    {/* Background track ring */}
+                    <Circle
+                        cx={center}
+                        cy={center}
+                        r={radius}
+                        stroke={isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'}
+                        strokeWidth={strokeWidth}
+                        fill="none"
+                    />
+                    {stats.map((item, i) => {
+                        const dashArray = (item.percentage / 100) * circumference;
+                        const dashOffset = -currentOffset;
+                        currentOffset += dashArray;
+                        
+                        return (
+                            <Circle
+                                key={item.label}
+                                cx={center}
+                                cy={center}
+                                r={radius}
+                                stroke={item.color}
+                                strokeWidth={strokeWidth}
+                                strokeDasharray={`${dashArray} ${circumference}`}
+                                strokeDashoffset={dashOffset}
+                                strokeLinecap="round"
+                                fill="none"
+                            />
+                        );
+                    })}
+                </G>
+            </Svg>
+            <MotiView
+                from={{ scale: 0.8, opacity: 0 }}
+                animate={{ 
+                    scale: [1, 1.15, 1],
+                    opacity: 1 
+                }}
+                transition={{ 
+                    scale: {
+                        loop: true,
+                        type: 'timing',
+                        duration: 1500,
+                    },
+                    opacity: { type: 'spring', delay: 1000 }
+                }}
+                style={{ position: 'absolute' }}
+            >
+                 <Ionicons name="heart" size={size * 0.28} color="#FF2D55" style={{ 
+                    shadowColor: '#FF2D55',
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: 0.5,
+                    shadowRadius: 10,
+                 }} />
+            </MotiView>
+        </View>
+    );
+}
+
+function generateAIInsight(stats: any[]) {
+    if (stats.length === 0) return "Whispery đang lắng nghe những cảm xúc của bạn để đưa ra phân tích...";
+    
+    const dominant = stats[0];
+    if (dominant.label === 'Vui vẻ' || dominant.label === 'Hào hứng') {
+        return `Bạn đang trải qua một giai đoạn rực rỡ với ${dominant.percentage.toFixed(0)}% năng lượng tích cực. Hãy tận hưởng và lưu giữ những âm thanh hạnh phúc này nhé!`;
+    }
+    if (dominant.label === 'Bình yên' || dominant.label === 'Bí ẩn') {
+        return `Tâm hồn bạn đang ở trạng thái tĩnh lặng và sâu sắc. Những khoảng nghỉ ngơi này là cần thiết để bạn tái tạo năng lượng sáng tạo.`;
+    }
+    if (dominant.label === 'Buồn bã' || dominant.label === 'Lo lắng' || dominant.label === 'Cô đơn') {
+        return `Dường như có chút mây mờ trong lòng bạn. Đừng quên rằng mỗi "tiếng vang" bạn gửi đi đều là cách để giải tỏa và tìm thấy sự đồng điệu.`;
+    }
+    return `Hành trình cảm xúc của bạn thật đa dạng! Sự cân bằng giữa các cung bậc cảm xúc là chìa khóa để bạn hiểu rõ bản thân hơn qua từng ngày.`;
+}
+
+// ─── Background Decoration ────────────────────────────────
+function BackgroundDecor({ isDark, currentTheme }: { isDark: boolean; currentTheme: any }) {
+    const Blob = ({ color, size, opacity }: { color: string; size: number; opacity: number }) => (
+        <Svg width={size * 2} height={size * 2} viewBox={`0 0 ${size * 2} ${size * 2}`} style={{ position: 'absolute' }}>
+            <G>
+                <Circle
+                    cx={size}
+                    cy={size}
+                    r={size * 0.8}
+                    fill={color}
+                    opacity={opacity}
+                />
+            </G>
+        </Svg>
+    );
+
+    return (
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <MotiView
+                from={{ opacity: 0, scale: 0.8, translateX: -50 }}
+                animate={{ opacity: 1, scale: 1.5, translateX: -20 }}
+                transition={{ type: 'timing', duration: 12000, loop: true, repeatReverse: true }}
+                style={{ position: 'absolute', left: -120, top: 20 }}
+            >
+                <Blob color={currentTheme.colors.primary} size={250} opacity={isDark ? 0.15 : 0.12} />
+            </MotiView>
+            <MotiView
+                from={{ opacity: 0, scale: 0.8, translateX: 50 }}
+                animate={{ opacity: 1, scale: 2, translateX: 20 }}
+                transition={{ type: 'timing', duration: 15000, loop: true, repeatReverse: true, delay: 2000 }}
+                style={{ position: 'absolute', right: -150, top: 250 }}
+            >
+                <Blob color="#3b82f6" size={300} opacity={isDark ? 0.12 : 0.1} />
+            </MotiView>
+            <MotiView
+                from={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1.8 }}
+                transition={{ type: 'timing', duration: 18000, loop: true, repeatReverse: true, delay: 1000 }}
+                style={{ position: 'absolute', left: -20, bottom: 0 }}
+            >
+                <Blob color="#ec4899" size={220} opacity={isDark ? 0.1 : 0.08} />
+            </MotiView>
+            
+            {/* Overlay Blur for smoothness */}
+            <BlurView intensity={isDark ? 40 : 20} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+        </View>
+    );
+}
+
 export default function MemoryScreen() {
     const colorScheme = useColorScheme() || 'light';
     const isDark = colorScheme === 'dark';
@@ -131,6 +282,9 @@ export default function MemoryScreen() {
     const [selectedPin, setSelectedPin] = useState<VoicePin | null>(null);
     const [activeFilter, setActiveFilter] = useState<FilterType>('time');
     const [refreshing, setRefreshing] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [showSearch, setShowSearch] = useState(false);
+    const [chartType, setChartType] = useState<'bar' | 'pie'>('bar');
 
     const scrollY = useSharedValue(0);
     const shimmerProgress = useSharedValue(0);
@@ -177,6 +331,54 @@ export default function MemoryScreen() {
         setRefreshing(false);
     }, [refetch]);
 
+    const filteredPins = useMemo(() => {
+        if (!searchQuery.trim()) return pins;
+        const q = searchQuery.toLowerCase();
+        return pins.filter(p => 
+            p.transcription?.toLowerCase().includes(q) || 
+            p.address?.toLowerCase().includes(q) ||
+            p.emotionLabel?.toLowerCase().includes(q)
+        );
+    }, [pins, searchQuery]);
+
+    const flashbackPin = useMemo(() => {
+        if (pins.length === 0) return null;
+        // Relaxation: Look for pins older than 1 day to ensure it shows up during testing/early usage
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const olderPins = pins.filter(p => new Date(p.createdAt) < oneDayAgo);
+        if (olderPins.length === 0) return null;
+        return olderPins[Math.floor(Math.random() * olderPins.length)];
+    }, [pins]);
+
+    const EMOTION_COLORS: Record<string, string> = {
+        'Bình yên': '#10b981',
+        'Vui vẻ': '#f59e0b',
+        'Buồn bã': '#3b82f6',
+        'Hào hứng': '#ef4444',
+        'Giận dữ': '#b91c1c',
+        'Lo lắng': '#8b5cf6',
+        'Sợ hãi': '#1e293b',
+        'Ngạc nhiên': '#ec4899',
+    };
+
+    const emotionStats = useMemo(() => {
+        const stats: Record<string, number> = {};
+        pins.slice(0, 50).forEach(p => {
+            if (p.emotionLabel) {
+                stats[p.emotionLabel] = (stats[p.emotionLabel] || 0) + 1;
+            }
+        });
+        const sorted = Object.entries(stats).sort((a, b) => b[1] - a[1]).slice(0, 4);
+        const total = sorted.reduce((acc, [, count]) => acc + count, 0);
+        
+        return sorted.map(([label, count]) => ({
+            label,
+            count,
+            percentage: total > 0 ? (count / total) * 100 : 0,
+            color: EMOTION_COLORS[label] || '#7c3aed'
+        }));
+    }, [pins]);
+
 
 
     const sections = useMemo(() => {
@@ -185,14 +387,14 @@ export default function MemoryScreen() {
 
         if (activeFilter === 'time') {
             const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            const recent = pins
+            const recent = filteredPins
                 .filter(p => new Date(p.createdAt) >= sevenDaysAgo)
                 .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
             if (recent.length > 0) {
                 result.push({ key: 'recent', title: 'Mới thêm gần đây', icon: 'time-outline', iconColor: '#7c3aed', pins: recent });
             }
 
-            const thisMonth = pins
+            const thisMonth = filteredPins
                 .filter(p => {
                     const d = new Date(p.createdAt);
                     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
@@ -202,10 +404,9 @@ export default function MemoryScreen() {
                 result.push({ key: 'month', title: 'Tháng này', icon: 'calendar-outline', iconColor: '#3b82f6', pins: thisMonth });
             }
 
-            // Gom các pin cũ hơn theo từng tháng để không bị mất
             const shownIds = new Set([...recent, ...thisMonth].map(p => p.id));
             const olderByMonth: Record<string, VoicePin[]> = {};
-            for (const p of pins) {
+            for (const p of filteredPins) {
                 if (shownIds.has(p.id)) continue;
                 const d = new Date(p.createdAt);
                 const label = d.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
@@ -225,25 +426,6 @@ export default function MemoryScreen() {
             }
         }
 
-        if (activeFilter === 'visibility') {
-            const visMap: Record<string, VoicePin[]> = {};
-            for (const p of pins) {
-                const key = p.visibility ?? 'PRIVATE';
-                (visMap[key] = visMap[key] ?? []).push(p);
-            }
-            const VIS_META: Record<string, { label: string, icon: keyof typeof Ionicons.glyphMap, color: string }> = {
-                'PRIVATE': { label: 'Chỉ mình tôi', icon: 'lock-closed-outline', color: '#94a3b8' },
-                'FRIENDS': { label: 'Bạn bè', icon: 'people-outline', color: '#60a5fa' },
-                'PUBLIC': { label: 'Công khai', icon: 'earth-outline', color: '#34d399' }
-            };
-
-            const sorted = Object.entries(visMap).sort((a, b) => b[1].length - a[1].length);
-            for (const [vis, vpins] of sorted) {
-                const meta = VIS_META[vis] || VIS_META['PRIVATE'];
-                result.push({ key: `vis-${vis}`, title: meta.label, icon: meta.icon, iconColor: meta.color, pins: vpins });
-            }
-        }
-
         return result;
     }, [pins, activeFilter]);
 
@@ -260,7 +442,16 @@ export default function MemoryScreen() {
     }
 
     return (
-        <View style={[styles.container, { backgroundColor: currentTheme.colors.background }]}>
+        <View style={styles.container}>
+            <LinearGradient
+                colors={[
+                    isDark ? '#080809' : '#f0f2ff',
+                    isDark ? '#101012' : '#ffffff',
+                    isDark ? '#0c0c0e' : '#f8f9ff',
+                ]}
+                style={StyleSheet.absoluteFill}
+            />
+            <BackgroundDecor isDark={isDark} currentTheme={currentTheme} />
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
 
             <Animated.ScrollView
@@ -272,63 +463,190 @@ export default function MemoryScreen() {
                 }
                 contentContainerStyle={styles.scrollContent}
             >
-                {/* Header Section with Profile-style Asymmetry */}
-                <View style={styles.header}>
-                    <View style={styles.headerRow}>
-                        <Animated.View style={headerTextAnim}>
-                            <MotiView
-                                from={{ opacity: 0, translateX: -40 }}
-                                animate={{ opacity: 1, translateX: 0 }}
-                                transition={{ type: 'spring', damping: 12 }}
-                            >
-                                <Text style={[styles.title, { color: currentTheme.colors.text }]}>Ký Ức</Text>
-                                <View style={styles.subtitleRow}>
-                                    <Text style={[styles.subtitle, { color: currentTheme.colors.textSecondary }]}>Dòng thời gian đang vang vọng</Text>
-                                </View>
-                            </MotiView>
-                        </Animated.View>
-
-                        {/* ASYMMETRIC STAT BUBBLES LIKE PROFILE */}
-                        <View style={styles.bubblesContainer}>
-                            <MotiView
-                                from={{ scale: 0, translateX: 20 }}
-                                animate={{ scale: 1, translateX: 0 }}
-                                transition={{ delay: 300, type: 'spring' }}
-                                style={[styles.statBubble, styles.bubbleLarge]}
-                            >
-                                <BlurView intensity={18} tint={isDark ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: currentTheme.colors.surface + 'CC' }]} />
-                                <Text style={[styles.bubbleValue, { color: currentTheme.colors.text }]}>{pins.length}</Text>
-                                <Text style={[styles.bubbleLabel, { color: currentTheme.colors.textSecondary }]}>Chốt</Text>
-                            </MotiView>
-
-                            <MotiView
-                                from={{ scale: 0, translateY: 20 }}
-                                animate={{ scale: 1, translateY: 0 }}
-                                transition={{ delay: 450, type: 'spring' }}
-                                style={[styles.statBubble, styles.bubbleSmall, { bottom: -10, left: 10 }]}
-                            >
-                                <BlurView intensity={18} tint={isDark ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: currentTheme.colors.surface + 'CC' }]} />
-                                <Text style={[styles.bubbleValueSmall, { color: currentTheme.colors.text }]}>
-                                    {pins.filter(p => p.visibility === 'PRIVATE').length}
-                                </Text>
-                                <Text style={[styles.bubbleLabelSmall, { color: currentTheme.colors.textSecondary }]}>Ẩn</Text>
-                            </MotiView>
+                {/* 1. Dashboard Header & Search */}
+                <View style={styles.dashboardHeader}>
+                    <MotiView
+                        from={{ opacity: 0, translateX: -20 }}
+                        animate={{ opacity: 1, translateX: 0 }}
+                        style={styles.headerTitleArea}
+                    >
+                        <Text style={[styles.mainGreeting, { color: currentTheme.colors.primary }]}>Ký ức của bạn</Text>
+                        <View style={styles.statsRow}>
+                            <View style={styles.statPill}>
+                                <Text style={[styles.statValue, { color: '#7c3aed' }]}>{pins.length}</Text>
+                                <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>VoicePins</Text>
+                            </View>
+                            <View style={[styles.statDivider, { backgroundColor: currentTheme.colors.primary + '30' }]} />
+                            <View style={styles.statPill}>
+                                <Text style={[styles.statValue, { color: '#ec4899' }]}>{new Set(pins.map(p => new Date(p.createdAt).toDateString())).size}</Text>
+                                <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>Ngày lưu</Text>
+                            </View>
                         </View>
+                    </MotiView>
+                    
+                    <TouchableOpacity 
+                        onPress={() => setShowSearch(!showSearch)}
+                        style={[styles.searchCircle, { backgroundColor: currentTheme.colors.surface }]}
+                    >
+                        <Ionicons name={showSearch ? "close" : "search"} size={20} color={currentTheme.colors.primary} />
+                    </TouchableOpacity>
+                </View>
+
+                {/* Search Bar Overlay */}
+                <AnimatePresence>
+                    {showSearch && (
+                        <MotiView
+                            from={{ height: 0, opacity: 0 }}
+                            animate={{ height: 80, opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            style={styles.searchWrapperContainer}
+                        >
+                            <View style={[styles.searchWrapper, { backgroundColor: currentTheme.colors.surface, borderColor: currentTheme.colors.primary + '15' }]}>
+                                <Ionicons name="search" size={20} color={currentTheme.colors.primary} />
+                                <TextInput
+                                    placeholder="Tìm kiếm ký ức, địa điểm..."
+                                    placeholderTextColor={currentTheme.colors.textMuted}
+                                    style={[styles.searchInput, { color: currentTheme.colors.text }]}
+                                    value={searchQuery}
+                                    onChangeText={setSearchQuery}
+                                    autoFocus
+                                />
+                                {searchQuery.length > 0 && (
+                                    <TouchableOpacity onPress={() => setSearchQuery('')}>
+                                        <Ionicons name="close-circle" size={20} color={currentTheme.colors.textMuted} />
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        </MotiView>
+                    )}
+                </AnimatePresence>
+
+                {/* 2. Emotional Hub (The Centerpiece) */}
+                {!searchQuery && (
+                    <MotiView
+                        from={{ opacity: 0, translateY: 30 }}
+                        animate={{ opacity: 1, translateY: 0 }}
+                        transition={{ delay: 300 }}
+                        style={styles.hubContainer}
+                    >
+                        <View style={[styles.emotionDashboard, { backgroundColor: isDark ? 'rgba(30, 30, 40, 0.4)' : 'rgba(255, 255, 255, 0.35)', borderColor: currentTheme.colors.primary + '20', overflow: 'hidden' }]}>
+                            <BlurView intensity={isDark ? 40 : 60} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+                            <View style={{ zIndex: 1 }}>
+                                <View style={styles.emotionHeader}>
+                                    <View>
+                                        <Text style={[styles.emotionTitle, { color: currentTheme.colors.text }]}>Hành trình Tâm trí</Text>
+                                        <Text style={[styles.emotionSubtitle, { color: currentTheme.colors.textSecondary }]}>Phân tích cảm xúc hệ thống</Text>
+                                    </View>
+                                    <TouchableOpacity 
+                                        onPress={() => {
+                                            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                                            setChartType(chartType === 'bar' ? 'pie' : 'bar');
+                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                        }}
+                                        style={[styles.chartToggleBtn, { backgroundColor: currentTheme.colors.primary + '15' }]}
+                                    >
+                                        <Ionicons 
+                                            name={chartType === 'bar' ? 'pie-chart' : 'stats-chart'} 
+                                            size={18} 
+                                            color={currentTheme.colors.primary} 
+                                        />
+                                    </TouchableOpacity>
+                                </View>
+
+                                <AnimatePresence mode="wait">
+                                    {chartType === 'bar' ? (
+                                        <MotiView key="bar" from={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={styles.chartContainer}>
+                                            {emotionStats.length > 0 ? emotionStats.map((item, i) => (
+                                                <View key={item.label} style={styles.chartRow}>
+                                                    <View style={styles.chartLabelWrapper}>
+                                                        <Text style={[styles.chartLabel, { color: currentTheme.colors.text }]}>{item.label}</Text>
+                                                        <Text style={[styles.chartValue, { color: currentTheme.colors.primary }]}>{item.count}</Text>
+                                                    </View>
+                                                    <View style={[styles.barBg, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                                                        <MotiView
+                                                            from={{ width: '0%' }}
+                                                            animate={{ width: `${item.percentage}%` }}
+                                                            transition={{ type: 'timing', duration: 1000, delay: i * 100 }}
+                                                            style={[styles.barFill, { backgroundColor: item.color }]}
+                                                        />
+                                                    </View>
+                                                </View>
+                                            )) : <EmptyChart currentTheme={currentTheme} />}
+                                        </MotiView>
+                                    ) : (
+                                        <MotiView key="pie" from={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={styles.pieContainer}>
+                                            <PieChartData stats={emotionStats} size={150} isDark={isDark} />
+                                            <View style={styles.pieLegend}>
+                                                {emotionStats.map(item => (
+                                                    <View key={item.label} style={styles.legendItem}>
+                                                        <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+                                                        <Text style={[styles.legendText, { color: currentTheme.colors.textSecondary }]}>{item.label}</Text>
+                                                    </View>
+                                                ))}
+                                            </View>
+                                        </MotiView>
+                                    )}
+                                </AnimatePresence>
+
+                                <View style={[styles.aiInsightCard, { 
+                                    backgroundColor: currentTheme.colors.primary + '08', 
+                                    borderWidth: 1, 
+                                    borderColor: currentTheme.colors.primary + '40',
+                                    borderStyle: 'dashed' 
+                                }]}>
+                                    <Ionicons name="sparkles" size={14} color={currentTheme.colors.primary} />
+                                    <Text style={[styles.aiText, { color: currentTheme.colors.text }]}>{generateAIInsight(emotionStats)}</Text>
+                                </View>
+                            </View>
+                        </View>
+                    </MotiView>
+                )}
+
+                {/* 3. Flashback Section (Floating Highlight) */}
+                {flashbackPin && !searchQuery && (
+                    <MotiView
+                        from={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 600 }}
+                        style={styles.flashbackSection}
+                    >
+                        <TouchableOpacity 
+                            onPress={() => setSelectedPin(flashbackPin)}
+                            style={[styles.flashbackCard, { backgroundColor: isDark ? 'rgba(30, 30, 40, 0.4)' : 'rgba(255, 255, 255, 0.35)', borderColor: '#FFD70020', overflow: 'hidden' }]}
+                        >
+                            <BlurView intensity={isDark ? 40 : 60} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+                            <View style={{ zIndex: 1 }}>
+                                <View style={styles.flashbackHeader}>
+                                    <View style={styles.flashbackBadge}>
+                                        <Ionicons name="flash" size={14} color="#FFD700" />
+                                        <Text style={styles.flashbackTitle}>Ngày này năm xưa</Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={16} color={currentTheme.colors.textMuted} />
+                                </View>
+                                <Text style={[styles.flashbackText, { color: currentTheme.colors.text }]} numberOfLines={2}>
+                                    "{flashbackPin.content || flashbackPin.transcription || 'Một ký ức đang chờ bạn...'}"
+                                </Text>
+                                <View style={styles.flashbackFooter}>
+                                    <Ionicons name="location-outline" size={12} color={currentTheme.colors.textMuted} />
+                                    <Text style={[styles.flashbackMeta, { color: currentTheme.colors.textSecondary }]}>{flashbackPin.address || 'Đâu đó trong quá khứ'}</Text>
+                                </View>
+                            </View>
+                        </TouchableOpacity>
+                    </MotiView>
+                )}
+
+                {/* 4. Unified Memory Feed */}
+                <View style={styles.timelineHeader}>
+                    <Text style={[styles.sectionHeading, { color: currentTheme.colors.text }]}>Kho lưu trữ</Text>
+                    <View style={styles.filterContainer}>
+                        <FilterChips active={activeFilter} onChange={handleFilterChange} currentTheme={currentTheme} />
                     </View>
                 </View>
 
-
-
-                {/* Filter Chips */}
-                <View style={styles.filterContainer}>
-                    <FilterChips active={activeFilter} onChange={handleFilterChange} currentTheme={currentTheme} />
-                </View>
-
-                {/* Main Content Area */}
                 <View style={styles.content}>
                     {loading && (
                         <View style={styles.center}>
-                            <ActivityIndicator size="large" color="#7c3aed" />
+                            <ActivityIndicator size="large" color={currentTheme.colors.primary} />
                         </View>
                     )}
 
@@ -337,7 +655,7 @@ export default function MemoryScreen() {
                             key={s.key}
                             from={{ opacity: 0, translateY: 30 }}
                             animate={{ opacity: 1, translateY: 0 }}
-                            transition={{ delay: 500 + idx * 200 }}
+                            transition={{ delay: 500 + idx * 100 }}
                             style={styles.sectionContainer}
                         >
                             <VoicePinCarousel
@@ -362,13 +680,7 @@ export default function MemoryScreen() {
                         <MotiView
                             from={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            style={[
-                                styles.calendarWrapper,
-                                {
-                                    backgroundColor: currentTheme.colors.surface + '99',
-                                    borderColor: currentTheme.colors.primary + '33'
-                                }
-                            ]}
+                            style={[styles.calendarWrapper, { backgroundColor: currentTheme.colors.surface, borderColor: currentTheme.colors.primary + '15' }]}
                         >
                             <BlurView intensity={12} tint={isDark ? "dark" : "light"} style={styles.calendarBlur}>
                                 <HistoryCalendar
@@ -384,21 +696,13 @@ export default function MemoryScreen() {
 
                     {!loading && pins.length === 0 && (
                         <View style={styles.emptyContainer}>
-                            <MotiView
-                                from={{ scale: 0.5, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                transition={{ type: 'spring' }}
-                                style={styles.emptyIconCircle}
-                            >
-                                <BlurView intensity={10} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+                            <MotiView from={{ scale: 0.5 }} animate={{ scale: 1 }} style={styles.emptyIconCircle}>
                                 <Ionicons name="infinite-outline" size={50} color={currentTheme.colors.primary} />
                             </MotiView>
                             <Text style={[styles.emptyTitle, { color: currentTheme.colors.text }]}>Lặng Im</Text>
-                            <Text style={[styles.emptySubtitle, { color: currentTheme.colors.textSecondary }]}>Không gian ký ức của bạn còn trống.{'\n'}Hãy bắt đầu ghi lại thanh âm cuộc sống.</Text>
+                            <Text style={[styles.emptySubtitle, { color: currentTheme.colors.textSecondary }]}>Bạn chưa có VoicePin nào ở đây.</Text>
                         </View>
                     )}
-
-
                 </View>
 
                 <View style={{ height: 100 }} />
@@ -409,173 +713,306 @@ export default function MemoryScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    scrollContent: { paddingTop: 60 },
-    header: {
-        paddingHorizontal: 25,
-        marginBottom: 30,
+    scrollContent: { paddingTop: 60, paddingBottom: 40 },
+    
+    // --- Header ---
+    dashboardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 24,
+        marginBottom: 24,
     },
-    title: {
-        fontSize: 48,
+    headerTitleArea: {
+        flex: 1,
+    },
+    mainGreeting: {
+        fontSize: 34,
         fontWeight: '900',
-        color: '#fff',
-        letterSpacing: -2,
+        letterSpacing: -1.2,
     },
-    subtitleRow: {
+    statsRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: -5,
-        gap: 10,
+        marginTop: 6,
+        gap: 16,
     },
-    countBadge: {
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 12,
-        overflow: 'hidden',
-        backgroundColor: 'rgba(124, 58, 237, 0.3)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
+    statPill: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+        gap: 4,
     },
-    countText: {
-        color: '#fff',
+    statValue: {
+        fontSize: 18,
         fontWeight: '900',
-        fontSize: 16,
+        color: '#7c3aed',
     },
-    subtitle: {
-        color: 'rgba(255,255,255,0.5)',
-        fontSize: 14,
+    statLabel: {
+        fontSize: 12,
         fontWeight: '600',
+        opacity: 0.5,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
-    searchWrapper: {
-        marginHorizontal: 20,
-        marginBottom: 20,
-        flexDirection: 'row',
+    statDivider: {
+        width: 1,
+        height: 12,
+    },
+    searchCircle: {
+        width: 46,
+        height: 46,
+        borderRadius: 23,
+        justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 15,
-        paddingVertical: 10,
-        borderRadius: 24,
-        borderWidth: 1,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 10,
-        elevation: 4,
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 3,
     },
-    searchInput: {
-        flex: 1,
-        marginLeft: 10,
-        color: '#111827',
-        fontSize: 16,
-        fontWeight: '500',
+
+    // --- Hub Section ---
+    hubContainer: {
+        paddingHorizontal: 20,
+        marginBottom: 24,
     },
-    filterContainer: {
-        marginBottom: 10,
+    emotionDashboard: {
+        padding: 22,
+        borderRadius: 36,
+        borderWidth: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.05,
+        shadowRadius: 20,
+        elevation: 5,
     },
-    content: {
-        paddingTop: 10,
+    emotionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 24,
     },
-    sectionContainer: {
-        marginBottom: 10,
+    emotionTitle: {
+        fontSize: 20,
+        fontWeight: '900',
+        letterSpacing: -0.5,
     },
-    calendarWrapper: {
-        marginHorizontal: 15,
-        borderRadius: 40,
-        overflow: 'hidden',
-        borderWidth: 1.5,
-        paddingTop: 10,
-        paddingBottom: 20,
+    emotionSubtitle: {
+        fontSize: 12,
+        opacity: 0.5,
+        marginTop: 2,
     },
-    calendarBlur: {
+    chartToggleBtn: {
         padding: 10,
+        borderRadius: 14,
     },
-    center: {
-        padding: 50,
-        alignItems: 'center',
-        justifyContent: 'center',
+    chartContainer: {
+        gap: 16,
     },
-    emptyContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 60,
-        paddingHorizontal: 40,
+    chartRow: {
+        gap: 8,
     },
-    emptyIconCircle: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        justifyContent: 'center',
+    chartLabelWrapper: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 4,
+        paddingHorizontal: 2,
+    },
+    chartLabel: {
+        fontSize: 13,
+        fontWeight: '800',
+    },
+    chartValue: {
+        fontSize: 13,
+        fontWeight: '900',
+    },
+    barBg: {
+        height: 10,
+        borderRadius: 5,
+        overflow: 'hidden',
+    },
+    barFill: {
+        height: '100%',
+        borderRadius: 5,
+    },
+    pieContainer: {
+        flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 25,
+        justifyContent: 'space-around',
+        paddingVertical: 10,
+    },
+    pieLegend: {
+        gap: 12,
+    },
+    legendItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    legendDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+    },
+    legendText: {
+        fontSize: 12,
+        fontWeight: '800',
+    },
+    aiInsightCard: {
+        marginTop: 24,
+        padding: 16,
+        borderRadius: 24,
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 12,
+    },
+    aiText: {
+        fontSize: 13,
+        lineHeight: 19,
+        flex: 1,
+        fontStyle: 'italic',
+        opacity: 0.9,
+    },
+
+    // --- Flashback ---
+    flashbackSection: {
+        paddingHorizontal: 20,
+        marginBottom: 32,
+    },
+    flashbackCard: {
+        padding: 24,
+        borderRadius: 32,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.08)',
+    },
+    flashbackHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    flashbackBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    flashbackTitle: {
+        fontSize: 14,
+        fontWeight: '900',
+        color: '#FFD700',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    flashbackText: {
+        fontSize: 16,
+        lineHeight: 24,
+        fontWeight: '700',
+        fontStyle: 'italic',
+    },
+    flashbackFooter: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 12,
+        gap: 6,
+    },
+    flashbackMeta: {
+        fontSize: 11,
+        fontWeight: '600',
+        opacity: 0.5,
+    },
+
+    // --- Timeline Section ---
+    timelineHeader: {
+        paddingHorizontal: 24,
+        marginBottom: 16,
+    },
+    sectionHeading: {
+        fontSize: 24,
+        fontWeight: '900',
+        letterSpacing: -0.5,
+        marginBottom: 12,
+    },
+    filterContainer: {
+        marginBottom: 12,
+    },
+    content: {
+        flex: 1,
+    },
+    sectionContainer: {
+        marginBottom: 28,
+    },
+    
+    // --- Calendar ---
+    calendarWrapper: {
+        marginHorizontal: 20,
+        borderRadius: 36,
+        borderWidth: 1,
+        overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.05,
+        shadowRadius: 20,
+    },
+    calendarBlur: {
+        padding: 12,
+    },
+
+    // --- Empty States ---
+    emptyContainer: {
+        alignItems: 'center',
+        padding: 60,
+    },
+    emptyIconCircle: {
+        width: 110,
+        height: 110,
+        borderRadius: 55,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 24,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(124, 58, 237, 0.2)',
     },
     emptyTitle: {
-        fontSize: 28,
+        fontSize: 26,
         fontWeight: '900',
-        color: '#fff',
         marginBottom: 10,
     },
     emptySubtitle: {
         fontSize: 15,
-        color: 'rgba(255,255,255,0.5)',
         textAlign: 'center',
+        opacity: 0.5,
         lineHeight: 22,
     },
-    noResultsText: {
-        marginTop: 15,
-        color: 'rgba(255,255,255,0.4)',
-        fontSize: 15,
-        fontWeight: '600',
-    },
-    headerRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+    center: {
+        padding: 50,
         alignItems: 'center',
     },
-    bubblesContainer: {
-        width: 100,
-        height: 100,
-        position: 'relative',
-    },
-    statBubble: {
-        position: 'absolute',
+    emptyChart: {
+        height: 120,
         justifyContent: 'center',
         alignItems: 'center',
-        borderRadius: 100,
+    },
+
+    // --- Search Overlay ---
+    searchWrapperContainer: {
+        paddingHorizontal: 20,
+        marginBottom: 20,
         overflow: 'hidden',
-        borderWidth: 1.5,
-        borderColor: 'rgba(124, 58, 237, 0.2)',
     },
-    bubbleLarge: {
-        width: 70,
-        height: 70,
-        right: 0,
-        top: 0,
+    searchWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 28,
+        borderWidth: 1,
     },
-    bubbleSmall: {
-        width: 50,
-        height: 50,
-    },
-    bubbleValue: {
-        fontSize: 22,
-        fontWeight: '900',
-        color: '#fff',
-    },
-    bubbleLabel: {
-        fontSize: 9,
-        fontWeight: '800',
-        textTransform: 'uppercase',
-        color: '#fff',
-    },
-    bubbleValueSmall: {
-        fontSize: 14,
-        fontWeight: '900',
-        color: '#fff',
-    },
-    bubbleLabelSmall: {
-        fontSize: 8,
-        fontWeight: '800',
-        textTransform: 'uppercase',
-        color: '#fff',
+    searchInput: {
+        flex: 1,
+        height: 40,
+        fontSize: 15,
+        marginLeft: 12,
+        fontWeight: '600',
     },
 });

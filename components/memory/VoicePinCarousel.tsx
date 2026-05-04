@@ -176,6 +176,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(139, 92, 246, 0.1)' // Default translucent primary
   },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   title: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
   subtitle: { fontSize: 13, fontWeight: '500', marginTop: 1 },
   seeAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },

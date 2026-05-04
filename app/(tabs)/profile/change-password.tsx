@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Text } from '@/components/ui/text';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { SettingTabHeader } from '@/components/profile/SettingTabHeader';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { SettingInput } from '@/components/profile/SettingInput';
 
 export default function ChangePasswordScreen() {
@@ -81,7 +81,7 @@ export default function ChangePasswordScreen() {
             className="flex-1 bg-white dark:bg-gray-950"
             keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
-            <SettingTabHeader title="Đổi mật khẩu" leftIcon="arrow-back" />
+            <PageHeader title="Đổi mật khẩu" subtitle="Bảo mật tài khoản của bạn" />
 
             <ScrollView className="flex-1 px-6 pt-8" showsVerticalScrollIndicator={false}>
                 <Animated.View entering={FadeInDown.duration(500)}>

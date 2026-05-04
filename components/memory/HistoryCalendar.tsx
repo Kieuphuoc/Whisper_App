@@ -5,13 +5,16 @@ import {
   Dimensions,
   Image,
   TouchableOpacity,
+  SafeAreaView,
+  ScrollView as RNScrollView,
 } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { Text } from '@/components/ui/text';
 import { Ionicons } from '@expo/vector-icons';
 import { VoicePin } from '@/types';
 import { BASE_URL } from '@/configs/Apis';
 import { BlurView } from 'expo-blur';
-import { MotiView } from 'moti';
+import { MotiView, AnimatePresence } from 'moti';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useAnimatedStyle, withRepeat, withTiming, withSequence, withDelay, interpolate } from 'react-native-reanimated';
 
@@ -63,6 +66,7 @@ const HistoryCalendar: React.FC<HistoryCalendarProps> = ({
   onPressAddToday,
 }) => {
   const today = useMemo(() => startOfDay(new Date()), []);
+  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
 
   // MONTH NAVIGATION STATE
   const [selectedMonthIdx, setSelectedMonthIdx] = useState(0);
@@ -101,14 +105,23 @@ const HistoryCalendar: React.FC<HistoryCalendarProps> = ({
 
   const activeMonth = monthRange[selectedMonthIdx] || monthRange[0];
 
+  const selectedDayPins = useMemo(() => {
+    if (!selectedDateKey) return [];
+    return pinsByDateKey[selectedDateKey] || [];
+  }, [selectedDateKey, pinsByDateKey]);
+
+  const selectedDateLabel = useMemo(() => {
+    if (!selectedDateKey) return '';
+    const [y, m, d] = selectedDateKey.split('-').map(Number);
+    return `Ngày ${d} tháng ${m} năm ${y}`;
+  }, [selectedDateKey]);
+
   const nextMonth = () => {
-      if (selectedMonthIdx > 0) setSelectedMonthIdx(v => v - 1);
+    if (selectedMonthIdx > 0) setSelectedMonthIdx(v => v - 1);
   };
   const prevMonth = () => {
-      if (selectedMonthIdx < monthRange.length - 1) setSelectedMonthIdx(v => v + 1);
+    if (selectedMonthIdx < monthRange.length - 1) setSelectedMonthIdx(v => v + 1);
   };
-
-  if (!activeMonth) return null;
 
   return (
     <View style={styles.container}>
@@ -207,7 +220,7 @@ const HistoryCalendar: React.FC<HistoryCalendarProps> = ({
                       {imgUrl ? (
                         <TouchableOpacity
                           activeOpacity={0.8}
-                          onPress={() => representativePin && onSelectPin(representativePin)}
+                          onPress={() => setSelectedDateKey(key)}
                           style={[styles.pinImageWrapper, shadowStyle]}
                         >
                           <Image source={{ uri: imgUrl }} style={styles.pinImage} />
@@ -231,7 +244,7 @@ const HistoryCalendar: React.FC<HistoryCalendarProps> = ({
                       ) : dayPins?.length ? (
                         <TouchableOpacity
                           activeOpacity={0.85}
-                          onPress={() => representativePin && onSelectPin(representativePin)}
+                          onPress={() => setSelectedDateKey(key)}
                           style={styles.pinFallbackWrapper}
                         >
                           <View style={styles.pinFallbackIcon}>
@@ -282,6 +295,94 @@ const HistoryCalendar: React.FC<HistoryCalendarProps> = ({
             </View>
           </View>
         </MotiView>
+
+        {/* Selected Day Detail Modal/Overlay */}
+        <AnimatePresence>
+            {selectedDateKey && (
+                <MotiView
+                    from={{ opacity: 0, translateY: 100 }}
+                    animate={{ opacity: 1, translateY: 0 }}
+                    exit={{ opacity: 0, translateY: 100 }}
+                    style={[StyleSheet.absoluteFill, { zIndex: 100 }]}
+                >
+                    <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFill}>
+                        <SafeAreaView style={{ flex: 1 }}>
+                            <View style={styles.modalHeader}>
+                                <TouchableOpacity 
+                                    onPress={() => setSelectedDateKey(null)}
+                                    style={styles.closeBtn}
+                                >
+                                    <Ionicons name="close" size={28} color="#fff" />
+                                </TouchableOpacity>
+                                <View style={styles.modalTitleContainer}>
+                                    <Text style={styles.modalTitle}>{selectedDateLabel}</Text>
+                                    <Text style={styles.modalSubtitle}>{selectedDayPins.length} khoảnh khắc được ghi lại</Text>
+                                </View>
+                            </View>
+
+                            <ScrollView contentContainerStyle={styles.modalContent}>
+                                <MotiView
+                                    from={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ delay: 200 }}
+                                    style={styles.journalDecoration}
+                                >
+                                    <Image 
+                                        source={require('@/assets/images/mascot_whispery.png')} 
+                                        style={styles.modalMascot}
+                                        resizeMode="contain"
+                                    />
+                                    <View style={styles.speechBubble}>
+                                        <Text style={styles.speechText}>Nhìn xem bạn đã để lại những gì vào ngày này...</Text>
+                                    </View>
+                                </MotiView>
+
+                                {selectedDayPins.map((pin, idx) => (
+                                    <MotiView
+                                        key={pin.id}
+                                        from={{ opacity: 0, translateX: -20 }}
+                                        animate={{ opacity: 1, translateX: 0 }}
+                                        transition={{ delay: 300 + idx * 100 }}
+                                    >
+                                        <TouchableOpacity
+                                            activeOpacity={0.9}
+                                            onPress={() => {
+                                                onSelectPin(pin);
+                                                setSelectedDateKey(null);
+                                            }}
+                                            style={styles.pinListItem}
+                                        >
+                                            <LinearGradient
+                                                colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
+                                                style={StyleSheet.absoluteFill}
+                                            />
+                                            <View style={styles.pinListImgContainer}>
+                                                {getPinImage(pin) ? (
+                                                    <Image source={{ uri: getPinImage(pin) }} style={styles.pinListImg} />
+                                                ) : (
+                                                    <View style={styles.pinListIconFallback}>
+                                                        <Ionicons name="mic" size={24} color="#8b5cf6" />
+                                                    </View>
+                                                )}
+                                            </View>
+                                            <View style={styles.pinListInfo}>
+                                                <Text style={styles.pinListTime}>
+                                                    {new Date(pin.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                                </Text>
+                                                <Text style={styles.pinListContent} numberOfLines={2}>
+                                                    {pin.transcription || pin.content || "Ký ức âm thanh..."}
+                                                </Text>
+                                            </View>
+                                            <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.3)" />
+                                        </TouchableOpacity>
+                                    </MotiView>
+                                ))}
+                            </ScrollView>
+                        </SafeAreaView>
+                    </BlurView>
+                </MotiView>
+            )}
+        </AnimatePresence>
     </View>
   );
 };
@@ -488,6 +589,107 @@ const styles = StyleSheet.create({
   },
   separatorIcon: {
     padding: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    paddingTop: 40,
+  },
+  closeBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  modalTitleContainer: {
+    flex: 1,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#fff',
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '600',
+  },
+  modalContent: {
+    padding: 20,
+    paddingBottom: 100,
+  },
+  journalDecoration: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 30,
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    padding: 15,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.2)',
+  },
+  modalMascot: {
+    width: 60,
+    height: 60,
+    marginRight: 15,
+  },
+  speechBubble: {
+    flex: 1,
+  },
+  speechText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 20,
+  },
+  pinListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 24,
+    marginBottom: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  pinListImgContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  pinListImg: {
+    width: '100%',
+    height: '100%',
+  },
+  pinListIconFallback: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+  },
+  pinListInfo: {
+    flex: 1,
+    marginLeft: 15,
+  },
+  pinListTime: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#8b5cf6',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  pinListContent: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+    lineHeight: 18,
   },
 });
 

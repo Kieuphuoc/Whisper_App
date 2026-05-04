@@ -5,7 +5,6 @@ import { useRouter } from 'expo-router';
 import {
     ActivityIndicator,
     Dimensions,
-    FlatList,
     RefreshControl,
     StatusBar,
     StyleSheet,
@@ -14,6 +13,7 @@ import {
     useColorScheme,
     Image,
     SectionList,
+    Modal,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -105,7 +105,6 @@ function NotifItem({
     const config = NOTIF_CONFIG[item.type] ?? DEFAULT_CONFIG;
     const { data } = item;
 
-    // Resolve Avatar
     const avatarUri = useMemo(() => {
         const url = data?.senderAvatar || data?.reactorAvatar || data?.commenterAvatar || data?.replierAvatar || data?.posterAvatar;
         if (!url) return null;
@@ -113,15 +112,67 @@ function NotifItem({
         return `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
     }, [data]);
 
+    const REACTION_MAP: Record<string, string> = {
+        'LIKE': '👍',
+        'LOVE': '❤️',
+        'LAUGH': '😂',
+        'SAD': '😢',
+        'ANGRY': '😡'
+    };
+
     const getMessage = () => {
+        const nameStyle = [styles.boldText, { color: isDark ? '#fff' : '#111827' }];
+        const italicStyle = [styles.italicText, { color: isDark ? '#9ca3af' : '#64748b' }];
+
         switch(item.type) {
-            case 'FRIEND_REQUEST': return `${data?.senderName || 'Ai đó'} đã gửi lời mời kết bạn.`;
-            case 'FRIEND_ACCEPTED': return `${data?.accepterName || 'Ai đó'} đã chấp nhận lời mời.`;
-            case 'NEW_REACTION': return `${data?.reactorName || 'Ai đó'} đã bày tỏ cảm xúc với VoicePin của bạn.`;
-            case 'NEW_COMMENT': return `${data?.commenterName || 'Ai đó'}: "${data?.snippet || '...'}"`;
-            case 'COMMENT_REPLY': return `${data?.replierName || 'Ai đó'} đã phản hồi bình luận của bạn: "${data?.snippet || '...'}"`;
-            case 'FRIEND_VOICEPIN': return `${data?.posterName || 'Bạn bè'} vừa đăng: "${data?.voicePinContent || '...'}"`;
-            default: return 'Bạn có thông báo mới.';
+            case 'FRIEND_REQUEST': 
+                return (
+                    <Text numberOfLines={2} style={[styles.messageText, { color: isDark ? '#e2e8f0' : '#4b5563' }]}>
+                        <Text style={nameStyle}>{data?.senderName || 'Ai đó'}</Text> đã gửi lời mời kết bạn.
+                    </Text>
+                );
+            case 'FRIEND_ACCEPTED': 
+                return (
+                    <Text numberOfLines={2} style={[styles.messageText, { color: isDark ? '#e2e8f0' : '#4b5563' }]}>
+                        <Text style={nameStyle}>{data?.accepterName || 'Ai đó'}</Text> đã chấp nhận lời mời.
+                    </Text>
+                );
+            case 'NEW_REACTION': 
+                const emoji = REACTION_MAP[data?.reactionType] || '❤️';
+                return (
+                    <Text numberOfLines={2} style={[styles.messageText, { color: isDark ? '#e2e8f0' : '#4b5563' }]}>
+                        <Text style={nameStyle}>{data?.reactorName || 'Ai đó'}</Text> đã thả {emoji} vào bài đăng của bạn.
+                    </Text>
+                );
+            case 'NEW_COMMENT': 
+                return (
+                    <Text numberOfLines={2} style={[styles.messageText, { color: isDark ? '#e2e8f0' : '#4b5563' }]}>
+                        <Text style={nameStyle}>{data?.commenterName || 'Ai đó'}</Text> đã bình luận: <Text style={italicStyle}>"{data?.snippet || '...'}"</Text>
+                    </Text>
+                );
+            case 'COMMENT_REPLY': 
+                return (
+                    <Text numberOfLines={2} style={[styles.messageText, { color: isDark ? '#e2e8f0' : '#4b5563' }]}>
+                        <Text style={nameStyle}>{data?.replierName || 'Ai đó'}</Text> đã phản hồi: <Text style={italicStyle}>"{data?.snippet || '...'}"</Text>
+                    </Text>
+                );
+            case 'FRIEND_VOICEPIN': 
+                return (
+                    <Text numberOfLines={2} style={[styles.messageText, { color: isDark ? '#e2e8f0' : '#4b5563' }]}>
+                        <Text style={nameStyle}>{data?.posterName || 'Bạn bè'}</Text> vừa đăng: <Text style={italicStyle}>"{data?.voicePinContent || '...'}"</Text>
+                    </Text>
+                );
+            case 'SYSTEM_MESSAGE': 
+                return (
+                    <View style={styles.systemMessageContainer}>
+                        <Ionicons name="shield-checkmark" size={14} color={isDark ? '#fbbf24' : '#d97706'} style={{ marginRight: 6 }} />
+                        <Text numberOfLines={2} style={[styles.messageText, { color: isDark ? '#fbbf24' : '#d97706', fontWeight: '600' }]}>
+                            {data?.message || 'Thông báo từ hệ thống.'}
+                        </Text>
+                    </View>
+                );
+            default: 
+                return <Text style={styles.messageText}>Bạn có thông báo mới.</Text>;
         }
     };
 
@@ -143,7 +194,6 @@ function NotifItem({
                     }
                 ]}
             >
-                
                 <View style={styles.leftCol}>
                     <View style={styles.avatarContainer}>
                         {avatarUri ? (
@@ -167,9 +217,9 @@ function NotifItem({
                         <Text style={styles.timeText}>{timeAgo(item.createdAt)}</Text>
                     </View>
                     
-                    <Text style={[styles.messageText, { color: isDark ? '#fff' : '#1f2937' }, !item.isRead && styles.boldText]}>
+                    <View>
                         {getMessage()}
-                    </Text>
+                    </View>
 
                     {item.type === 'FRIEND_REQUEST' && !item.isRead && (
                         <View style={styles.actionRow}>
@@ -204,6 +254,8 @@ export default function NotificationScreen() {
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [activeTab, setActiveTab] = useState<TabType>('all');
+    const [selectedNotif, setSelectedNotif] = useState<Notification | null>(null);
+    const [showDetail, setShowDetail] = useState(false);
 
     const load = useCallback(async (isRefresh = false) => {
         isRefresh ? setRefreshing(true) : setLoading(true);
@@ -216,15 +268,16 @@ export default function NotificationScreen() {
             setNotifs(data);
         } catch (e) {
             console.error('Load notifications error:', e);
-            // Optional: alert('Không thể kết nối máy chủ.');
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     }, []);
 
-    const handleNavigate = useCallback((item: Notification) => {
+    const handleNavigate = (item: Notification) => {
         const { data } = item;
+        setShowDetail(false);
+        
         switch (item.type) {
             case 'NEW_REACTION':
             case 'NEW_COMMENT':
@@ -247,7 +300,13 @@ export default function NotificationScreen() {
             default:
                 break;
         }
-    }, [router]);
+    };
+
+    const handlePressNotif = (item: Notification) => {
+        handleRead(item.id);
+        setSelectedNotif(item);
+        setShowDetail(true);
+    };
 
     useEffect(() => { load(); }, [load]);
 
@@ -256,14 +315,6 @@ export default function NotificationScreen() {
         if (activeTab === 'requests') return notifs.filter(n => n.type === 'FRIEND_REQUEST' || n.type === 'FRIEND_ACCEPTED');
         return notifs.filter(n => n.type !== 'FRIEND_REQUEST' && n.type !== 'FRIEND_ACCEPTED');
     }, [notifs, activeTab]);
-
-    // Extra safety: refresh data if tab is switched to 'requests' or 'interactions' and they are empty
-    useEffect(() => {
-        if (activeTab !== 'all' && filteredNotifs.length === 0 && !loading && !refreshing) {
-            // If the filtered list is empty, try one more fetch to be sure
-            load();
-        }
-    }, [activeTab]);
 
     const sectionedData = useMemo(() => {
         const today: Notification[] = [];
@@ -326,7 +377,6 @@ export default function NotificationScreen() {
         <View style={[styles.container, { backgroundColor: themeContext.colors.background }]}>
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
 
-            {/* AURA BACKGROUND */}
             <View style={StyleSheet.absoluteFill}>
                 <LinearGradient
                     colors={isDark ? ['#1e1b4b', '#000'] : ['#f5f3ff', '#fff']}
@@ -345,7 +395,6 @@ export default function NotificationScreen() {
                 />
             </View>
 
-            {/* HEADER */}
             <View style={styles.header}>
                 <View style={styles.headerLeft}>
                     <TouchableOpacity
@@ -374,7 +423,6 @@ export default function NotificationScreen() {
                 </TouchableOpacity>
             </View>
 
-            {/* TABS */}
             <View style={styles.tabContainer}>
                 <FilterTab label="Tất cả" active={activeTab === 'all'} onPress={() => setActiveTab('all')} isDark={isDark} theme={themeContext} />
                 <FilterTab label="Lời mời" active={activeTab === 'requests'} onPress={() => setActiveTab('requests')} isDark={isDark} theme={themeContext} />
@@ -400,7 +448,7 @@ export default function NotificationScreen() {
                             item={item} 
                             onRead={handleRead} 
                             onAction={handleAction}
-                            onNavigate={handleNavigate}
+                            onNavigate={handlePressNotif}
                             isDark={isDark} 
                             theme={themeContext} 
                         />
@@ -429,6 +477,79 @@ export default function NotificationScreen() {
                     ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
                 />
             )}
+
+            <Modal
+                visible={showDetail}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowDetail(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+                    <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setShowDetail(false)} />
+                    
+                    <AnimatePresence>
+                        {showDetail && selectedNotif && (
+                            <MotiView
+                                from={{ opacity: 0, scale: 0.9, translateY: 20 }}
+                                animate={{ opacity: 1, scale: 1, translateY: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, translateY: 20 }}
+                                style={[styles.modalContent, { backgroundColor: isDark ? '#1e1e2e' : '#fff' }]}
+                            >
+                                <View style={styles.modalHeader}>
+                                    <Text style={[styles.modalTitle, { color: isDark ? '#fff' : '#111827' }]}>Chi tiết thông báo</Text>
+                                    <TouchableOpacity onPress={() => setShowDetail(false)}>
+                                        <Ionicons name="close" size={24} color={isDark ? '#9ca3af' : '#6b7280'} />
+                                    </TouchableOpacity>
+                                </View>
+
+                                <View style={styles.modalBody}>
+                                    <View style={styles.modalIconBox}>
+                                        <LinearGradient 
+                                            colors={(NOTIF_CONFIG[selectedNotif.type] || DEFAULT_CONFIG).colors as any} 
+                                            style={styles.modalIconGradient}
+                                        >
+                                            <Ionicons name={(NOTIF_CONFIG[selectedNotif.type] || DEFAULT_CONFIG).icon} size={32} color="#fff" />
+                                        </LinearGradient>
+                                    </View>
+
+                                    <Text style={[styles.modalTime, { color: '#9ca3af' }]}>
+                                        {new Date(selectedNotif.createdAt).toLocaleString('vi-VN')}
+                                    </Text>
+
+                                    <Text style={[styles.modalMessage, { color: isDark ? '#e2e8f0' : '#334155' }]}>
+                                        {selectedNotif.type === 'SYSTEM_MESSAGE' 
+                                            ? selectedNotif.data?.message 
+                                            : selectedNotif.type === 'NEW_COMMENT' || selectedNotif.type === 'COMMENT_REPLY'
+                                                ? `${(selectedNotif.data?.commenterName || selectedNotif.data?.replierName)} đã để lại nội dung: "${selectedNotif.data?.snippet}"`
+                                                : selectedNotif.type === 'NEW_REACTION'
+                                                    ? `${selectedNotif.data?.reactorName} đã thả cảm xúc vào bài đăng của bạn.`
+                                                    : selectedNotif.type === 'FRIEND_VOICEPIN'
+                                                        ? `${selectedNotif.data?.posterName} vừa đăng nội dung mới: "${selectedNotif.data?.voicePinContent}"`
+                                                        : 'Bạn có một tương tác mới trên hệ thống.'
+                                        }
+                                    </Text>
+
+                                    {selectedNotif.type !== 'SYSTEM_MESSAGE' && (
+                                        <Text style={[styles.modalHint, { color: '#9ca3af' }]}>
+                                            Nhấn nút bên dưới để xem chi tiết đối tượng liên quan.
+                                        </Text>
+                                    )}
+                                </View>
+
+                                <TouchableOpacity 
+                                    style={[styles.modalActionBtn, { backgroundColor: themeContext.colors.primary }]}
+                                    onPress={() => handleNavigate(selectedNotif)}
+                                >
+                                    <Text style={styles.modalActionBtnText}>
+                                        {selectedNotif.type === 'FRIEND_REQUEST' ? 'Xem trang cá nhân' : 'Xem chi tiết bài viết'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </MotiView>
+                        )}
+                    </AnimatePresence>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -550,6 +671,15 @@ const styles = StyleSheet.create({
     timeText: { fontSize: 10, color: '#9ca3af', fontWeight: '600' },
     messageText: { fontSize: 14, lineHeight: 20, fontWeight: '500' },
     boldText: { fontWeight: '800' },
+    italicText: { fontStyle: 'italic' },
+    systemMessageContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(245, 158, 11, 0.05)',
+        padding: 8,
+        borderRadius: 12,
+        marginTop: 4,
+    },
     actionRow: {
         flexDirection: 'row',
         gap: 8,
@@ -571,4 +701,73 @@ const styles = StyleSheet.create({
     emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40, marginTop: 40 },
     emptyIconBox: { width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(0,0,0,0.02)', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
     emptyText: { color: '#9ca3af', fontSize: 14, fontWeight: '500', textAlign: 'center' },
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24,
+    },
+    modalContent: {
+        width: '100%',
+        borderRadius: 32,
+        padding: 24,
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '800',
+    },
+    modalBody: {
+        alignItems: 'center',
+        gap: 16,
+        marginBottom: 32,
+    },
+    modalIconBox: {
+        width: 80,
+        height: 80,
+        borderRadius: 24,
+        overflow: 'hidden',
+    },
+    modalIconGradient: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalTime: {
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    modalMessage: {
+        fontSize: 16,
+        lineHeight: 24,
+        textAlign: 'center',
+        fontWeight: '500',
+    },
+    modalHint: {
+        fontSize: 13,
+        textAlign: 'center',
+        fontStyle: 'italic',
+    },
+    modalActionBtn: {
+        width: '100%',
+        height: 56,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalActionBtnText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '800',
+    },
 });

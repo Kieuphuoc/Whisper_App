@@ -86,7 +86,11 @@ const avStyle = StyleSheet.create({
 // ─── Main Modal ───────────────────────────────────────────
 type Tab = 'friends' | 'requests' | 'search';
 
-interface Props { visible: boolean; onClose: () => void; }
+interface Props { 
+    visible: boolean; 
+    onClose: () => void; 
+    onSelectFriend?: (friend: FriendUser) => void;
+}
 
 // ─── Tabs Component ──────────────────────────────────────
 const FilterTab = ({ label, active, onPress, isDark, theme }: { label: string, active: boolean, onPress: () => void, isDark: boolean, theme: any }) => (
@@ -113,7 +117,7 @@ const FilterTab = ({ label, active, onPress, isDark, theme }: { label: string, a
     </TouchableOpacity>
 );
 
-export default function FriendsModal({ visible, onClose }: Props) {
+export default function FriendsModal({ visible, onClose, onSelectFriend }: Props) {
     const user = useContext(MyUserContext);
     const router = useRouter();
     const colorScheme = useColorScheme() || 'light';
@@ -405,15 +409,27 @@ export default function FriendsModal({ visible, onClose }: Props) {
                                                     <Text style={styles.cardName}>{item.displayName ?? item.username}</Text>
                                                     <Text style={styles.cardSub}>@{item.username}</Text>
                                                 </View>
-                                                <TouchableOpacity 
-                                                    style={styles.actionBtn}
-                                                    onPress={(e) => {
-                                                        e.stopPropagation();
-                                                        removeFriend(item.id);
-                                                    }}
-                                                >
-                                                    <Ionicons name="ellipsis-horizontal" size={20} color="#9ca3af" />
-                                                </TouchableOpacity>
+                                                 {onSelectFriend ? (
+                                                    <TouchableOpacity 
+                                                        style={[styles.smallActionBtn, { backgroundColor: currentTheme.colors.primary }]}
+                                                        onPress={(e) => {
+                                                            e.stopPropagation();
+                                                            onSelectFriend(item);
+                                                        }}
+                                                    >
+                                                        <Ionicons name="chatbubble-ellipses" size={18} color="#fff" />
+                                                    </TouchableOpacity>
+                                                ) : (
+                                                    <TouchableOpacity 
+                                                        style={styles.actionBtn}
+                                                        onPress={(e) => {
+                                                            e.stopPropagation();
+                                                            removeFriend(item.id);
+                                                        }}
+                                                    >
+                                                        <Ionicons name="ellipsis-horizontal" size={20} color="#9ca3af" />
+                                                    </TouchableOpacity>
+                                                )}
                                             </TouchableOpacity>
                                         </MotiView>
                                     )}

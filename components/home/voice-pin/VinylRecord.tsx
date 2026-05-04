@@ -368,7 +368,7 @@ export function VinylRecord({
                 <Text style={[styles.profileBio, { color: isDark ? "#A3A3A3" : "#64748B" }]} numberOfLines={1}>
                   {pin.status === 'REJECTED' && pin.moderationReason 
                     ? `Lý do: ${pin.moderationReason}` 
-                    : (isCreationMode ? pin.emotionLabel : (pin.user?.bio || pin.emotionLabel || "Tap record to play"))}
+                    : (isCreationMode ? pin.emotionLabel : (pin.content || pin.user?.bio || pin.emotionLabel || "Tap record to play"))}
                 </Text>
               </View>
             </TouchableOpacity>

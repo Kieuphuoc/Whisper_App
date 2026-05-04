@@ -21,7 +21,7 @@ import {
 import { Text } from '@/components/ui/text';
 import MapView, { Marker, MapType } from 'react-native-maps';
 import { darkMapStyle } from '@/constants/MapStyles';
-import { SettingTabHeader } from '@/components/profile/SettingTabHeader';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 
 interface SettingItemProps {
@@ -196,7 +196,7 @@ export default function SettingsScreen() {
         <View className="flex-1 bg-white dark:bg-gray-950">
             <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
 
-            <SettingTabHeader title="Cài đặt" leftIcon="close" />
+            <PageHeader title="Cài đặt" subtitle="Quản lý tài khoản và ứng dụng" backIcon="close" />
 
             <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
                 {/* Profile Section */}

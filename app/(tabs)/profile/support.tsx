@@ -4,7 +4,7 @@ import { Text } from '@/components/ui/text';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme as useNWColorScheme } from "nativewind";
 import { useRouter } from 'expo-router';
-import { SettingTabHeader } from '@/components/profile/SettingTabHeader';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export default function SupportScreen() {
     const { colorScheme } = useNWColorScheme();
@@ -34,7 +34,7 @@ export default function SupportScreen() {
     return (
         <View className="flex-1 bg-white dark:bg-gray-950">
             <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
-            <SettingTabHeader title="Hỗ trợ & Phản hồi" leftIcon="chevron-back" />
+            <PageHeader title="Hỗ trợ" subtitle="Chúng tôi luôn sẵn sàng giúp đỡ bạn" />
 
             <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
                 <Text style={{ fontSize: 18, fontWeight: '700', color: colorScheme === 'dark' ? '#fff' : '#111', marginBottom: 12 }}>Câu hỏi thường gặp</Text>

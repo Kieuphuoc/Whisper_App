@@ -65,12 +65,12 @@ const QuickActions: React.FC<QuickActionsProps> = ({
                             style={StyleSheet.absoluteFill}
                         />
                         <Ionicons name={icon} size={22} color="#8b5cf6" />
-                        {badge > 0 && (
-                            <View style={styles.badge}>
-                                <Text style={styles.badgeText}>{badge}</Text>
-                            </View>
-                        )}
                     </View>
+                    {badge > 0 && (
+                        <View style={styles.badge}>
+                            <Text style={styles.badgeText}>{badge}</Text>
+                        </View>
+                    )}
                 </TouchableOpacity>
             </Animated.View>
         );
@@ -88,26 +88,27 @@ const QuickActions: React.FC<QuickActionsProps> = ({
                     {
                         backgroundColor: isDark ? 'rgba(18,18,18,0.9)' : 'rgba(255,255,255,0.95)',
                         borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                        overflow: 'hidden',
                     }
                 ]}
                 onPress={toggleMenu}
             >
-                <BlurView
-                    intensity={isDark ? 20 : 40}
-                    tint={isDark ? 'dark' : 'light'}
-                    style={StyleSheet.absoluteFill}
-                />
-                <Animated.View style={{
-                    transform: [{
-                        rotate: animation.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: ['0deg', '45deg']
-                        })
-                    }]
-                }}>
-                    <Ionicons name="grid" size={24} color="#8b5cf6" />
-                </Animated.View>
+                <View style={styles.mainButtonInner}>
+                    <BlurView
+                        intensity={isDark ? 20 : 40}
+                        tint={isDark ? 'dark' : 'light'}
+                        style={StyleSheet.absoluteFill}
+                    />
+                    <Animated.View style={{
+                        transform: [{
+                            rotate: animation.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: ['0deg', '45deg']
+                            })
+                        }]
+                    }}>
+                        <Ionicons name="grid" size={24} color="#8b5cf6" />
+                    </Animated.View>
+                </View>
                 {unreadCount > 0 && !isExpanded && (
                     <View style={styles.mainBadge}>
                         <Text style={styles.badgeText}>{unreadCount}</Text>
@@ -168,8 +169,8 @@ const styles = StyleSheet.create({
     },
     badge: {
         position: 'absolute',
-        top: -2,
-        right: -2,
+        top: 2,
+        right: 2,
         backgroundColor: '#ef4444',
         borderRadius: 10,
         minWidth: 16,
@@ -178,6 +179,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderWidth: 1.5,
         borderColor: '#fff',
+        zIndex: 10,
     },
     mainBadge: {
         position: 'absolute',
@@ -191,6 +193,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderWidth: 1.5,
         borderColor: '#fff',
+    },
+    mainButtonInner: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 28,
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
     },
     badgeText: {
         color: '#fff',

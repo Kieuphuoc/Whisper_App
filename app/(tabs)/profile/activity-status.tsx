@@ -4,7 +4,7 @@ import { Text } from '@/components/ui/text';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme as useNWColorScheme } from "nativewind";
 import { useRouter } from 'expo-router';
-import { SettingTabHeader } from '@/components/profile/SettingTabHeader';
+import { PageHeader } from '@/components/ui/PageHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApis, endpoints } from '@/configs/Apis';
 
@@ -63,7 +63,7 @@ export default function ActivityStatusScreen() {
     return (
         <View className="flex-1 bg-white dark:bg-gray-950">
             <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
-            <SettingTabHeader title="Trạng thái HĐ" leftIcon="chevron-back" />
+            <PageHeader title="Trạng thái HĐ" subtitle="Quản lý hiển thị hoạt động cá nhân" />
 
             <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
                 

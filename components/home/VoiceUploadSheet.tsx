@@ -23,11 +23,12 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from "expo-haptics";
 import { MyUserContext } from '../../configs/Context';
 import { VinylRecord } from './voice-pin/VinylRecord';
+import { useCelebration } from '@/components/ui/CelebrationOverlay';
 
 const { width } = Dimensions.get('window');
 
 type Props = {
-    visible: boolean;
+    visible: boolean; j
     audioUri: string | null;
     photoUri: string | null;
     location: Location.LocationObject | null;
@@ -49,22 +50,23 @@ export default function VoiceUploadSheet({
     const colorScheme = useColorScheme() || 'light';
     const currentTheme = theme[colorScheme];
     const isDark = colorScheme === 'dark';
-    
+    const { celebrate } = useCelebration();
+
     const [selectedVisibility, setSelectedVisibility] = useState<Visibility>(visibility);
     const [uploading, setUploading] = useState(false);
-    
+
     // Tonearm animation
     const armRotateAnim = useRef(new Animated.Value(0)).current;
-    
+
     // Audio Player using new expo-audio API
     const player = useAudioPlayer(audioUri || "");
     const { playing, status } = useAudioPlayerStatus(player);
-    
+
     const [transcription, setTranscription] = useState<string | null>(null);
-    const [emotionLabel, setEmotionLabel] = useState<string>("NEW RECORD");
+    const [emotionLabel, setEmotionLabel] = useState<string>("Bình yên");
     const [isThinking, setIsThinking] = useState(false);
     const [showTranscription, setShowTranscription] = useState(false);
-    
+
     const armRotate = armRotateAnim.interpolate({
         inputRange: [0, 1],
         outputRange: ['-10deg', '5deg']
@@ -113,7 +115,7 @@ export default function VoiceUploadSheet({
 
             const formData = new FormData();
             const audioFileUri = audioUri.startsWith('file://') ? audioUri : `file://${audioUri}`;
-            
+
             formData.append('file', {
                 uri: audioFileUri,
                 name: 'audio.m4a',
@@ -126,13 +128,15 @@ export default function VoiceUploadSheet({
 
             if (res.data?.data) {
                 const { transcript, emotion_label } = res.data.data;
-                if (!transcript || transcript.trim().length === 0) {
-                    setTranscription("Không tìm thấy nội dung trong đoạn ghi âm này...");
-                    setEmotionLabel("SILENT");
-                } else {
-                    setTranscription(transcript);
-                    if (emotion_label) setEmotionLabel(emotion_label);
+
+                // Cập nhật văn bản (nếu rỗng thì báo không tìm thấy)
+                setTranscription(transcript && transcript.trim().length > 0 ? transcript : "Không tìm thấy nội dung lời nói...");
+
+                // Ưu tiên nhãn cảm xúc từ AI nếu có, nếu không thì giữ nguyên mặc định
+                if (emotion_label) {
+                    setEmotionLabel(emotion_label);
                 }
+
                 setShowTranscription(true);
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             }
@@ -192,10 +196,10 @@ export default function VoiceUploadSheet({
             }
 
             const formData = new FormData();
-            
+
             // Ensure URI starts with file:// for proper FormData handling in React Native
             const audioFileUri = audioUri.startsWith('file://') ? audioUri : `file://${audioUri}`;
-            
+
             formData.append('file', {
                 uri: audioFileUri,
                 name: `voice_${Date.now()}.m4a`,
@@ -229,13 +233,23 @@ export default function VoiceUploadSheet({
             }
 
             const api = authApis(token);
-            await api.post(endpoints.createVoicePin, formData);
+            const res = await api.post(endpoints.createVoicePin, formData);
 
+            setUploading(false);
             onUploadSuccess();
-            Alert.alert('Đã đăng!', 'Giọng nói của bạn đã lên bản đồ.');
+
+            // Celebrate only on first post!
+            if (res.data?.data?.isFirstPost) {
+                celebrate({
+                    title: 'Ký ức đã tỏa sáng!',
+                    subtitle: 'Giọng nói của bạn đã chính thức lên bản đồ Whispery.',
+                    achievementKey: 'first_voice',
+                    type: 'achievement'
+                });
+            }
         } catch (err: any) {
             console.error('Upload failed:', err.response?.data || err.message);
-            
+
             const serverMessage = err.response?.data?.message;
             if (serverMessage && serverMessage.includes('too quiet')) {
                 Alert.alert('Âm thanh quá nhỏ', 'Mình chưa nghe rõ. Bạn thử nói to hơn hoặc kiểm tra micro nhé!');
@@ -273,7 +287,7 @@ export default function VoiceUploadSheet({
                     style={StyleSheet.absoluteFill}
                     onPress={handleClose}
                 />
-                
+
                 <View style={styles.container}>
                     {/* Minimalist Cancel Button */}
                     <TouchableOpacity onPress={handleClose} style={styles.cancelBtn} disabled={uploading}>
@@ -295,14 +309,14 @@ export default function VoiceUploadSheet({
                     >
                         <VinylRecord
                             pin={mockPin}
-                            playing={playing} 
-                            spin={null} 
-                            armRotate={armRotate} 
-                            onPress={togglePlayback} 
+                            playing={playing}
+                            spin={null}
+                            armRotate={armRotate}
+                            onPress={togglePlayback}
                             verticalDateLabel={new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join(' . ')}
                             isCreationMode={true}
                             visibility={selectedVisibility}
-                            onVisibilityChange={handleToggleVisibility} 
+                            onVisibilityChange={handleToggleVisibility}
                             onPost={handleUpload}
                             theme={currentTheme}
                             onTranscriptionToggle={handleToggleTranscription}

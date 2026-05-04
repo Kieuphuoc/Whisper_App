@@ -20,7 +20,7 @@ import {
 import { Text } from '@/components/ui/text';
 
 // Giữ nguyên các component import
-import { SettingTabHeader } from '@/components/profile/SettingTabHeader';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { SettingInput } from '@/components/profile/SettingInput';
 
 export default function EditProfileScreen() {
@@ -130,19 +130,19 @@ export default function EditProfileScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             className="flex-1 bg-white dark:bg-gray-950"
         >
-            <SettingTabHeader
+            <PageHeader 
                 title="Chỉnh sửa hồ sơ"
-                leftIcon="arrow-back"
+                subtitle="Cập nhật thông tin cá nhân của bạn"
                 rightElement={
                     <TouchableOpacity
                         onPress={handleUpdate}
                         disabled={loading}
-                        className="px-2"
+                        style={{ paddingHorizontal: 12 }}
                     >
                         {loading ? (
                             <ActivityIndicator size="small" color="#3cd3bf" />
                         ) : (
-                            <Text className="text-[#3cd3bf] font-bold text-lg">Lưu</Text>
+                            <Text style={{ color: '#3cd3bf', fontWeight: 'bold', fontSize: 18 }}>Lưu</Text>
                         )}
                     </TouchableOpacity>
                 }
@@ -150,7 +150,7 @@ export default function EditProfileScreen() {
 
             <ScrollView
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: 40 }}
+                contentContainerStyle={{ paddingBottom: 120 }}
             >
                 {/* Avatar Section */}
                 <View className="items-center py-8">
