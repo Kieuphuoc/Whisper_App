@@ -107,17 +107,24 @@ export default function ClusterMarker({ id, coordinate, count, size, bg, onPress
       <Animated.View
         style={[
           styles.cluster,
-          { width: size, height: size, borderRadius: size / 2, backgroundColor: bg + "dd" },
+          { width: size, height: size, borderRadius: size / 2, backgroundColor: bg + "33" }, // Very faint outer glow
           animatedStyle,
         ]}
       >
         <View
           style={[
-            styles.clusterInner,
-            { width: size - 12, height: size - 12, borderRadius: (size - 12) / 2, backgroundColor: bg },
+            styles.clusterMid,
+            { width: size - 8, height: size - 8, borderRadius: (size - 8) / 2, backgroundColor: bg + "66" }, // Glassy middle ring
           ]}
         >
-          <Text style={styles.clusterCount}>{count}</Text>
+          <View
+            style={[
+              styles.clusterInner,
+              { width: size - 20, height: size - 20, borderRadius: (size - 20) / 2, backgroundColor: bg },
+            ]}
+          >
+            <Text style={styles.clusterCount}>{count}</Text>
+          </View>
         </View>
       </Animated.View>
     </Marker>
@@ -134,9 +141,17 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 6,
   },
+  clusterMid: {
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+  },
   clusterInner: {
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
   },
   clusterCount: {
     color: "#fff",

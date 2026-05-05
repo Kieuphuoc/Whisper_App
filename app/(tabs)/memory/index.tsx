@@ -470,15 +470,15 @@ export default function MemoryScreen() {
                         animate={{ opacity: 1, translateX: 0 }}
                         style={styles.headerTitleArea}
                     >
-                        <Text style={[styles.mainGreeting, { color: currentTheme.colors.primary }]}>Ký ức của bạn</Text>
+                        <Text style={[styles.mainGreeting, { color: isDark ? '#FFF' : '#000' }]}>Ký ức của bạn</Text>
                         <View style={styles.statsRow}>
                             <View style={styles.statPill}>
-                                <Text style={[styles.statValue, { color: '#7c3aed' }]}>{pins.length}</Text>
+                                <Text style={[styles.statValue, { color: isDark ? '#FFF' : '#000' }]}>{pins.length}</Text>
                                 <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>VoicePins</Text>
                             </View>
                             <View style={[styles.statDivider, { backgroundColor: currentTheme.colors.primary + '30' }]} />
                             <View style={styles.statPill}>
-                                <Text style={[styles.statValue, { color: '#ec4899' }]}>{new Set(pins.map(p => new Date(p.createdAt).toDateString())).size}</Text>
+                                <Text style={[styles.statValue, { color: isDark ? '#FFF' : '#000' }]}>{new Set(pins.map(p => new Date(p.createdAt).toDateString())).size}</Text>
                                 <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>Ngày lưu</Text>
                             </View>
                         </View>
@@ -488,7 +488,7 @@ export default function MemoryScreen() {
                         onPress={() => setShowSearch(!showSearch)}
                         style={[styles.searchCircle, { backgroundColor: currentTheme.colors.surface }]}
                     >
-                        <Ionicons name={showSearch ? "close" : "search"} size={20} color={currentTheme.colors.primary} />
+                        <Ionicons name={showSearch ? "close" : "search"} size={20} color={isDark ? '#FFF' : '#000'} />
                     </TouchableOpacity>
                 </View>
 

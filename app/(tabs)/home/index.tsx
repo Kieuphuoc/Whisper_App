@@ -256,7 +256,7 @@ export default function HomeScreen() {
             id: 'recenter',
             title: 'Định vị lại',
             description: 'Nếu bạn bị lạc trên bản đồ, chỉ cần nhấn vào đây để quay lại vị trí hiện tại của mình ngay lập tức!',
-            icon: 'navigate',
+            icon: 'paper-plane',
             targetPos: { top: 135, right: 20, width: 68, height: 60 }
           }
         ]);
@@ -521,7 +521,7 @@ export default function HomeScreen() {
             activeOpacity={0.7}
           >
             <View style={[styles.exploreIconContainer, { backgroundColor: isDark ? 'rgba(139, 92, 246, 0.2)' : 'rgba(139, 92, 246, 0.1)' }]}>
-              <Ionicons name="locate" size={24} color="#8b5cf6" />
+              <Ionicons name="paper-plane" size={24} color="#8b5cf6" />
             </View>
             <Text style={[styles.exploreLabel, { color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)', fontSize: 9 }]}>Hiện tại</Text>
           </TouchableOpacity>

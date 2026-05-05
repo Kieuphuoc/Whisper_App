@@ -432,7 +432,7 @@ export default function ProfileScreen() {
                             from={{ scale: 0, rotate: '-15deg' }}
                             animate={{ scale: 1, rotate: '0deg' }}
                             transition={{ type: 'spring', damping: 15 }}
-                            style={[styles.avatarOuter, { borderColor: isDark ? '#fff' : '#1a1a1a' }]}
+                            style={[styles.avatarOuter, { borderColor: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)' }]}
                         >
                             <TouchableOpacity onPress={() => handleUpdateImage('avatar')} activeOpacity={0.9}>
                                 <Image source={avatarSource} style={styles.avatar} />

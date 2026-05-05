@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { theme } from '@/constants/Theme';
-import { LinearGradient } from 'expo-linear-gradient';
+
 
 type VoiceButtonProps = {
     isRecording: boolean;
@@ -113,11 +113,13 @@ export default function VoiceButton({ isRecording, onPress }: VoiceButtonProps) 
                     activeOpacity={0.9}
                     onPress={onPress}
                 >
-                    <LinearGradient
-                        colors={isRecording ? ['#ff4b4b', '#dc2626'] : ['#a78bfa', '#7c3aed']}
+                    <View
                         style={[
                             styles.button,
-                            { borderRadius: 36 },
+                            {
+                                borderRadius: 36,
+                                backgroundColor: isRecording ? '#dc2626' : currentTheme.colors.primary
+                            },
                             !isRecording && styles.shadow
                         ]}
                     >
@@ -126,7 +128,7 @@ export default function VoiceButton({ isRecording, onPress }: VoiceButtonProps) 
                             size={32}
                             color="white"
                         />
-                    </LinearGradient>
+                    </View>
                 </TouchableOpacity>
             </Animated.View>
         </View>
@@ -148,7 +150,7 @@ const styles = StyleSheet.create({
         height: 72,
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 5,
+        borderWidth: 4,
         borderColor: '#ffffff',
     },
     shadow: {

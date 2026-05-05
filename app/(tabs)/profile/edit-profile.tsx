@@ -130,7 +130,7 @@ export default function EditProfileScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             className="flex-1 bg-white dark:bg-gray-950"
         >
-            <PageHeader 
+            <PageHeader
                 title="Chỉnh sửa hồ sơ"
                 subtitle="Cập nhật thông tin cá nhân của bạn"
                 rightElement={

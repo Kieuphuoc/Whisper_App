@@ -13,6 +13,7 @@ import Animated, {
 import { MotiView, AnimatePresence } from 'moti';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 
 const { width, height } = Dimensions.get('window');
 
@@ -105,6 +106,7 @@ export const CelebrationProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const celebrate = useCallback((config: CelebrationConfig) => {
     setActiveCelebration(config);
     setShowFireworks(true);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     
     setTimeout(() => {
       setActiveCelebration(null);
@@ -175,9 +177,14 @@ export const CelebrationProvider: React.FC<{ children: React.ReactNode }> = ({ c
                         from={{ opacity: 0, translateY: 10 }}
                         animate={{ opacity: 1, translateY: 0 }}
                         transition={{ delay: 500 }}
-                        style={styles.badge}
+                        style={[
+                            styles.badge, 
+                            activeCelebration.type === 'success' && { backgroundColor: 'rgba(16, 185, 129, 0.2)', borderColor: 'rgba(16, 185, 129, 0.4)' }
+                        ]}
                     >
-                        <Text style={styles.badgeText}>MỞ KHÓA THÀNH TỰU</Text>
+                        <Text style={[styles.badgeText, activeCelebration.type === 'success' && { color: '#10b981' }]}>
+                            {activeCelebration.badge || (activeCelebration.type === 'success' ? 'TẢI LÊN THÀNH CÔNG' : 'MỞ KHÓA THÀNH TỰU')}
+                        </Text>
                     </MotiView>
 
                     <Text style={styles.title}>{activeCelebration.title}</Text>

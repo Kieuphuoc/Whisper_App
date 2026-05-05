@@ -238,13 +238,19 @@ export default function VoiceUploadSheet({
             setUploading(false);
             onUploadSuccess();
 
-            // Celebrate only on first post!
+            // Celebrate success!
             if (res.data?.data?.isFirstPost) {
                 celebrate({
                     title: 'Ký ức đã tỏa sáng!',
                     subtitle: 'Giọng nói của bạn đã chính thức lên bản đồ Whispery.',
                     achievementKey: 'first_voice',
                     type: 'achievement'
+                });
+            } else {
+                celebrate({
+                    title: 'Kỷ niệm đã được gửi gắm!',
+                    subtitle: 'Giọng nói của bạn đã hòa mình vào bản đồ Whispery.',
+                    type: 'success'
                 });
             }
         } catch (err: any) {

@@ -131,11 +131,59 @@ export default function FriendsModal({ visible, onClose, onSelectFriend }: Props
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(false);
     const [searching, setSearching] = useState(false);
+    const [suggestions, setSuggestions] = useState<FriendUser[]>([]);
+    const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
     const navigateToProfile = (userId: number) => {
         onClose();
         router.push(`/user/${userId}`);
     };
+
+    const loadSuggestions = useCallback(async () => {
+        try {
+            setSuggestionsLoading(true);
+            const token = await AsyncStorage.getItem('token');
+            if (!token) return;
+            const api = authApis(token);
+            // Fetch public voices to discover users
+            const res = await api.get(endpoints.voicePublic);
+            const voices = res.data?.data || [];
+            
+            // Extract unique users who are not 'me' and not already friends
+            const discoveredUsers: FriendUser[] = [];
+            const seenIds = new Set<number>();
+            if (user?.id) seenIds.add(user.id);
+            
+            // Also don't suggest people who are already friends
+            friends.forEach(f => seenIds.add(f.id));
+
+            voices.forEach((v: any) => {
+                const u = v.user;
+                if (u && !seenIds.has(u.id)) {
+                    discoveredUsers.push(u);
+                    seenIds.add(u.id);
+                }
+            });
+
+            // If not enough from voices, try a broad search for common letter 'a'
+            if (discoveredUsers.length < 5) {
+                const searchRes = await api.get(endpoints.searchUsers('a'));
+                const searchUsers = searchRes.data?.data || [];
+                searchUsers.forEach((u: FriendUser) => {
+                    if (!seenIds.has(u.id)) {
+                        discoveredUsers.push(u);
+                        seenIds.add(u.id);
+                    }
+                });
+            }
+
+            setSuggestions(discoveredUsers.slice(0, 10));
+        } catch (e) {
+            console.error('Load suggestions error:', e);
+        } finally {
+            setSuggestionsLoading(false);
+        }
+    }, [user?.id, friends, pending]);
 
     const load = useCallback(async () => {
         if (!user) return;
@@ -150,7 +198,8 @@ export default function FriendsModal({ visible, onClose, onSelectFriend }: Props
             ]);
 
             const fData = fRes.data?.data ?? fRes.data ?? [];
-            setFriends(Array.isArray(fData) ? fData : []);
+            const fList = Array.isArray(fData) ? fData : [];
+            setFriends(fList);
 
             const pData = pRes.data?.data ?? pRes.data ?? [];
             if (Array.isArray(pData)) {
@@ -169,7 +218,17 @@ export default function FriendsModal({ visible, onClose, onSelectFriend }: Props
         }
     }, [user, user?.id]);
 
-    useEffect(() => { if (visible) load(); }, [visible, load]);
+    useEffect(() => { 
+        if (visible) {
+            load(); 
+        }
+    }, [visible, load]);
+
+    useEffect(() => {
+        if (visible && friends.length === 0 && !loading) {
+            loadSuggestions();
+        }
+    }, [visible, friends.length, loading]);
 
     const handleSearch = async (query: string) => {
         setSearchQuery(query);
@@ -194,9 +253,12 @@ export default function FriendsModal({ visible, onClose, onSelectFriend }: Props
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) return;
-            await authApis(token).post(endpoints.friendRequest, { targetUserId });
+            const res = await authApis(token).post(endpoints.friendRequest, { receiverId: targetUserId });
+            const newRequest = res.data?.data || res.data;
+            if (newRequest) {
+                setPending(prev => [...prev, newRequest]);
+            }
             Alert.alert('Thành công', 'Đã gửi lời mời kết bạn.');
-            load();
         } catch (error: any) {
             Alert.alert('Lỗi', error.response?.data?.message || 'Không thể gửi lời mời.');
         }
@@ -206,10 +268,28 @@ export default function FriendsModal({ visible, onClose, onSelectFriend }: Props
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) return;
-            await authApis(token).post(endpoints.friendRespond(reqId), { action });
-            load();
+            const res = await authApis(token).post(endpoints.friendRespond(reqId), { action });
+            const updated = res.data?.data || res.data;
+            
+            setPending(prev => prev.filter(p => p.id !== reqId));
+            if (action === 'accept' && updated) {
+                // If accepted, move to friends list
+                const newFriend = updated.senderId === user?.id ? updated.receiver : updated.sender;
+                if (newFriend) setFriends(prev => [...prev, newFriend]);
+            }
         } catch {
             Alert.alert('Lỗi', 'Không thể phản hồi lời mời. Thử lại sau.');
+        }
+    };
+
+    const cancelRequest = async (reqId: number) => {
+        try {
+            const token = await AsyncStorage.getItem('token');
+            if (!token) return;
+            await authApis(token).delete(endpoints.friendCancel(reqId));
+            setPending(prev => prev.filter(p => p.id !== reqId));
+        } catch {
+            Alert.alert('Lỗi', 'Không thể thu hồi lời mời.');
         }
     };
 
@@ -221,7 +301,7 @@ export default function FriendsModal({ visible, onClose, onSelectFriend }: Props
                     try {
                         const token = await AsyncStorage.getItem('token');
                         if (!token) return;
-                        await authApis(token).delete(endpoints.friendRemove, { data: { friendId } });
+                        await authApis(token).delete(endpoints.friendRemove, { data: { otherUserId: friendId } });
                         setFriends(prev => prev.filter(f => f.id !== friendId));
                     } catch {
                         Alert.alert('Lỗi', 'Không thể xoá bạn bè.');
@@ -322,8 +402,8 @@ export default function FriendsModal({ visible, onClose, onSelectFriend }: Props
                         </TouchableOpacity>
 
                         <View style={styles.headerTitleBlock}>
-                            <Text style={[styles.title, { color: isDark ? '#fff' : '#111827' }]}>Vòng kết nối</Text>
-                            <Text style={styles.subtitle}>Bạn bè & lời mời</Text>
+                            <Text style={[styles.title, { color: isDark ? '#fff' : '#111827' }]}>Bạn bè</Text>
+                            <Text style={styles.subtitle}>Gợi ý & kết nối</Text>
                         </View>
 
                         <TouchableOpacity
@@ -435,22 +515,93 @@ export default function FriendsModal({ visible, onClose, onSelectFriend }: Props
                                     )}
                                     ListEmptyComponent={
                                         <View style={styles.emptyContainer}>
-                                            <MotiView
-                                                from={{ opacity: 0, scale: 0.5 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                transition={{ type: 'spring', delay: 200 }}
-                                                style={styles.emptyIconBox}
-                                            >
-                                                <Ionicons
-                                                    name="people"
-                                                    size={60}
-                                                    color={isDark ? 'rgba(255,255,255,0.2)' : '#f3f4f6'}
-                                                />
-                                            </MotiView>
-                                            <Text style={styles.emptyText}>Chưa có ai trong vòng kết nối</Text>
+                                            <Text style={styles.emptyText}>Bắt đầu hành trình kết nối</Text>
                                             <Text style={styles.emptySubText}>
-                                                Kết nối với bạn bè để bắt đầu chia sẻ.
+                                                Bạn chưa có ai trong danh sách. Hãy tìm kiếm hoặc kết bạn với những người xung quanh nhé!
                                             </Text>
+
+                                            {suggestions.length > 0 && (
+                                                <MotiView 
+                                                    from={{ opacity: 0, translateY: 20 }}
+                                                    animate={{ opacity: 1, translateY: 0 }}
+                                                    transition={{ delay: 400 }}
+                                                    style={styles.suggestionSection}
+                                                >
+                                                    <View style={styles.suggestionHeader}>
+                                                        <Text style={[styles.suggestionTitle, { color: currentTheme.colors.text }]}>Gợi ý cho bạn</Text>
+                                                        <TouchableOpacity onPress={loadSuggestions}>
+                                                            <Ionicons name="refresh" size={16} color={currentTheme.colors.primary} />
+                                                        </TouchableOpacity>
+                                                    </View>
+                                                    
+                                                    {suggestions.map((item, idx) => (
+                                                        <MotiView
+                                                            key={`suggest-${item.id}`}
+                                                            from={{ opacity: 0, translateX: -10 }}
+                                                            animate={{ opacity: 1, translateX: 0 }}
+                                                            transition={{ delay: 500 + idx * 100 }}
+                                                            style={styles.suggestionCard}
+                                                        >
+                                                            <TouchableOpacity 
+                                                                style={styles.suggestionInner}
+                                                                onPress={() => navigateToProfile(item.id)}
+                                                            >
+                                                                <Avatar user={item} size={40} />
+                                                                <View style={styles.suggestionInfo}>
+                                                                    <Text style={[styles.suggestionName, { color: currentTheme.colors.text }]} numberOfLines={1}>
+                                                                        {item.displayName || item.username}
+                                                                    </Text>
+                                                                    <Text style={styles.suggestionSub} numberOfLines={1}>
+                                                                        @{item.username}
+                                                                    </Text>
+                                                                </View>
+                                                                {(() => {
+                                                                    const sentReq = pending.find(p => p.senderId === user?.id && (p.receiverId === item.id || p.receiver?.id === item.id));
+                                                                    const receivedReq = pending.find(p => (p.receiverId === user?.id || p.receiver?.id === user?.id) && (p.senderId === item.id || p.sender?.id === item.id));
+                                                                    
+                                                                    if (sentReq) {
+                                                                        return (
+                                                                            <TouchableOpacity 
+                                                                                style={[styles.miniAddBtn, { backgroundColor: '#ef4444' }]}
+                                                                                onPress={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    cancelRequest(sentReq.id);
+                                                                                }}
+                                                                            >
+                                                                                <Ionicons name="close" size={14} color="#fff" />
+                                                                            </TouchableOpacity>
+                                                                        );
+                                                                    } else if (receivedReq) {
+                                                                        return (
+                                                                            <TouchableOpacity 
+                                                                                style={[styles.miniAddBtn, { backgroundColor: '#10b981' }]}
+                                                                                onPress={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    respondRequest(receivedReq.id, 'accept');
+                                                                                }}
+                                                                            >
+                                                                                <Ionicons name="checkmark" size={14} color="#fff" />
+                                                                            </TouchableOpacity>
+                                                                        );
+                                                                    } else {
+                                                                        return (
+                                                                            <TouchableOpacity 
+                                                                                style={[styles.miniAddBtn, { backgroundColor: currentTheme.colors.primary }]}
+                                                                                onPress={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    sendRequest(item.id);
+                                                                                }}
+                                                                            >
+                                                                                <Ionicons name="person-add" size={14} color="#fff" />
+                                                                            </TouchableOpacity>
+                                                                        );
+                                                                    }
+                                                                })()}
+                                                            </TouchableOpacity>
+                                                        </MotiView>
+                                                    ))}
+                                                </MotiView>
+                                            )}
                                         </View>
                                     }
                                 />
@@ -524,9 +675,15 @@ export default function FriendsModal({ visible, onClose, onSelectFriend }: Props
                                                             </TouchableOpacity>
                                                         </View>
                                                     ) : (
-                                                        <View style={styles.pendingBadge}>
-                                                            <Text style={styles.pendingBadgeText}>Chờ</Text>
-                                                        </View>
+                                                        <TouchableOpacity 
+                                                            style={styles.pendingBadge}
+                                                            onPress={(e) => {
+                                                                e.stopPropagation();
+                                                                cancelRequest(item.id);
+                                                            }}
+                                                        >
+                                                            <Text style={[styles.pendingBadgeText, { color: '#ef4444' }]}>Thu hồi</Text>
+                                                        </TouchableOpacity>
                                                     )}
                                                 </TouchableOpacity>
                                             </MotiView>
@@ -811,8 +968,8 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 40,
-        marginTop: 40,
+        paddingHorizontal: 40,
+        marginTop: 20,
     },
     emptyIconBox: {
         width: 100,
@@ -837,5 +994,56 @@ const styles = StyleSheet.create({
         marginTop: 6,
         opacity: 0.7,
         maxWidth: 200,
+    },
+
+    // Suggestion styles
+    suggestionSection: {
+        width: '100%',
+        marginTop: 20,
+        paddingTop: 20,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(0,0,0,0.05)',
+    },
+    suggestionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    suggestionTitle: {
+        fontSize: 18,
+        fontWeight: '800',
+        letterSpacing: -0.5,
+    },
+    suggestionCard: {
+        marginBottom: 10,
+    },
+    suggestionInner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.02)',
+        borderRadius: 20,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.03)',
+    },
+    suggestionInfo: {
+        flex: 1,
+        marginLeft: 12,
+    },
+    suggestionName: {
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    suggestionSub: {
+        fontSize: 12,
+        color: '#94a3b8',
+    },
+    miniAddBtn: {
+        width: 32,
+        height: 32,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });

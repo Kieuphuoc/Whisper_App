@@ -120,8 +120,8 @@ const MapSection = forwardRef<MapView, Props>(function MapSection(
         latitude: geometry.coordinates[1],
         longitude: geometry.coordinates[0],
       };
-      const size = count < 5 ? 44 : count < 15 ? 52 : 62;
-      const bg = count < 5 ? "#ef4444" : count < 15 ? "#f97316" : "#8b5cf6";
+      const size = count < 5 ? 46 : count < 15 ? 54 : 64;
+      const bg = count < 5 ? "#a5b4fc" : count < 15 ? "#8b5cf6" : "#6d28d9";
       return (
         <ClusterMarker key={id} id={id} coordinate={coord} count={count} size={size} bg={bg} onPress={onPress} />
       );
@@ -202,7 +202,7 @@ const MapSection = forwardRef<MapView, Props>(function MapSection(
                       style={styles.markerAvatar}
                     />
                     {/* Small icon overlay to indicate type */}
-                    <View style={[styles.typeIndicator, { backgroundColor: isAR ? "#8b5cf6" : "#ef4444" }]}>
+                    <View style={[styles.typeIndicator, { backgroundColor: "#8b5cf6" }]}>
                       <Ionicons
                         name={isAR ? "sparkles" : "mic"}
                         size={8}
@@ -221,7 +221,7 @@ const MapSection = forwardRef<MapView, Props>(function MapSection(
                     <Ionicons
                       name={isAR ? "sparkles-outline" : "mic-outline"}
                       size={13}
-                      color={isAR ? "#8b5cf6" : "#ef4444"}
+                      color="#8b5cf6"
                     />
                     <Text style={styles.calloutTitle} numberOfLines={1}>
                       {isAR ? "Giọng nói AR ẩn" : pin.content ?? "Ghim giọng nói"}

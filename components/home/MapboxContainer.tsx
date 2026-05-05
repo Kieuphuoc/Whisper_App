@@ -165,9 +165,9 @@ const MapboxContainer = forwardRef<Mapbox.MapView, Props>((props, ref) => {
               circleColor: [
                 'step',
                 ['get', 'point_count'],
-                '#ef4444', 10,
-                '#f97316', 50,
-                '#8b5cf6'
+                '#a5b4fc', 10,
+                '#8b5cf6', 50,
+                '#6d28d9'
               ],
               circleRadius: [
                 'step',
@@ -200,7 +200,7 @@ const MapboxContainer = forwardRef<Mapbox.MapView, Props>((props, ref) => {
             id="single-pins-layer"
             filter={['!', ['has', 'point_count']]}
             style={{
-              circleColor: '#ef4444',
+              circleColor: '#8b5cf6',
               circleRadius: 10,
               circleStrokeWidth: 2,
               circleStrokeColor: '#ffffff',
@@ -253,11 +253,13 @@ const MapboxContainer = forwardRef<Mapbox.MapView, Props>((props, ref) => {
                   resizeMode="cover"
                 />
                 
-                {pin.type === VoiceType.HIDDEN_AR && (
-                  <View style={styles.typeIndicator}>
-                    <Ionicons name="sparkles" size={8} color="#fff" />
-                  </View>
-                )}
+                <View style={[styles.typeIndicator, { backgroundColor: "#8b5cf6" }]}>
+                  <Ionicons 
+                    name={pin.type === VoiceType.HIDDEN_AR ? "sparkles" : "mic"} 
+                    size={8} 
+                    color="#fff" 
+                  />
+                </View>
               </View>
               <View style={[
                 styles.markerTail,
