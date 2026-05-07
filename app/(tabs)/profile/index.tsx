@@ -40,7 +40,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { BlurView } from 'expo-blur';
 import VoicePinCarousel from '@/components/memory/VoicePinCarousel';
 import VoicePinTurntable from '@/components/home/VoicePinCard';
-import FriendsModal from '@/components/FriendsModal';
 import { useNotifications } from '@/hooks/useNotifications';
 
 const MASCOT_ICONS: { [key: string]: any } = {
@@ -74,7 +73,7 @@ export default function ProfileScreen() {
     const [achievements, setAchievements] = useState<any[]>([]);
     const [tabLoading, setTabLoading] = useState(false);
     const [selectedPin, setSelectedPin] = useState<VoicePin | null>(null);
-    const [friendsVisible, setFriendsVisible] = useState(false);
+    const [hasPrivacyZones, setHasPrivacyZones] = useState<boolean>(true);
 
     const scrollY = useSharedValue(0);
     const shimmerProgress = useSharedValue(0);
@@ -119,6 +118,10 @@ export default function ProfileScreen() {
             const userData = uRes.data?.data || EMPTY_USER;
             setUser(userData);
             setStats(sRes.data?.data || EMPTY_STATS);
+
+            // Check for privacy zones
+            const pzRes = await api.get(endpoints.privacyZones).catch(() => ({ data: { data: [] } }));
+            setHasPrivacyZones((pzRes.data?.data || []).length > 0);
 
             if (dispatch) {
                 dispatch({ type: 'SET_USER', payload: userData });
@@ -335,17 +338,54 @@ export default function ProfileScreen() {
         <View style={[styles.container, { backgroundColor: currentTheme.colors.background }]}>
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
 
-            <FriendsModal visible={friendsVisible} onClose={() => setFriendsVisible(false)} />
-
             {/* FULL SCREEN BACKGROUND IMAGE */}
             <View style={StyleSheet.absoluteFill}>
                 {coverUri ? (
                     <Image source={{ uri: coverUri }} style={styles.fullscreenBackground} />
                 ) : (
-                    <LinearGradient
-                        colors={[currentTheme.colors.primary, currentTheme.colors.background]}
-                        style={styles.fullscreenBackground}
-                    />
+                    <View style={styles.fullscreenBackground}>
+                        <LinearGradient
+                            colors={[currentTheme.colors.primary, currentTheme.colors.background, '#4338ca']}
+                            style={StyleSheet.absoluteFill}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                        />
+                        {/* Mesh-like subtle overlays */}
+                        <MotiView
+                            from={{ opacity: 0.3, scale: 1 }}
+                            animate={{ opacity: 0.6, scale: 1.2 }}
+                            transition={{ loop: true, type: 'timing', duration: 8000, easing: Easing.inOut(Easing.sin) }}
+                            style={[styles.meshBlob, { backgroundColor: currentTheme.colors.secondary + '40', top: -50, left: -50 }]}
+                        />
+                        <MotiView
+                            from={{ opacity: 0.2, scale: 1.2 }}
+                            animate={{ opacity: 0.5, scale: 1 }}
+                            transition={{ loop: true, type: 'timing', duration: 10000, easing: Easing.inOut(Easing.sin), delay: 1000 }}
+                            style={[styles.meshBlob, { backgroundColor: '#7c3aed40', bottom: '20%', right: -50 }]}
+                        />
+
+                        {/* Centered Placeholder Content */}
+                        <View style={styles.emptyAuraContent}>
+                            <MotiView
+                                from={{ opacity: 0, translateY: 20 }}
+                                animate={{ opacity: 1, translateY: 0 }}
+                                transition={{ delay: 1200, type: 'spring' }}
+                                style={styles.emptyAuraIconContainer}
+                            >
+                                <BlurView intensity={20} tint={isDark ? "dark" : "light"} style={styles.emptyAuraBlurIcon}>
+                                    <Ionicons name="sparkles" size={40} color={isDark ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.8)"} />
+                                </BlurView>
+                            </MotiView>
+                            <MotiView
+                                from={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 1400, type: 'spring' }}
+                            >
+                                <Text style={styles.emptyAuraTitle}>Tỏa sáng với Aura!</Text>
+                                <Text style={styles.emptyAuraSubtitleText}>Chạm để thiết kế dấu ấn cá nhân của bạn</Text>
+                            </MotiView>
+                        </View>
+                    </View>
                 )}
                 {/* Overlay to ensure readability */}
                 <LinearGradient
@@ -365,25 +405,37 @@ export default function ProfileScreen() {
             >
                 <MotiView
                     from={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 1000, type: 'spring' }}
+                    animate={{ 
+                        scale: !coverUri ? [1, 1.1, 1] : 1, 
+                        opacity: 1 
+                    }}
+                    transition={{ 
+                        scale: !coverUri ? {
+                            type: 'timing',
+                            duration: 1500,
+                            loop: true,
+                            repeatReverse: true,
+                        } : { delay: 1000, type: 'spring' },
+                        opacity: { delay: 1000 }
+                    }}
                 >
-                    <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={[styles.editAuraBlur, { borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]}>
+                    <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={[styles.editAuraBlur, { borderColor: !coverUri ? currentTheme.colors.secondary : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)') }]}>
                         <LinearGradient
-                            colors={isDark ? ['rgba(255,255,255,0.1)', 'transparent'] : ['rgba(0,0,0,0.05)', 'transparent']}
+                            colors={!coverUri ? [currentTheme.colors.secondary, currentTheme.colors.primary] : (isDark ? ['rgba(255,255,255,0.1)', 'transparent'] : ['rgba(0,0,0,0.05)', 'transparent'])}
                             style={StyleSheet.absoluteFill}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 1 }}
+                            opacity={!coverUri ? 0.8 : 1}
                         />
-                        <Ionicons name="sparkles" size={16} color={isDark ? "#fff" : currentTheme.colors.primary} />
-                        <Text style={[styles.editAuraText, { color: isDark ? "#fff" : currentTheme.colors.text }]}>Đổi Aura</Text>
+                        <Ionicons name={!coverUri ? "camera" : "sparkles"} size={16} color="#fff" />
+                        <Text style={[styles.editAuraText, { color: "#fff" }]}>{!coverUri ? "Thiết lập Aura" : "Đổi Aura"}</Text>
                     </BlurView>
                 </MotiView>
             </TouchableOpacity>
 
             {/* FLOATING NOTIFICATION BUTTON */}
             <TouchableOpacity
-                onPress={() => router.push('/(tabs)/notification')}
+                onPress={() => router.push('/(tabs)/notification?from=profile')}
                 style={styles.floatingNotification}
                 activeOpacity={0.8}
             >
@@ -424,6 +476,36 @@ export default function ProfileScreen() {
                 contentContainerStyle={styles.scrollContent}
             >
                 <View style={styles.topEmptyGap} />
+
+                {/* PRIVACY NUDGE */}
+                {!hasPrivacyZones && (
+                    <MotiView
+                        from={{ opacity: 0, scale: 0.9, translateY: -20 }}
+                        animate={{ opacity: 1, scale: 1, translateY: 0 }}
+                        style={{ paddingHorizontal: 20, marginBottom: 10 }}
+                    >
+                        <TouchableOpacity 
+                            onPress={() => router.push('/(tabs)/profile/privacy-zones')}
+                            activeOpacity={0.9}
+                        >
+                            <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={{ borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255, 107, 107, 0.3)' }}>
+                                <LinearGradient
+                                    colors={['rgba(255, 107, 107, 0.15)', 'rgba(255, 107, 107, 0.05)']}
+                                    style={{ padding: 15, flexDirection: 'row', alignItems: 'center' }}
+                                >
+                                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255, 107, 107, 0.2)', alignItems: 'center', justify: 'center', marginRight: 12 }}>
+                                        <Ionicons name="shield-outline" size={24} color="#ff6b6b" style={{marginTop: 7}}/>
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={{ fontSize: 15, fontWeight: '700', color: isDark ? '#fff' : '#111' }}>Bảo vệ sự riêng tư của bạn</Text>
+                                        <Text style={{ fontSize: 12, color: isDark ? 'rgba(255,255,255,0.7)' : '#666' }}>Thiết lập "Vùng an toàn" để ẩn vị trí nhà riêng ngay!</Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={20} color={isDark ? 'rgba(255,255,255,0.5)' : '#999'} />
+                                </LinearGradient>
+                            </BlurView>
+                        </TouchableOpacity>
+                    </MotiView>
+                )}
 
                 {/* AVATAR & ASYMMETRIC NAME PANEL */}
                 <Animated.View style={[styles.profileContent, contentAnim]}>
@@ -483,14 +565,15 @@ export default function ProfileScreen() {
                             </MotiView>
 
                             <TouchableOpacity
-                                onPress={() => setFriendsVisible(true)}
+                                style={{ position: 'absolute', right: -10, top: -35, zIndex: 100 }} 
+                                onPress={() => router.push('/friends')}
                                 activeOpacity={0.7}
                             >
                                 <MotiView
                                     from={{ scale: 0, translateY: -20 }}
                                     animate={{ scale: 1, translateY: 0 }}
                                     transition={{ delay: 600 }}
-                                    style={[styles.statBubble, styles.bubbleSmall, { right: -10, top: -35 }]}
+                                    style={[styles.statBubble, styles.bubbleSmall]}
                                 >
                                     <BlurView intensity={40} tint={isDark ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: '#10b981' + (isDark ? '50' : '20') }]} />
                                     <Text style={[styles.bubbleValueSmall, { color: isDark ? '#fff' : '#059669' }]}>{stats?.friendCount || 0}</Text>
@@ -804,6 +887,10 @@ export default function ProfileScreen() {
                     <VoicePinTurntable
                         pin={selectedPin!}
                         onClose={() => setSelectedPin(null)}
+                        onDelete={() => {
+                            setMyVoices(prev => prev.filter(p => p.id !== selectedPin?.id));
+                            fetchData(true); // Also refresh stats
+                        }}
                     />
                 </View>
             )}
@@ -1164,4 +1251,47 @@ const styles = StyleSheet.create({
     },
     overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)' },
     absCenter: { position: 'absolute', top: '50%', left: '50%', transform: [{ translateX: -15 }, { translateY: -15 }] },
+    meshBlob: {
+        position: 'absolute',
+        width: 300,
+        height: 300,
+        borderRadius: 150,
+        filter: 'blur(60px)',
+    },
+    emptyAuraContent: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingBottom: height * 0.65, // Move it up significantly
+    },
+    emptyAuraIconContainer: {
+        marginBottom: 20,
+    },
+    emptyAuraBlurIcon: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,255,255,0.2)',
+    },
+    emptyAuraTitle: {
+        fontSize: 28,
+        fontWeight: '900',
+        color: '#fff',
+        textAlign: 'center',
+        textShadowColor: 'rgba(0,0,0,0.3)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 10,
+    },
+    emptyAuraSubtitleText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: 'rgba(255,255,255,0.8)',
+        textAlign: 'center',
+        marginTop: 8,
+        paddingHorizontal: 40,
+    },
 });

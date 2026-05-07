@@ -22,6 +22,7 @@ import { Text } from '@/components/ui/text';
 import MapView, { Marker, MapType } from 'react-native-maps';
 import { darkMapStyle } from '@/constants/MapStyles';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { Avatar } from '@/components/ui/Avatar';
 
 
 interface SettingItemProps {
@@ -124,7 +125,7 @@ export default function SettingsScreen() {
     };
 
     const getAvatarUri = (avatar?: string) => {
-        if (!avatar) return 'https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg';
+        if (!avatar) return null;
         if (avatar.startsWith('http')) return avatar;
         return `http://10.5.1.149:5000${avatar.startsWith('/') ? '' : '/'}${avatar}`;
     };
@@ -204,7 +205,11 @@ export default function SettingsScreen() {
                     className="flex-row items-center p-4 mb-8 bg-gray-50 dark:bg-gray-900 rounded-2xl"
                     onPress={() => router.push('/(tabs)/profile/edit-profile')}
                 >
-                    <Image source={{ uri: avatarUri }} className="w-16 h-16 rounded-full mr-4" />
+                    <Avatar 
+                        uri={avatarUri} 
+                        size={64} 
+                        style={{ marginRight: 16 }} 
+                    />
                     <View className="flex-1">
                         <Text style={{ fontSize: 18, fontWeight: '700', color: colorScheme === 'dark' ? '#fff' : '#111' }}>{displayName}</Text>
                         <Text style={{ color: colorScheme === 'dark' ? '#9ca3af' : '#6b7280', fontSize: 14 }}>Chỉnh sửa hồ sơ</Text>

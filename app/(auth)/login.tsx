@@ -140,9 +140,8 @@ export default function LoginScreen() {
       <StatusBar barStyle="light-content" />
 
       {/* Background Image */}
-      <Image
-        source={{ uri: 'https://i.pinimg.com/736x/8f/4f/83/8f4f836b45cae5270f1d717af7158070.jpg' }}
-        className="absolute w-full h-full"
+      <View 
+        className="absolute w-full h-full bg-[#1a1a1a]" 
       />
       <BlurView intensity={20} className="absolute inset-0 bg-neutral-900/60" />
 
@@ -156,7 +155,7 @@ export default function LoginScreen() {
         <View className="items-center mb-10">
           <View className="w-44 h-44 justify-center items-center overflow-hidden mb-2">
             <Image
-              source={require('../../assets/images/doctor_strange_1.png')}
+              source={require('../../assets/images/mascot_whispery.png')}
               className="w-full h-full"
               resizeMode="contain"
             />
@@ -214,6 +213,14 @@ export default function LoginScreen() {
                   </TouchableOpacity>
                 )}
               </View>
+              {i.field === 'password' && (
+                <TouchableOpacity 
+                  onPress={() => router.push('/(auth)/forgot-password')}
+                  className="self-end mt-1 mb-2"
+                >
+                  <Text className="text-xs font-medium text-violet-500/80 italic">Quên mật khẩu?</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ))}
 

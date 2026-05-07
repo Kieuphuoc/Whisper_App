@@ -43,6 +43,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Svg, Path, G, Circle } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
+import { BubbleBackground } from '@/components/ui/BubbleBackground';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -222,54 +223,6 @@ function generateAIInsight(stats: any[]) {
     return `Hành trình cảm xúc của bạn thật đa dạng! Sự cân bằng giữa các cung bậc cảm xúc là chìa khóa để bạn hiểu rõ bản thân hơn qua từng ngày.`;
 }
 
-// ─── Background Decoration ────────────────────────────────
-function BackgroundDecor({ isDark, currentTheme }: { isDark: boolean; currentTheme: any }) {
-    const Blob = ({ color, size, opacity }: { color: string; size: number; opacity: number }) => (
-        <Svg width={size * 2} height={size * 2} viewBox={`0 0 ${size * 2} ${size * 2}`} style={{ position: 'absolute' }}>
-            <G>
-                <Circle
-                    cx={size}
-                    cy={size}
-                    r={size * 0.8}
-                    fill={color}
-                    opacity={opacity}
-                />
-            </G>
-        </Svg>
-    );
-
-    return (
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
-            <MotiView
-                from={{ opacity: 0, scale: 0.8, translateX: -50 }}
-                animate={{ opacity: 1, scale: 1.5, translateX: -20 }}
-                transition={{ type: 'timing', duration: 12000, loop: true, repeatReverse: true }}
-                style={{ position: 'absolute', left: -120, top: 20 }}
-            >
-                <Blob color={currentTheme.colors.primary} size={250} opacity={isDark ? 0.15 : 0.12} />
-            </MotiView>
-            <MotiView
-                from={{ opacity: 0, scale: 0.8, translateX: 50 }}
-                animate={{ opacity: 1, scale: 2, translateX: 20 }}
-                transition={{ type: 'timing', duration: 15000, loop: true, repeatReverse: true, delay: 2000 }}
-                style={{ position: 'absolute', right: -150, top: 250 }}
-            >
-                <Blob color="#3b82f6" size={300} opacity={isDark ? 0.12 : 0.1} />
-            </MotiView>
-            <MotiView
-                from={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1.8 }}
-                transition={{ type: 'timing', duration: 18000, loop: true, repeatReverse: true, delay: 1000 }}
-                style={{ position: 'absolute', left: -20, bottom: 0 }}
-            >
-                <Blob color="#ec4899" size={220} opacity={isDark ? 0.1 : 0.08} />
-            </MotiView>
-            
-            {/* Overlay Blur for smoothness */}
-            <BlurView intensity={isDark ? 40 : 20} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
-        </View>
-    );
-}
 
 export default function MemoryScreen() {
     const colorScheme = useColorScheme() || 'light';
@@ -451,7 +404,7 @@ export default function MemoryScreen() {
                 ]}
                 style={StyleSheet.absoluteFill}
             />
-            <BackgroundDecor isDark={isDark} currentTheme={currentTheme} />
+            <BubbleBackground />
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
 
             <Animated.ScrollView

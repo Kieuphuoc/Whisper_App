@@ -33,6 +33,7 @@ type Props = {
   onPressDiscoveredPin?: () => void;
   externalSelectedPin?: VoicePin | null;
   onSelectPin?: (pin: VoicePin | null) => void;
+  onDeletePin?: (id: number) => void;
   autoPlayPin?: boolean;
   onRegionChangeComplete?: (region: Region) => void;
 };
@@ -70,6 +71,7 @@ const MapSection = forwardRef<MapView, Props>(function MapSection(
   onPressDiscoveredPin,
   externalSelectedPin,
   onSelectPin,
+  onDeletePin,
   autoPlayPin = false,
   onRegionChangeComplete,
 },
@@ -266,6 +268,10 @@ const MapSection = forwardRef<MapView, Props>(function MapSection(
         <VoicePinCard
           pin={selectedPin}
           onClose={() => setSelectedPin(null)}
+          onDelete={() => {
+            if (onDeletePin) onDeletePin(selectedPin.id);
+            setSelectedPin(null);
+          }}
           autoPlay={autoPlayPin && selectedPin.id === discoveredPin?.id}
         />
       )}

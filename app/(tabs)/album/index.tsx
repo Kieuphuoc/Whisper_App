@@ -485,7 +485,7 @@ export default function AlbumScreen() {
     }, [filteredUserAlbums]);
 
     const coverUri = useMemo(() => {
-        if (!user?.cover) return 'https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=2071&auto=format&fit=crop';
+        if (!user?.cover) return require('@/assets/images/mascot_whispery.png');
         if (user.cover.startsWith('http')) return user.cover;
         return `${BASE_URL}${user.cover.startsWith('/') ? '' : '/'}${user.cover}`;
     }, [user]);
@@ -560,19 +560,23 @@ export default function AlbumScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
 
-            {/* FULL SCREEN BACKGROUND */}
             <View style={StyleSheet.absoluteFill}>
-                <Animated.Image
-                    source={{ uri: coverUri }}
-                    style={styles.fullscreenBg}
-                    blurRadius={12}
-                />
                 <LinearGradient
-                    colors={['rgba(0,0,0,0.35)', 'rgba(0,0,0,0.55)', 'rgba(0,0,0,0.92)']}
-                    locations={[0, 0.45, 1]}
+                    colors={isDark ? ['#1e1b4b', '#000'] : ['#f5f3ff', '#fff']}
                     style={StyleSheet.absoluteFill}
+                />
+                <MotiView
+                    from={{ opacity: 0.2, scale: 1 }}
+                    animate={{ opacity: 0.4, scale: 1.5 }}
+                    transition={{ loop: true, type: 'timing', duration: 15000, repeatReverse: true }}
+                    style={[styles.auraCircle, { backgroundColor: isDark ? '#4338ca' : '#ddd6fe', top: -50, right: -100 }]}
+                />
+                <BlurView 
+                    intensity={isDark ? 100 : 60} 
+                    tint={isDark ? "dark" : "light"} 
+                    style={StyleSheet.absoluteFill} 
                 />
             </View>
 
@@ -585,52 +589,23 @@ export default function AlbumScreen() {
                 }
                 contentContainerStyle={styles.scrollContent}
             >
-                {/* ── Header ── */}
                 <View style={styles.header}>
-                    <Animated.View style={[styles.headerLeft, headerTextAnim]}>
+                    <View style={styles.headerLeft}>
                         <MotiView
-                            from={{ opacity: 0, translateX: -40 }}
+                            from={{ opacity: 0, translateX: -20 }}
                             animate={{ opacity: 1, translateX: 0 }}
-                            transition={{ type: 'spring', damping: 12 }}
+                            transition={{ type: 'spring', damping: 15 }}
                         >
-                            <Text style={styles.title}>Album</Text>
-                            <Text style={styles.subtitle}>Bộ sưu tập của bạn</Text>
-                        </MotiView>
-                    </Animated.View>
-
-                    {/* Stat Bubbles (Profile-style asymmetric) */}
-                    <View style={styles.bubblesContainer}>
-                        <MotiView
-                            from={{ scale: 0, translateX: 20 }}
-                            animate={{ scale: 1, translateX: 0 }}
-                            transition={{ delay: 300, type: 'spring' }}
-                            style={[styles.statBubble, styles.bubbleLarge]}
-                        >
-                            <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFill, { backgroundColor: '#7c3aed50' }]} />
-                            <Text style={styles.bubbleValue}>{pins.length}</Text>
-                            <Text style={styles.bubbleLabel}>Chốt</Text>
-                        </MotiView>
-                        <MotiView
-                            from={{ scale: 0, translateY: 20 }}
-                            animate={{ scale: 1, translateY: 0 }}
-                            transition={{ delay: 450, type: 'spring' }}
-                            style={[styles.statBubble, styles.bubbleMedium, { bottom: -8, left: 5 }]}
-                        >
-                            <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFill, { backgroundColor: '#ec489950' }]} />
-                            <Text style={styles.bubbleValueSm}>{smartAlbums.length}</Text>
-                            <Text style={styles.bubbleLabelSm}>Smart</Text>
-                        </MotiView>
-                        <MotiView
-                            from={{ scale: 0, translateY: -20 }}
-                            animate={{ scale: 1, translateY: 0 }}
-                            transition={{ delay: 600, type: 'spring' }}
-                            style={[styles.statBubble, styles.bubbleSmall, { right: -8, top: -30 }]}
-                        >
-                            <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFill, { backgroundColor: '#10b98150' }]} />
-                            <Text style={styles.bubbleValueXs}>{userAlbums.length}</Text>
-                            <Text style={styles.bubbleLabelXs}>Của tôi</Text>
+                            <Text style={[styles.title, { color: isDark ? '#fff' : '#111827' }]}>Album</Text>
+                            <Text style={styles.subtitle}>Xem các bộ sưu tập của bạn</Text>
                         </MotiView>
                     </View>
+                    <TouchableOpacity 
+                        onPress={() => router.push('/(tabs)/album/create')}
+                        style={[styles.headerIconBtn, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
+                    >
+                        <Ionicons name="add" size={24} color={currentTheme.colors.primary} />
+                    </TouchableOpacity>
                 </View>
 
                 {/* ── Glass Search Bar ── */}
@@ -640,12 +615,15 @@ export default function AlbumScreen() {
                     transition={{ delay: 200 }}
                     style={styles.searchWrapper}
                 >
-                    <BlurView intensity={20} tint="dark" style={styles.searchBlur}>
-                        <Ionicons name="search-outline" size={18} color="rgba(255,255,255,0.5)" />
+                    <BlurView intensity={isDark ? 30 : 60} tint={isDark ? 'dark' : 'light'} style={[styles.searchBlur, { 
+                        borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                        backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.7)'
+                    }]}>
+                        <Ionicons name="search-outline" size={18} color={isDark ? "rgba(255,255,255,0.5)" : "#6b7280"} />
                         <TextInput
-                            style={styles.searchInput}
+                            style={[styles.searchInput, { color: isDark ? '#fff' : '#111827' }]}
                             placeholder="Tìm kiếm album, cảm xúc, địa điểm..."
-                            placeholderTextColor="rgba(255,255,255,0.35)"
+                            placeholderTextColor={isDark ? "rgba(255,255,255,0.35)" : "#9ca3af"}
                             value={searchQuery}
                             onChangeText={v => { setSearchQuery(v); setShowSuggestions(v.length > 0); }}
                             onFocus={() => searchQuery.length > 0 && setShowSuggestions(true)}
@@ -654,7 +632,7 @@ export default function AlbumScreen() {
                         />
                         {searchQuery.length > 0 && (
                             <TouchableOpacity onPress={() => { setSearchQuery(''); setShowSuggestions(false); }}>
-                                <Ionicons name="close-circle" size={16} color="rgba(255,255,255,0.4)" />
+                                <Ionicons name="close-circle" size={16} color={isDark ? "rgba(255,255,255,0.4)" : "#9ca3af"} />
                             </TouchableOpacity>
                         )}
                     </BlurView>
@@ -804,8 +782,7 @@ export default function AlbumScreen() {
 
 // ─── Section Header ───────────────────────────────────────────────────────
 
-function SectionHeader({ icon, title, iconColor, rightAction }: {
-    icon: string;
+function SectionHeader({ title, iconColor, rightAction }: {
     title: string;
     iconColor: string;
     rightAction?: React.ReactNode;
@@ -813,9 +790,7 @@ function SectionHeader({ icon, title, iconColor, rightAction }: {
     return (
         <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleRow}>
-                <View style={[styles.sectionIconDot, { backgroundColor: iconColor + '22' }]}>
-                    <Ionicons name={icon as any} size={16} color={iconColor} />
-                </View>
+                <View style={[styles.sectionDash, { backgroundColor: iconColor }]} />
                 <Text style={styles.sectionTitle}>{title}</Text>
             </View>
             {rightAction}
@@ -864,63 +839,50 @@ function AlbumEmptyState({ onPress, hasSearch }: { onPress: () => void; hasSearc
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#000' },
     fullscreenBg: { width: '100%', height: '100%', resizeMode: 'cover' },
-    scrollContent: { paddingTop: 60 },
+    auraCircle: {
+        position: 'absolute',
+        width: width,
+        height: width,
+        borderRadius: width / 2,
+    },
+    scrollContent: { paddingTop: 0 },
 
     // Header
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        paddingTop: 70,
+        paddingBottom: 20,
         paddingHorizontal: 24,
-        marginBottom: 28,
     },
-    headerLeft: { flex: 1 },
-    title: {
-        fontSize: 48,
-        fontWeight: '900',
-        color: '#fff',
-        letterSpacing: -2,
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
     },
-    subtitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: 'rgba(255,255,255,0.5)',
-        marginTop: -4,
-    },
-
-    // Bubbles (Profile-style)
-    bubblesContainer: { width: 130, height: 110, position: 'relative' },
-    statBubble: {
-        position: 'absolute',
+    title: { fontSize: 34, fontWeight: '900', letterSpacing: -1.5 },
+    subtitle: { fontSize: 13, color: '#9ca3af', fontWeight: '500', marginTop: -2 },
+    headerIconBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
-        borderRadius: 100,
-        overflow: 'hidden',
-        borderWidth: 1.5,
-        borderColor: 'rgba(255,255,255,0.3)',
+        borderWidth: 1,
+        backgroundColor: 'rgba(255,255,255,0.05)',
     },
-    bubbleLarge: { width: 80, height: 80, right: 0, top: 0 },
-    bubbleMedium: { width: 65, height: 65 },
-    bubbleSmall: { width: 55, height: 55 },
-    bubbleValue: { fontSize: 22, fontWeight: '900', color: '#fff' },
-    bubbleLabel: { fontSize: 9, fontWeight: '800', textTransform: 'uppercase', color: 'rgba(255,255,255,0.85)' },
-    bubbleValueSm: { fontSize: 17, fontWeight: '900', color: '#fff' },
-    bubbleLabelSm: { fontSize: 8, fontWeight: '800', textTransform: 'uppercase', color: 'rgba(255,255,255,0.85)' },
-    bubbleValueXs: { fontSize: 14, fontWeight: '900', color: '#fff' },
-    bubbleLabelXs: { fontSize: 7, fontWeight: '800', textTransform: 'uppercase', color: 'rgba(255,255,255,0.85)' },
 
     // Search
     searchWrapper: { paddingHorizontal: 20, marginBottom: 24 },
     searchBlur: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 15,
-        paddingVertical: 12,
-        borderRadius: 24,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderRadius: 20,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.12)',
-        backgroundColor: 'rgba(255,255,255,0.04)',
         gap: 10,
     },
     searchInput: {
@@ -933,20 +895,15 @@ const styles = StyleSheet.create({
     // Section Header
     sectionHeader: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        marginBottom: 16,
+        marginTop: 25,
+        marginBottom: 15,
+        gap: 10,
+        paddingHorizontal: 24,
     },
+    sectionDash: { width: 3, height: 14, borderRadius: 2 },
+    sectionTitle: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1, color: '#9ca3af' },
     sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    sectionIconDot: {
-        width: 32,
-        height: 32,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    sectionTitle: { fontSize: 20, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
 
     // Smart Albums Row
     smartRow: {

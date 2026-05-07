@@ -2,7 +2,7 @@ import { VoicePin } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { BlurView } from "expo-blur";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useContext } from "react";
 import {
   Animated,
   Dimensions,
@@ -19,12 +19,17 @@ import { FloatingVibe } from "./voice-pin/FloatingVibe";
 import { ReactionPicker } from "./voice-pin/ReactionPicker";
 import { ReportModal } from "./voice-pin/ReportModal";
 import { useVoicePinReport } from "./voice-pin/useVoicePinReport";
+import { MoreActionsSheet } from "./voice-pin/MoreActionsSheet";
 import { useVoicePinTurntable } from "./voice-pin/useVoicePinTurntable";
 import { Easing as ReanimatedEasing } from "react-native-reanimated";
 import { View as MotiView, AnimatePresence } from "moti";
 import { Text } from "../ui/text";
 import { VinylRecord } from "./voice-pin/VinylRecord";
 import { LinearGradient } from "expo-linear-gradient";
+import { MyUserContext } from "@/configs/Context";
+import { authApis, endpoints } from "@/configs/Apis";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Alert } from "react-native";
 
 const { width, height } = Dimensions.get("window");
 const CARD_WIDTH = Math.min(width * 0.92, 430);
@@ -33,18 +38,22 @@ const CARD_MAX_HEIGHT = Math.min(height * 0.88, 820);
 export default function VoicePinTurntable({
   pin,
   onClose,
+  onDelete,
   autoPlay = false,
 }: {
   pin: VoicePin;
   onClose: () => void;
+  onDelete?: () => void;
   autoPlay?: boolean;
 }) {
   const colorScheme = useColorScheme() || "dark";
   const currentTheme = theme[colorScheme];
   const router = useRouter();
+  const currentUser = useContext(MyUserContext);
 
   const [isClosing, setIsClosing] = useState(false);
   const [showAddToAlbum, setShowAddToAlbum] = useState(false);
+  const [showMoreSheet, setShowMoreSheet] = useState(false);
 
 
 
@@ -128,6 +137,61 @@ export default function VoicePinTurntable({
     ]).start(() => onClose());
   };
 
+  const handleDelete = async () => {
+    Alert.alert(
+      "Xóa VoicePin",
+      "Bạn có chắc chắn muốn xóa VoicePin này không?",
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Xóa",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem("token");
+              if (!token) return;
+              const api = authApis(token);
+              await api.delete(endpoints.deleteVoicePin(pin.id));
+              Alert.alert("Thành công", "VoicePin đã được xóa.");
+              if (onDelete) onDelete();
+              handleClose();
+            } catch (error: any) {
+              console.error("Delete voice error:", error);
+              Alert.alert("Lỗi", "Không thể xóa VoicePin. Vui lòng thử lại.");
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleNotInterested = () => {
+    Alert.alert(
+      "Đã ẩn bài viết",
+      "Chúng tôi sẽ hạn chế hiển thị những nội dung tương tự cho bạn.",
+      [{ text: "OK", onPress: () => handleClose() }]
+    );
+  };
+
+  const handleShareToUser = () => {
+    // Placeholder for sharing to specific user via message
+    // In a real app, this would open a friend selector
+    Alert.alert(
+      "Gửi cho bạn bè",
+      "Chọn bạn bè để gửi bài đăng này?",
+      [
+        { text: "Hủy", style: "cancel" },
+        { 
+          text: "Chọn bạn bè", 
+          onPress: () => {
+            setShowMoreSheet(false);
+            router.push({ pathname: '/chat', params: { sharePinId: pin.id } });
+          } 
+        }
+      ]
+    );
+  };
+
   return (
     <>
       <Animated.View style={[styles.overlay, { opacity: overlayOpacity, backgroundColor: colorScheme === 'dark' ? "rgba(15, 23, 42, 0.55)" : "rgba(255, 255, 255, 0.4)" }]}>
@@ -167,6 +231,7 @@ export default function VoicePinTurntable({
               reactionCount={reactionCount}
               isThinking={isThinking}
               showTranscription={showTranscription}
+              onMorePress={() => setShowMoreSheet(true)}
               theme={currentTheme}
             />
           </View>
@@ -207,7 +272,7 @@ export default function VoicePinTurntable({
           </View>
         </Animated.View>
 
-        {floatingEmojis.map((f) => (
+        {floatingEmojis.map((f: any) => (
           <FloatingVibe
             key={f.id}
             type={f.type}
@@ -231,11 +296,30 @@ export default function VoicePinTurntable({
         theme={currentTheme}
       />
 
-      <AddToAlbumSheet
+       <AddToAlbumSheet
         visible={showAddToAlbum}
         pinId={pin.id}
         onDismiss={() => setShowAddToAlbum(false)}
         onAdded={() => setShowAddToAlbum(false)}
+      />
+
+      <MoreActionsSheet
+        isVisible={showMoreSheet}
+        onClose={() => setShowMoreSheet(false)}
+        pin={pin}
+        isOwner={currentUser?.id === pin.user?.id}
+        onDelete={handleDelete}
+        onReport={() => {
+          setShowMoreSheet(false);
+          setShowReportModal(true);
+        }}
+        onNotInterested={handleNotInterested}
+        onShareToUser={handleShareToUser}
+        onAddToAlbum={() => {
+          setShowMoreSheet(false);
+          setShowAddToAlbum(true);
+        }}
+        theme={currentTheme}
       />
     </>
   );

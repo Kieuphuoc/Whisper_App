@@ -92,14 +92,37 @@ export default function CreateAlbumScreen() {
         <View style={styles.container}>
             <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-            {/* Background */}
-            <LinearGradient
-                colors={[selectedGradient.colors[0] + '33', currentTheme.colors.background]}
-                locations={[0, 0.5]}
-                style={StyleSheet.absoluteFill}
-            />
+            <View style={StyleSheet.absoluteFill}>
+                <LinearGradient
+                    colors={isDark ? ['#1e1b4b', '#000'] : ['#f5f3ff', '#fff']}
+                    style={StyleSheet.absoluteFill}
+                />
+                <MotiView
+                    from={{ opacity: 0.2, scale: 1 }}
+                    animate={{ opacity: 0.4, scale: 1.5 }}
+                    transition={{ loop: true, type: 'timing', duration: 15000, repeatReverse: true }}
+                    style={[styles.auraCircle, { backgroundColor: isDark ? '#4338ca' : '#ddd6fe', top: -50, right: -100 }]}
+                />
+                <BlurView 
+                    intensity={isDark ? 100 : 60} 
+                    tint={isDark ? "dark" : "light"} 
+                    style={StyleSheet.absoluteFill} 
+                />
+            </View>
 
-            <SettingTabHeader title="Tạo Album mới" />
+            {/* Custom Header */}
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => router.back()} style={[styles.headerIconBtn, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                    <Ionicons name="arrow-back" size={24} color={isDark ? '#fff' : '#111827'} />
+                </TouchableOpacity>
+                <View style={styles.headerTitleWrap}>
+                    <Text style={[styles.title, { color: isDark ? '#fff' : '#111827' }]}>Tạo Album</Text>
+                    <Text style={styles.subtitle}>Thiết lập bộ sưu tập mới</Text>
+                </View>
+                <TouchableOpacity onPress={handleCreate} disabled={saving || !name.trim()} style={[styles.headerIconBtn, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                    <Ionicons name="checkmark" size={24} color={(!name.trim() || saving) ? (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : currentTheme.colors.primary} />
+                </TouchableOpacity>
+            </View>
 
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -156,19 +179,25 @@ export default function CreateAlbumScreen() {
                         transition={{ delay: 100 }}
                         style={styles.section}
                     >
-                        <Text style={[styles.sectionLabel, { color: currentTheme.colors.text }]}>Tên album</Text>
-                        <View style={[styles.inputWrapper, { borderColor: currentTheme.colors.border ?? 'rgba(0,0,0,0.1)' }]}>
+                        <View style={styles.sectionHeader}>
+                            <View style={[styles.sectionDash, { backgroundColor: selectedGradient.colors[0] }]} />
+                            <Text style={styles.sectionTitle}>Tên album</Text>
+                        </View>
+                        <BlurView intensity={isDark ? 30 : 60} tint={isDark ? 'dark' : 'light'} style={[styles.inputWrapper, { 
+                            borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                            backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.7)'
+                        }]}>
                             <TextInput
-                                style={[styles.input, { color: currentTheme.colors.text, backgroundColor: currentTheme.colors.surface ?? 'rgba(0,0,0,0.04)' }]}
+                                style={[styles.input, { color: isDark ? '#fff' : '#111827' }]}
                                 placeholder="Nhập tên album..."
-                                placeholderTextColor={currentTheme.colors.textMuted}
+                                placeholderTextColor={isDark ? "rgba(255,255,255,0.35)" : "#9ca3af"}
                                 value={name}
                                 onChangeText={setName}
                                 maxLength={50}
                                 autoCapitalize="sentences"
                             />
-                        </View>
-                        <Text style={[styles.inputHint, { color: currentTheme.colors.textMuted }]}>{name.length}/50</Text>
+                        </BlurView>
+                        <Text style={[styles.inputHint, { color: isDark ? 'rgba(255,255,255,0.4)' : '#9ca3af' }]}>{name.length}/50</Text>
                     </MotiView>
 
                     {/* ── Description Input ── */}
@@ -178,12 +207,18 @@ export default function CreateAlbumScreen() {
                         transition={{ delay: 150 }}
                         style={styles.section}
                     >
-                        <Text style={[styles.sectionLabel, { color: currentTheme.colors.text }]}>Mô tả (tuỳ chọn)</Text>
-                        <View style={[styles.inputWrapper, { borderColor: currentTheme.colors.border ?? 'rgba(0,0,0,0.1)' }]}>
+                        <View style={styles.sectionHeader}>
+                            <View style={[styles.sectionDash, { backgroundColor: selectedGradient.colors[0] }]} />
+                            <Text style={styles.sectionTitle}>Mô tả (tuỳ chọn)</Text>
+                        </View>
+                        <BlurView intensity={isDark ? 30 : 60} tint={isDark ? 'dark' : 'light'} style={[styles.inputWrapper, { 
+                            borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                            backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.7)'
+                        }]}>
                             <TextInput
-                                style={[styles.textArea, { color: currentTheme.colors.text, backgroundColor: currentTheme.colors.surface ?? 'rgba(0,0,0,0.04)' }]}
+                                style={[styles.textArea, { color: isDark ? '#fff' : '#111827' }]}
                                 placeholder="Mô tả ngắn về album này..."
-                                placeholderTextColor={currentTheme.colors.textMuted}
+                                placeholderTextColor={isDark ? "rgba(255,255,255,0.35)" : "#9ca3af"}
                                 value={description}
                                 onChangeText={setDescription}
                                 maxLength={120}
@@ -191,7 +226,7 @@ export default function CreateAlbumScreen() {
                                 numberOfLines={3}
                                 textAlignVertical="top"
                             />
-                        </View>
+                        </BlurView>
                     </MotiView>
 
                     {/* ── Gradient Picker ── */}
@@ -201,7 +236,10 @@ export default function CreateAlbumScreen() {
                         transition={{ delay: 200 }}
                         style={styles.section}
                     >
-                        <Text style={[styles.sectionLabel, { color: currentTheme.colors.text }]}>Màu sắc</Text>
+                        <View style={styles.sectionHeader}>
+                            <View style={[styles.sectionDash, { backgroundColor: selectedGradient.colors[0] }]} />
+                            <Text style={styles.sectionTitle}>Màu sắc</Text>
+                        </View>
                         <ScrollView
                             horizontal
                             showsHorizontalScrollIndicator={false}
@@ -245,7 +283,10 @@ export default function CreateAlbumScreen() {
                         transition={{ delay: 250 }}
                         style={styles.section}
                     >
-                        <Text style={[styles.sectionLabel, { color: currentTheme.colors.text }]}>Quyền truy cập</Text>
+                        <View style={styles.sectionHeader}>
+                            <View style={[styles.sectionDash, { backgroundColor: selectedGradient.colors[0] }]} />
+                            <Text style={styles.sectionTitle}>Quyền truy cập</Text>
+                        </View>
                         <View style={styles.visibilityGroup}>
                             {VISIBILITY_OPTIONS.map((opt, i) => {
                                 const isSelected = opt.key === visibility;
@@ -257,25 +298,26 @@ export default function CreateAlbumScreen() {
                                         style={[
                                             styles.visibilityOption,
                                             {
-                                                backgroundColor: isSelected
-                                                    ? selectedGradient.colors[0] + '18'
-                                                    : (currentTheme.colors.surface ?? 'rgba(0,0,0,0.03)'),
                                                 borderColor: isSelected
                                                     ? selectedGradient.colors[0] + '60'
-                                                    : (currentTheme.colors.border ?? 'rgba(0,0,0,0.08)'),
+                                                    : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'),
+                                                backgroundColor: isSelected
+                                                    ? selectedGradient.colors[0] + '12'
+                                                    : (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.7)'),
                                             },
                                         ]}
                                     >
+                                        <BlurView intensity={isSelected ? 40 : 20} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
                                         <View style={[styles.visIconWrap, { backgroundColor: isSelected ? selectedGradient.colors[0] + '22' : 'rgba(0,0,0,0.05)' }]}>
                                             <Ionicons
                                                 name={opt.icon}
                                                 size={18}
-                                                color={isSelected ? selectedGradient.colors[0] : currentTheme.colors.textMuted}
+                                                color={isSelected ? selectedGradient.colors[0] : (isDark ? 'rgba(255,255,255,0.5)' : '#6b7280')}
                                             />
                                         </View>
                                         <View style={{ flex: 1 }}>
-                                            <Text style={[styles.visLabel, { color: currentTheme.colors.text }]}>{opt.label}</Text>
-                                            <Text style={[styles.visDesc, { color: currentTheme.colors.textMuted }]}>{opt.desc}</Text>
+                                            <Text style={[styles.visLabel, { color: isDark ? '#fff' : '#111827' }]}>{opt.label}</Text>
+                                            <Text style={[styles.visDesc, { color: isDark ? 'rgba(255,255,255,0.5)' : '#6b7280' }]}>{opt.desc}</Text>
                                         </View>
                                         {isSelected && (
                                             <View style={[styles.visCheck, { backgroundColor: selectedGradient.colors[0] }]}>
@@ -326,8 +368,49 @@ export default function CreateAlbumScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1 },
-    scrollContent: { paddingBottom: 40 },
+    container: { flex: 1, backgroundColor: '#000' },
+    auraCircle: {
+        position: 'absolute',
+        width: 300,
+        height: 300,
+        borderRadius: 150,
+    },
+    scrollContent: { paddingBottom: 40, paddingTop: 10 },
+
+    // Header
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingTop: 70,
+        paddingBottom: 20,
+        paddingHorizontal: 24,
+    },
+    headerTitleWrap: {
+        alignItems: 'center',
+    },
+    title: { fontSize: 28, fontWeight: '900', letterSpacing: -1 },
+    subtitle: { fontSize: 13, color: '#9ca3af', fontWeight: '500', marginTop: -2 },
+    headerIconBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+    },
+
+    // Section Header
+    sectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 25,
+        marginBottom: 15,
+        gap: 10,
+    },
+    sectionDash: { width: 3, height: 14, borderRadius: 2 },
+    sectionTitle: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1, color: '#9ca3af' },
 
     // Preview Card
     previewContainer: { alignItems: 'center', paddingVertical: 28 },
@@ -382,14 +465,13 @@ const styles = StyleSheet.create({
     previewCount: { color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '600', marginTop: 2 },
 
     // Sections
-    section: { paddingHorizontal: 20, marginBottom: 24 },
-    sectionLabel: { fontSize: 15, fontWeight: '800', marginBottom: 12, letterSpacing: -0.2 },
+    section: { paddingHorizontal: 24, marginBottom: 12 },
 
     // Inputs
-    inputWrapper: { borderRadius: 16, overflow: 'hidden', borderWidth: 1 },
-    input: { paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, fontWeight: '500', borderRadius: 16 },
-    textArea: { paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, fontWeight: '500', borderRadius: 16, minHeight: 80 },
-    inputHint: { fontSize: 12, fontWeight: '500', marginTop: 6, textAlign: 'right' },
+    inputWrapper: { borderRadius: 20, overflow: 'hidden', borderWidth: 1 },
+    input: { paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, fontWeight: '600' },
+    textArea: { paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, fontWeight: '600', minHeight: 100 },
+    inputHint: { fontSize: 12, fontWeight: '600', marginTop: 8, textAlign: 'right' },
 
     // Gradient row
     gradientRow: { gap: 10, paddingVertical: 4 },

@@ -23,6 +23,7 @@ import Animated, {
   useDerivedValue,
 } from 'react-native-reanimated';
 import { BASE_URL } from '@/configs/Apis';
+import { Avatar } from '@/components/ui/Avatar';
 
 const { width } = Dimensions.get('window');
 const PAGE_PADDING = 24;
@@ -81,6 +82,7 @@ export function VoicePinCarouselCard({
   fallbackAuraUrl,
 }: VoicePinCarouselCardProps) {
   const isHidden = pin.isAnonymous || pin.type === 'HIDDEN_AR';
+  const isDark = currentTheme.dark;
   const meta = isHidden ? { color: '#C084FC', icon: 'sparkles' as any, vi: 'Bí ẩn', gradient: ['#C084FC', '#9333EA'] } : getMeta(pin.emotionLabel);
   
   const imgUrl = useMemo(() => {
@@ -147,7 +149,7 @@ export function VoicePinCarouselCard({
           { 
             height: cardHeight, 
             borderRadius: isGrid ? 20 : 32,
-            backgroundColor: currentTheme.dark ? 'rgba(20, 20, 30, 0.7)' : 'rgba(255, 255, 255, 0.6)',
+            backgroundColor: 'transparent',
           }
         ]}
       >
@@ -186,112 +188,101 @@ export function VoicePinCarouselCard({
           {/* Aesthetic Overlay */}
           <LinearGradient
             colors={currentTheme.dark ? 
-                ['rgba(10,10,20,0)', 'rgba(10,10,20,0.2)', 'rgba(10,10,20,0.8)', '#0a0a14'] :
-                ['rgba(255,255,255,0)', 'rgba(255,255,255,0.1)', 'rgba(255,255,255,0.4)', 'rgba(255,255,255,0.8)']}
-            locations={[0, 0.3, 0.7, 1]}
+                ['transparent', 'rgba(10,10,20,0.2)', 'rgba(10,10,20,0.8)', '#0a0a14'] :
+                ['transparent', 'rgba(255,255,255,0.3)', 'rgba(255,255,255,0.9)', 'rgba(255,255,255,1)']}
+            locations={[0, 0.4, 0.7, 1]}
             style={StyleSheet.absoluteFill}
           />
 
-          {/* Top Header Section */}
-          <View style={styles.topSection}>
-            <View style={{ flexDirection: 'row', gap: 8, flex: 1 }}>
-                <BlurView intensity={30} tint={currentTheme.dark ? "dark" : "light"} style={[styles.moodBadge, { borderColor: currentTheme.dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)' }]}>
-                   <MotiView
-                      from={{ scale: 0.8 }}
-                      animate={{ scale: 1 }}
-                      transition={{ loop: true, type: 'spring' }}
-                   >
-                      <Ionicons name={meta.icon} size={isGrid ? 12 : 16} color={meta.color} />
-                   </MotiView>
-                   {!isGrid && <Text style={[styles.moodText, { color: currentTheme.dark ? '#FFF' : currentTheme.colors.text }]}>{meta.vi}</Text>}
+          <View style={styles.header}>
+            <View style={{ flexDirection: 'row', gap: 6, flex: 1, flexWrap: 'wrap' }}>
+                <BlurView 
+                    intensity={isDark ? 50 : 80} 
+                    tint={isDark ? "dark" : "light"} 
+                    style={[
+                        styles.glassBadge, 
+                        { 
+                            borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.4)'
+                        }
+                    ]}
+                >
+                    <Ionicons name={meta.icon} size={isGrid ? 12 : 14} color={meta.color} />
+                    {!isGrid && <Text style={[styles.badgeText, { color: isDark ? '#FFF' : '#111827' }]}>{meta.vi}</Text>}
                 </BlurView>
 
                 {pin.status !== 'APPROVED' && (
-                    <BlurView intensity={40} tint={currentTheme.dark ? "dark" : "light"} style={[styles.moodBadge, { borderColor: pin.status === 'REJECTED' ? '#EF4444' : '#F59E0B' }]}>
+                    <BlurView intensity={40} tint={currentTheme.dark ? "dark" : "light"} style={[styles.glassBadge, { borderColor: pin.status === 'REJECTED' ? '#EF4444' : '#F59E0B' }]}>
                         <Ionicons 
                             name={pin.status === 'REJECTED' ? 'alert-circle' : 'time'} 
                             size={isGrid ? 12 : 14} 
                             color={pin.status === 'REJECTED' ? '#EF4444' : '#F59E0B'} 
                         />
-                        {!isGrid && (
-                            <Text style={{ color: currentTheme.dark ? '#FFF' : currentTheme.colors.text, fontSize: 10, fontWeight: '700' }}>
-                                {pin.status === 'REJECTED' ? 'Bị từ chối' : 'Đang duyệt'}
-                            </Text>
-                        )}
                     </BlurView>
                 )}
             </View>
 
             <View style={[styles.dateBadge, { backgroundColor: currentTheme.dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.05)' }]}>
-                <Text style={[styles.dateText, { color: currentTheme.dark ? '#FFF' : currentTheme.colors.text }]}>{dateStr}</Text>
+                <Text style={[styles.dateText, { color: currentTheme.dark ? '#FFF' : '#6b7280' }]}>{dateStr}</Text>
             </View>
           </View>
 
-          {/* Bottom Info Section */}
-          <View style={styles.bottomSection}>
-            <View style={styles.contentRow}>
+          {/* Content Body */}
+          <View style={styles.body}>
+            <View style={styles.titleWrapper}>
                 <Text style={[styles.title, { 
-                    fontSize: isGrid ? 16 : 22,
-                    color: currentTheme.dark ? '#FFF' : currentTheme.colors.text 
+                    fontSize: isGrid ? 15 : 20,
+                    color: currentTheme.dark ? '#FFF' : '#111827',
+                    lineHeight: isGrid ? 20 : 26
                 }]} numberOfLines={2}>
                     {pin.content || pin.transcription || 'Tiếng vọng Ký ức'}
                 </Text>
-                {pin.status === 'REJECTED' && pin.moderationReason && !isGrid && (
-                    <View style={styles.reasonRow}>
-                        <Ionicons name="information-circle-outline" size={12} color="#EF4444" />
-                        <Text style={styles.reasonText} numberOfLines={2}>
-                            {pin.moderationReason}
-                        </Text>
-                    </View>
-                )}
-                <View style={styles.locationContainer}>
-                    <Ionicons name="location-sharp" size={10} color={currentTheme.dark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.5)"} />
-                    <Text style={[styles.locationText, { color: currentTheme.dark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.5)" }]} numberOfLines={1}>
+                
+                <View style={styles.locationRow}>
+                    <Ionicons name="location" size={10} color={isDark ? "rgba(255,255,255,0.5)" : "#6b7280"} />
+                    <Text style={[styles.locationText, { color: isDark ? "rgba(255,255,255,0.5)" : "#6b7280" }]} numberOfLines={1}>
                         {pin.address?.split(',')[0] || 'Unknown Aura'}
                     </Text>
                 </View>
             </View>
 
-            {!isGrid && (
-                <View style={styles.statsRow}>
-                    <View style={styles.statItem}>
-                        <Ionicons name="mic-outline" size={14} color={meta.color} />
-                        <Text style={[styles.statText, { color: currentTheme.dark ? '#FFF' : currentTheme.colors.text }]}>{pin.audioDuration ?? 0}s</Text>
-                    </View>
-                    <View style={[styles.statDivider, { backgroundColor: currentTheme.dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]} />
-                    <View style={styles.statItem}>
-                        <Ionicons name="headset-outline" size={14} color={currentTheme.dark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.5)"} />
-                        <Text style={[styles.statText, { color: currentTheme.dark ? '#FFF' : currentTheme.colors.text }]}>{pin.listensCount ?? 0}</Text>
-                    </View>
-                    <View style={[styles.statDivider, { backgroundColor: currentTheme.dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]} />
-                    <View style={styles.statItem}>
-                        <Ionicons name="heart-outline" size={14} color={currentTheme.dark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.5)"} />
-                        <Text style={[styles.statText, { color: currentTheme.dark ? '#FFF' : currentTheme.colors.text }]}>{pin.reactionsCount ?? 0}</Text>
-                    </View>
+            {pin.status === 'REJECTED' && pin.moderationReason && !isGrid && (
+                <View style={styles.rejectReason}>
+                    <Ionicons name="warning" size={12} color="#EF4444" />
+                    <Text style={styles.rejectText} numberOfLines={1}>{pin.moderationReason}</Text>
                 </View>
             )}
 
-            {/* Premium Border Bottom Glow */}
-            <View style={[styles.bottomGlow, { backgroundColor: meta.color, shadowColor: meta.color }]} />
+            {!isGrid && (
+                <View style={styles.footer}>
+                    {/* Stats */}
+                    <View style={styles.stats}>
+                        <View style={styles.statItem}>
+                            <Ionicons name="mic" size={14} color={meta.color} />
+                            <Text style={[styles.statValue, { color: isDark ? '#fff' : '#4b5563' }]}>{pin.audioDuration ?? 0}s</Text>
+                        </View>
+                        <View style={styles.statItem}>
+                            <Ionicons name="play" size={14} color={isDark ? "rgba(255,255,255,0.4)" : "#9ca3af"} />
+                            <Text style={[styles.statValue, { color: isDark ? '#fff' : '#4b5563' }]}>{pin.listensCount ?? 0}</Text>
+                        </View>
+                    </View>
+
+                    {/* Author */}
+                    {pin.user && (
+                        <View style={styles.author}>
+                            <Avatar 
+                                uri={pin.user.avatar} 
+                                size={32} 
+                            />
+                        </View>
+                    )}
+                </View>
+            )}
+
+            {/* Bottom Accent Line */}
+            <View style={[styles.accentLine, { backgroundColor: meta.color }]} />
           </View>
         </View>
-
-        {/* Author Avatar Floating (Only in Carousel) */}
-        {!isGrid && pin.user && (
-            <MotiView
-                from={{ translateY: 20, opacity: 0 }}
-                animate={{ translateY: 0, opacity: 1 }}
-                transition={{ delay: 300 }}
-                style={styles.avatarContainer}
-            >
-                <BlurView intensity={40} tint={currentTheme.dark ? "dark" : "light"} style={[styles.avatarBlur, { borderColor: currentTheme.dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)' }]}>
-                    <Image 
-                        source={resolveAsset(pin.user.avatar) || undefined} 
-                        style={styles.avatarImg} 
-                    />
-                </BlurView>
-            </MotiView>
-        )}
       </TouchableOpacity>
     </Animated.View>
   );
@@ -303,12 +294,12 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 15 },
-        shadowOpacity: 0.4,
-        shadowRadius: 20,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 15,
       },
       android: {
-        elevation: 10,
+        elevation: 8,
       },
     }),
   },
@@ -317,41 +308,39 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
   },
-  topSection: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     padding: 16,
     zIndex: 10,
   },
-  moodBadge: {
+  glassBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 14,
+    borderRadius: 12,
     gap: 6,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
   },
-  moodText: {
-    fontSize: 12,
-    fontWeight: '700',
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   dateBadge: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
   },
   dateText: {
     fontSize: 10,
-    fontWeight: '600',
-    opacity: 0.8,
+    fontWeight: '700',
   },
-  bottomSection: {
+  body: {
     position: 'absolute',
     bottom: 0,
     left: 0,
@@ -359,43 +348,49 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 24,
   },
-  contentRow: {
-    marginBottom: 12,
+  titleWrapper: {
+    marginBottom: 8,
   },
   title: {
-    fontWeight: '800',
+    fontWeight: '900',
     letterSpacing: -0.5,
-    marginBottom: 4,
   },
-  reasonRow: {
+  locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    marginTop: 6,
+  },
+  locationText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  rejectReason: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
-    marginBottom: 6,
+    marginBottom: 12,
     borderWidth: 0.5,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: 'rgba(239, 68, 68, 0.2)',
   },
-  reasonText: {
-    color: '#FCA5A5',
+  rejectText: {
+    color: '#EF4444',
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '700',
     flex: 1,
   },
-  locationContainer: {
+  footer: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 4,
+    marginTop: 2,
+    paddingTop: 4,
   },
-  locationText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  statsRow: {
+  stats: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -405,44 +400,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  statText: {
+  statValue: {
     fontSize: 12,
-    fontWeight: '600',
-    opacity: 0.9,
+    fontWeight: '700',
   },
-  statDivider: {
-    width: 1,
-    height: 12,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  author: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  bottomGlow: {
+  accentLine: {
     position: 'absolute',
     bottom: 0,
     left: 20,
     right: 20,
-    height: 4,
-    borderRadius: 2,
-    opacity: 0.8,
-    shadowRadius: 15,
-    shadowOpacity: 0.6,
-  },
-  avatarContainer: {
-    position: 'absolute',
-    top: 45,
-    right: -10,
-    zIndex: 20,
-  },
-  avatarBlur: {
-    padding: 4,
-    borderRadius: 20,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  avatarImg: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#333',
+    height: 3,
+    borderRadius: 1.5,
+    opacity: 0.6,
   },
 });

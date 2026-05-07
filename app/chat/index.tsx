@@ -18,10 +18,9 @@ import { MotiView } from 'moti';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MyUserContext } from '@/configs/Context';
-import { authApis, endpoints } from '@/configs/Apis';
+import { authApis, endpoints, BASE_URL } from '@/configs/Apis';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { theme } from '@/constants/Theme';
-import FriendsModal from '@/components/FriendsModal';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 const { width } = Dimensions.get('window');
@@ -47,19 +46,23 @@ export default function ChatListScreen() {
     const currentTheme = theme[colorScheme];
 
     const [rooms, setRooms] = useState<any[]>([]);
+    const [friends, setFriends] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [friendsModalVisible, setFriendsModalVisible] = useState(false);
 
     const fetchRooms = useCallback(async (isRefresh = false) => {
         isRefresh ? setRefreshing(true) : setLoading(true);
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) return;
-            const res = await authApis(token).get(endpoints.chatRooms);
+            const api = authApis(token);
+            const [roomsRes, friendsRes] = await Promise.all([
+                api.get(endpoints.chatRooms),
+                api.get(endpoints.friendList(user?.id))
+            ]);
 
             // Deduplicate rooms: Only show one conversation per user (the most recent one)
-            const rawRooms = res.data.data || [];
+            const rawRooms = roomsRes.data.data || [];
             const uniqueRoomsMap = new Map();
 
             rawRooms.forEach((room: any) => {
@@ -78,6 +81,7 @@ export default function ChatListScreen() {
             );
 
             setRooms(sortedRooms);
+            setFriends(friendsRes.data?.data || friendsRes.data || []);
         } catch (error: any) {
             console.error('Error fetching chat rooms:', error.message || error);
         } finally {
@@ -86,29 +90,18 @@ export default function ChatListScreen() {
         }
     }, [user?.id]);
 
-    useEffect(() => {
-        fetchRooms();
-    }, [fetchRooms]);
-
-    const handleSelectFriend = async (friend: any) => {
-        setFriendsModalVisible(false);
-        try {
-            const token = await AsyncStorage.getItem('token');
-            if (!token) return;
-            const res = await authApis(token).post(endpoints.chatPrivate(friend.id));
-            const roomId = res.data?.data?.id || res.data?.id;
-            if (roomId) {
-                router.push({ pathname: '/chat/[id]', params: { id: roomId.toString() } });
-            }
-        } catch (e) {
-            console.error('Start chat error:', e);
-        }
-    };
+    const { useFocusEffect } = require('expo-router');
+    useFocusEffect(
+        useCallback(() => {
+            fetchRooms();
+        }, [fetchRooms])
+    );
 
     const renderRoomItem = ({ item, index }: { item: any; index: number }) => {
         const otherMember = item.members.find((m: any) => m.userId !== user?.id)?.user;
         const lastMessage = item.lastMessage;
         const isUnread = item.unreadCount > 0;
+        const nameStyle = [styles.boldText, { color: isDark ? '#fff' : '#111827' }];
 
         return (
             <MotiView
@@ -129,76 +122,69 @@ export default function ChatListScreen() {
                             borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
                             backgroundColor: isDark
                                 ? 'rgba(255, 255, 255, 0.03)'
-                                : 'rgba(255, 255, 255, 0.75)',
+                                : 'rgba(255, 255, 255, 0.7)',
                         },
                     ]}
-                    onPress={() => router.push(`/chat/${item.id}`)}
-                    activeOpacity={0.88}
+                    onPress={() => router.push({
+                        pathname: '/chat/[id]',
+                        params: { id: String(item.id) }
+                    })}
+                    activeOpacity={0.9}
                 >
-                    {/* Avatar */}
-                    <View style={styles.avatarContainer}>
-                        {otherMember?.avatar ? (
-                            <Image source={{ uri: otherMember.avatar }} style={styles.avatar} />
-                        ) : (
-                            <LinearGradient
-                                colors={['#8b5cf6', '#6d28d9']}
-                                style={styles.avatarPlaceholder}
-                            >
-                                <Ionicons name="person" size={20} color="#fff" />
-                            </LinearGradient>
-                        )}
-                        {(otherMember?.isOnline || otherMember?.isActive) && (
-                            <View style={styles.onlineStatus} />
-                        )}
-                        {isUnread && (
-                            <View style={[styles.unreadDot, { backgroundColor: currentTheme.colors.primary }]} />
-                        )}
+                    {/* Left Column - Avatar & Status */}
+                    <View style={styles.leftCol}>
+                        <View style={styles.avatarContainer}>
+                            <Image
+                                source={otherMember?.avatar
+                                    ? { uri: otherMember.avatar.startsWith('http') ? otherMember.avatar : `${BASE_URL}${otherMember.avatar.startsWith('/') ? '' : '/'}${otherMember.avatar}` }
+                                    : require('@/assets/images/avatar.png')
+                                }
+                                style={styles.avatar}
+                            />
+                            {/* Top right dot - Purple/Pink for unread (matches Notif page) */}
+                            {isUnread && (
+                                <View style={[styles.unreadDot, { backgroundColor: '#c084fc' }]} />
+                            )}
+                            {/* Bottom right dot - Green for chat type */}
+                            <View style={[styles.miniTypeIcon, { backgroundColor: '#10b981' }]}>
+                                <Ionicons name="chatbubbles" size={10} color="#fff" />
+                            </View>
+                        </View>
                     </View>
 
-                    {/* Info */}
+                    {/* Right Column - Info */}
                     <View style={styles.rightCol}>
-                        <View style={styles.itemMeta}>
+                        <View style={styles.nameRow}>
                             <Text
                                 style={[
                                     styles.roomName,
                                     { color: isDark ? '#fff' : '#111827' },
-                                    isUnread && styles.boldText,
+                                    isUnread && styles.boldText
                                 ]}
                                 numberOfLines={1}
                             >
                                 {otherMember?.displayName || otherMember?.username || 'Người dùng'}
                             </Text>
-                            <Text style={styles.timeText}>
-                                {timeAgo(item.updatedAt)}
-                            </Text>
+                            <Text style={styles.timeText}>{timeAgo(item.updatedAt)}</Text>
                         </View>
-
-                        <View style={styles.lastMsgRow}>
-                            <Text
-                                style={[
-                                    styles.lastMessage,
-                                    {
-                                        color: isDark
-                                            ? isUnread ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.45)'
-                                            : isUnread ? '#374151' : 'rgba(17,24,39,0.45)',
-                                    },
-                                    isUnread && styles.boldText,
-                                ]}
-                                numberOfLines={1}
-                            >
-                                {lastMessage
-                                    ? lastMessage.type === 'VOICE'
-                                        ? '🎤 Tin nhắn thoại'
-                                        : lastMessage.content
-                                    : 'Bắt đầu cuộc trò chuyện...'}
-                            </Text>
-
-                            {isUnread && (
-                                <View style={[styles.unreadBadge, { backgroundColor: currentTheme.colors.primary }]}>
-                                    <Text style={styles.unreadCountText}>{item.unreadCount}</Text>
-                                </View>
-                            )}
-                        </View>
+                        <Text
+                            style={[
+                                styles.lastMessage,
+                                {
+                                    color: isDark
+                                        ? isUnread ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.45)'
+                                        : isUnread ? '#4b5563' : 'rgba(17,24,39,0.45)',
+                                },
+                                isUnread && styles.boldText,
+                            ]}
+                            numberOfLines={1}
+                        >
+                            {lastMessage
+                                ? lastMessage.type === 'VOICE'
+                                    ? '🎤 Tin nhắn thoại'
+                                    : lastMessage.content
+                                : 'Bắt đầu cuộc trò chuyện...'}
+                        </Text>
                     </View>
                 </TouchableOpacity>
             </MotiView>
@@ -232,12 +218,60 @@ export default function ChatListScreen() {
             </View>
 
             {/* HEADER - exactly matching Notification page */}
-            <PageHeader 
+            <PageHeader
                 title="Tin nhắn"
                 subtitle="Lịch sử trò chuyện"
                 rightIcon="create-outline"
-                onRightPress={() => setFriendsModalVisible(true)}
+                onRightPress={() => router.push('/friends?mode=select')}
             />
+
+            {/* ONLINE FRIENDS SECTION */}
+            {!loading && friends.length > 0 && (
+                <MotiView
+                    from={{ opacity: 0, translateY: -10 }}
+                    animate={{ opacity: 1, translateY: 0 }}
+                    transition={{ delay: 100 }}
+                    style={styles.onlineSection}
+                >
+                    <View style={styles.sectionHeader}>
+                        <View style={[styles.sectionDash, { backgroundColor: currentTheme.colors.primary }]} />
+                        <Text style={styles.sectionTitle}>Đang hoạt động</Text>
+                        <View style={styles.activeCountBadge}>
+                            <Text style={styles.activeCountText}>{friends.length}</Text>
+                        </View>
+                    </View>
+                    <FlatList
+                        horizontal
+                        data={friends}
+                        keyExtractor={(f) => `online-${f.id}`}
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.onlineListContent}
+                        renderItem={({ item, index }) => (
+                            <TouchableOpacity
+                                style={styles.onlineItem}
+                                onPress={() => router.push({
+                                    pathname: '/user/[id]',
+                                    params: { id: String(item.id) }
+                                })}
+                            >
+                                <View style={styles.onlineAvatarWrapper}>
+                                    <Image
+                                        source={item.avatar
+                                            ? { uri: item.avatar.startsWith('http') ? item.avatar : `${BASE_URL}${item.avatar.startsWith('/') ? '' : '/'}${item.avatar}` }
+                                            : require('@/assets/images/avatar.png')
+                                        }
+                                        style={styles.onlineAvatar}
+                                    />
+                                    <View style={styles.onlineIndicator} />
+                                </View>
+                                <Text style={styles.onlineName} numberOfLines={1}>
+                                    {(item.displayName || item.username).split(' ')[0]}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
+                    />
+                </MotiView>
+            )}
 
             {loading && !refreshing ? (
                 <View style={styles.center}>
@@ -284,11 +318,6 @@ export default function ChatListScreen() {
                 />
             )}
 
-            <FriendsModal 
-                visible={friendsModalVisible}
-                onClose={() => setFriendsModalVisible(false)}
-                onSelectFriend={handleSelectFriend}
-            />
         </View>
     );
 }
@@ -351,7 +380,9 @@ const styles = StyleSheet.create({
         gap: 15,
         borderWidth: 1.2,
         borderRadius: 28,
-        alignItems: 'center',
+    },
+    leftCol: {
+        justifyContent: 'flex-start',
     },
     avatarContainer: {
         width: 54,
@@ -362,24 +393,7 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
         borderRadius: 15,
-    },
-    avatarPlaceholder: {
-        width: '100%',
-        height: '100%',
-        borderRadius: 15,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    onlineStatus: {
-        position: 'absolute',
-        bottom: -2,
-        right: -2,
-        width: 14,
-        height: 14,
-        borderRadius: 7,
-        backgroundColor: '#10b981',
-        borderWidth: 2.5,
-        borderColor: '#fff',
+        backgroundColor: 'rgba(0,0,0,0.05)',
     },
     unreadDot: {
         position: 'absolute',
@@ -391,43 +405,37 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: '#fff',
     },
-    rightCol: { flex: 1, gap: 4 },
-    itemMeta: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    roomName: {
-        fontSize: 16,
-        fontWeight: '600',
-        flex: 1,
-        marginRight: 8,
-        letterSpacing: -0.2,
-    },
-    boldText: { fontWeight: '800' },
-    timeText: { fontSize: 10, color: '#9ca3af', fontWeight: '600' },
-    lastMsgRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    lastMessage: {
-        fontSize: 13,
-        fontWeight: '500',
-        flex: 1,
-    },
-    unreadBadge: {
-        minWidth: 20,
+    miniTypeIcon: {
+        position: 'absolute',
+        bottom: -2,
+        right: -2,
+        width: 20,
         height: 20,
         borderRadius: 10,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 5,
+        borderWidth: 2,
+        borderColor: '#fff',
     },
-    unreadCountText: {
-        color: '#fff',
-        fontSize: 10,
-        fontWeight: '900',
+    rightCol: { flex: 1, gap: 2, justifyContent: 'center' },
+    nameRow: { 
+        flexDirection: 'row', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        marginBottom: 2,
+    },
+    timeText: { fontSize: 10, color: '#9ca3af', fontWeight: '600' },
+    roomName: {
+        flex: 1,
+        fontSize: 15,
+        fontWeight: '700',
+        letterSpacing: -0.2,
+        marginRight: 10,
+    },
+    boldText: { fontWeight: '800' },
+    lastMessage: {
+        fontSize: 13,
+        fontWeight: '500',
     },
     // ── States ────────────────────────────────────────────────
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', minHeight: 400 },
@@ -460,5 +468,77 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 6,
         opacity: 0.7,
+    },
+    // ── Online Section ──────────────────────────────────────
+    onlineSection: {
+        marginBottom: 20,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 24,
+        marginBottom: 15,
+        marginTop: 10,
+        gap: 10,
+    },
+    sectionDash: {
+        width: 3,
+        height: 14,
+        borderRadius: 2,
+    },
+    sectionTitle: {
+        fontSize: 13,
+        fontWeight: '800',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        color: '#9ca3af',
+    },
+    activeCountBadge: {
+        backgroundColor: '#10b98120',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6,
+    },
+    activeCountText: {
+        fontSize: 10,
+        fontWeight: '800',
+        color: '#10b981',
+    },
+    onlineListContent: {
+        paddingHorizontal: 20,
+        gap: 15,
+    },
+    onlineItem: {
+        alignItems: 'center',
+        width: 70,
+    },
+    onlineAvatarWrapper: {
+        position: 'relative',
+        marginBottom: 8,
+        width: 58,
+        height: 58,
+    },
+    onlineAvatar: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 18,
+        backgroundColor: 'rgba(0,0,0,0.05)',
+    },
+    onlineIndicator: {
+        position: 'absolute',
+        bottom: 2,
+        right: 2,
+        width: 14,
+        height: 14,
+        borderRadius: 7,
+        backgroundColor: '#10b981',
+        borderWidth: 2,
+        borderColor: '#fff',
+    },
+    onlineName: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#9ca3af',
+        textAlign: 'center',
     },
 });

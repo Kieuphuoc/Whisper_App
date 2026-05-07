@@ -50,6 +50,7 @@ interface VinylRecordProps {
   visibility?: Visibility;
   onVisibilityChange?: (v: Visibility) => void;
   onPost?: () => void;
+  onMorePress?: () => void;
 }
 
 export function VinylRecord({
@@ -73,6 +74,7 @@ export function VinylRecord({
   visibility,
   onVisibilityChange,
   onPost,
+  onMorePress,
 }: VinylRecordProps) {
   const router = useRouter();
   const isDark = theme.colors.background === "#0a0a14" || theme.colors.text === "#f1f5f9";
@@ -83,7 +85,7 @@ export function VinylRecord({
 
   const rawArtworkUri = pin.images?.[0]?.imageUrl ?? pin.imageUrl;
   const artworkUri = useMemo(() => {
-    if (!rawArtworkUri) return "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&q=80";
+    if (!rawArtworkUri) return require('@/assets/images/mascot_whispery.png');
     if (rawArtworkUri.startsWith("http") || rawArtworkUri.startsWith("file://") || rawArtworkUri.startsWith("ph://")) {
       return rawArtworkUri;
     }
@@ -257,7 +259,7 @@ export function VinylRecord({
                 <>
                   <View style={[styles.emotionDot, { backgroundColor: emotionColor }]} />
                   <Text style={[styles.emotionTagText, { color: emotionColor }]}>
-                    {pin.emotionLabel}
+                    {pin.emotionLabel || 'Khác'}
                   </Text>
                 </>
               )}
@@ -265,25 +267,28 @@ export function VinylRecord({
           </View>
         ) : null}
 
-        {/* Stats hidden in creation mode */}
-        {/* Stats hidden temporarily */}
-        {/* {!isCreationMode && (
+        {!isCreationMode && (
           <View style={styles.topStatsRow}>
             <View style={[styles.statPillSmall, {
               backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)",
-              paddingHorizontal: 10,
-              paddingVertical: 5,
-              borderRadius: 12,
-              borderWidth: 1,
               borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
             }]}>
-              <Ionicons name="headset-outline" size={12} color={isDark ? theme.colors.primary : theme.colors.primary} />
-              <Text style={[styles.statTextSmall, { color: isDark ? "#F5F5F4" : "#1E293B", marginLeft: 4 }]}>
+              <Ionicons name="mic-outline" size={12} color={emotionColor} />
+              <Text style={[styles.statTextSmall, { color: isDark ? "#F5F5F4" : "#1E293B" }]}>
+                {pin.audioDuration ?? 0}s
+              </Text>
+            </View>
+            <View style={[styles.statPillSmall, {
+              backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)",
+              borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+            }]}>
+              <Ionicons name="headset-outline" size={12} color={isDark ? "#A3A3A3" : "#64748B"} />
+              <Text style={[styles.statTextSmall, { color: isDark ? "#F5F5F4" : "#1E293B" }]}>
                 {pin.listensCount || 0}
               </Text>
             </View>
           </View>
-        )} */}
+        )}
       </View>
 
       <View style={styles.recordStage}>
@@ -297,7 +302,7 @@ export function VinylRecord({
             <AnimatedRE.View style={[styles.vinylPlate, discStyle]}>
               <View style={styles.vinylBlackDisk}>
                 <ImageBackground
-                  source={{ uri: artworkUri }}
+                  source={typeof artworkUri === 'number' ? artworkUri : { uri: artworkUri }}
                   style={styles.diskArtwork}
                   imageStyle={styles.diskArtworkImage}
                 >
@@ -361,16 +366,21 @@ export function VinylRecord({
               </MotiView>
             </MotiView>
 
-              <View style={styles.userTextInfo}>
-                <Text style={[styles.profileDisplayName, { color: isDark ? "#F5F5F4" : "#1E293B" }]} numberOfLines={1}>
-                  {pin.user?.displayName || "Anonymous"}
-                </Text>
+            <View style={styles.userTextInfo}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={[styles.profileDisplayName, { color: isDark ? "#F5F5F4" : "#1E293B" }]} numberOfLines={1}>
+                    {pin.user?.displayName || "Anonymous"}
+                  </Text>
+                  {pin.address && (
+                    <Text style={{ fontSize: 10, color: isDark ? "#A3A3A3" : "#64748B" }}>• {pin.address.split(',')[0]}</Text>
+                  )}
+                </View>
                 <Text style={[styles.profileBio, { color: isDark ? "#A3A3A3" : "#64748B" }]} numberOfLines={1}>
                   {pin.status === 'REJECTED' && pin.moderationReason 
                     ? `Lý do: ${pin.moderationReason}` 
                     : (isCreationMode ? pin.emotionLabel : (pin.content || pin.user?.bio || pin.emotionLabel || "Tap record to play"))}
                 </Text>
-              </View>
+            </View>
             </TouchableOpacity>
           </View>
 
@@ -465,23 +475,14 @@ export function VinylRecord({
                 })()}
               </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={onAlbumPress}
-                style={styles.actionButtonContainer}
-                activeOpacity={0.7}
-              >
-                <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={styles.actionButtonBlur}>
-                  <Ionicons name="library" size={16} color={isDark ? "#FFFFFF" : theme.colors.primary} />
-                </BlurView>
-              </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={onReportPress}
+                onPress={onMorePress}
                 style={styles.actionButtonContainer}
                 activeOpacity={0.7}
               >
                 <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={styles.actionButtonBlur}>
-                  <Ionicons name="flag-outline" size={14} color={isDark ? "#FB7185" : "#E11D48"} />
+                  <Ionicons name="ellipsis-vertical" size={18} color={isDark ? "#FFFFFF" : theme.colors.primary} />
                 </BlurView>
               </TouchableOpacity>
             </>
@@ -645,11 +646,15 @@ const styles = StyleSheet.create({
   statPillSmall: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 2,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    borderWidth: 1,
   },
   statTextSmall: {
     fontSize: 10,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   userProfileGlass: {
     flex: 1,

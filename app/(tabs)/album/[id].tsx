@@ -244,7 +244,7 @@ export default function AlbumDetailScreen() {
             if (!raw) return null;
             return raw.startsWith('http') ? raw : `${BASE_URL}/${raw.replace(/^\//, '')}`;
         }
-        if (!user?.cover) return 'https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=2071&auto=format&fit=crop';
+        if (!user?.cover) return require('@/assets/images/mascot_whispery.png');
         if (user.cover.startsWith('http')) return user.cover;
         return `${BASE_URL}${user.cover.startsWith('/') ? '' : '/'}${user.cover}`;
     }, [sectionPins, user]);
@@ -268,7 +268,7 @@ export default function AlbumDetailScreen() {
             <View style={StyleSheet.absoluteFill}>
                 {coverUri ? (
                     <Animated.Image
-                        source={{ uri: coverUri }}
+                        source={typeof coverUri === 'number' ? coverUri : { uri: coverUri }}
                         style={[styles.fullscreenBg, bannerAnim]}
                         blurRadius={14}
                     />

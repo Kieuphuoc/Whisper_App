@@ -8,6 +8,8 @@ export const endpoints = {
   login: "/auth/login/",
   register: "/auth/register/",
   googleLogin: "/auth/google",
+  forgotPassword: "/auth/forgot-password",
+  resetPassword: "/auth/reset-password",
 
   // User
   userMe: "/user/me",
@@ -52,6 +54,7 @@ export const endpoints = {
   notifications: "/notification/",
   notificationsUnread: "/notification/unread",
   notificationRead: (id: string | number) => `/notification/${id}/read`,
+  notificationRoomRead: (roomId: string | number) => `/notification/room/${roomId}/read`,
   notificationsReadAll: "/notification/read-all",
   notificationsClear: "/notification/clear",
 
@@ -74,6 +77,11 @@ export const endpoints = {
   chatMessages: (roomId: string | number) => `/chat/rooms/${roomId}/messages`,
   chatSend: (roomId: string | number) => `/chat/rooms/${roomId}/send`,
   chatPrivate: (targetUserId: string | number) => `/chat/private/${targetUserId}`,
+
+  // Privacy Zones
+  privacyZones: "/privacy-zone",
+  privacyZoneToggle: (id: string | number) => `/privacy-zone/${id}/toggle`,
+  privacyZoneDelete: (id: string | number) => `/privacy-zone/${id}`,
 };
 
 const axiosInstance = axios.create({

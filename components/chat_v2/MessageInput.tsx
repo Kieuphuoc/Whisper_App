@@ -1,27 +1,63 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, useColorScheme } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, useColorScheme, FlatList, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { STICKERS, StickerId } from '../../constants/stickers';
+import { MotiView } from 'moti';
 
 interface MessageInputProps {
-    onSend: (text: string) => void;
+    onSend: (text: string, type?: string) => void;
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({ onSend }) => {
     const [text, setText] = useState('');
+    const [showStickers, setShowStickers] = useState(false);
     const scheme = useColorScheme() || 'light';
     const isDark = scheme === 'dark';
 
     const handleSend = () => {
         if (text.trim()) {
-            onSend(text);
+            onSend(text, 'TEXT');
             setText('');
         }
     };
 
+    const handleSendSticker = (id: StickerId) => {
+        onSend(id, 'STICKER');
+        setShowStickers(false);
+    };
+
     return (
         <View style={styles.container}>
+            {showStickers && (
+                <MotiView 
+                    from={{ opacity: 0, translateY: 10 }}
+                    animate={{ opacity: 1, translateY: 0 }}
+                    style={[styles.stickerPicker, { 
+                        backgroundColor: isDark ? 'rgba(7,10,21,0.92)' : 'rgba(255,255,255,0.96)',
+                        borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                    }]}
+                >
+                    <BlurView intensity={25} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+                    <FlatList
+                        data={Object.keys(STICKERS) as StickerId[]}
+                        numColumns={4}
+                        showsVerticalScrollIndicator={true}
+                        keyExtractor={(item) => item}
+                        renderItem={({ item }) => (
+                            <TouchableOpacity 
+                                style={styles.stickerItem}
+                                onPress={() => handleSendSticker(item)}
+                            >
+                                <Image source={STICKERS[item]} style={styles.stickerImage} />
+                            </TouchableOpacity>
+                        )}
+                        contentContainerStyle={styles.stickerListContent}
+                    />
+                </MotiView>
+            )}
+
             <View style={styles.shadowWrapper}>
                 <View style={[styles.inputWrapper, { 
                     backgroundColor: isDark ? 'rgba(7,10,21,0.74)' : 'rgba(255,255,255,0.88)',
@@ -35,8 +71,12 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend }) => {
                         style={StyleSheet.absoluteFill}
                     />
                     
-                    <TouchableOpacity style={[styles.attachButton, { backgroundColor: isDark ? 'rgba(139,92,246,0.24)' : 'rgba(139,92,246,0.12)' }]} activeOpacity={0.7}>
-                        <Ionicons name="add" size={22} color={isDark ? "rgba(255,255,255,0.9)" : "#4B5563"} />
+                    <TouchableOpacity 
+                        style={[styles.attachButton, { backgroundColor: isDark ? 'rgba(139,92,246,0.24)' : 'rgba(139,92,246,0.12)' }]} 
+                        activeOpacity={0.7}
+                        onPress={() => setShowStickers(!showStickers)}
+                    >
+                        <Ionicons name={showStickers ? "close" : "happy-outline"} size={22} color={isDark ? "#a78bfa" : "#8b5cf6"} />
                     </TouchableOpacity>
 
                     <TextInput
@@ -46,6 +86,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend }) => {
                         value={text}
                         onChangeText={setText}
                         multiline={false}
+                        onFocus={() => setShowStickers(false)}
                     />
 
                     <TouchableOpacity
@@ -82,6 +123,28 @@ const styles = StyleSheet.create({
         paddingTop: 8,
         backgroundColor: 'transparent',
     },
+    stickerPicker: {
+        marginBottom: 8,
+        borderRadius: 20,
+        height: 200, // Reduced height
+        overflow: 'hidden',
+        borderWidth: 1,
+    },
+    stickerListContent: {
+        paddingVertical: 10,
+        paddingHorizontal: 10, 
+    },
+    stickerItem: {
+        flexBasis: '25%', 
+        height: 80, // Tăng chiều cao để vừa sticker to
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    stickerImage: {
+        width: 65, // Tăng kích thước sticker lên
+        height: 65,
+        resizeMode: 'contain',
+    },
     shadowWrapper: {
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 8 },
@@ -96,7 +159,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
         paddingVertical: 8,
         borderWidth: 1.2,
-        overflow: 'hidden', // This is key to fix the overflow of absolute children
+        overflow: 'hidden',
     },
     attachButton: {
         width: 40,
@@ -112,7 +175,6 @@ const styles = StyleSheet.create({
         height: 44,
         paddingHorizontal: 12,
         fontWeight: '600',
-        fontFamily: 'Quicksand_600SemiBold',
     },
     sendButton: {
         width: 40,

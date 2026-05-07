@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useContext, useState, useEffect, useRef, useCallback } from "react";
+import { useContext, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { StyleSheet, TouchableOpacity, View, Alert, useColorScheme, ActivityIndicator, Text } from "react-native";
 import { BlurView } from "expo-blur";
 import MapView, { Region } from "react-native-maps";
@@ -9,7 +9,7 @@ import MapContainer from "@/components/home/MapContainer";
 import VoiceButton from "@/components/home/VoiceButton";
 import VoiceCameraCapture from "@/components/home/VoiceCameraCapture";
 import VoiceUploadSheet from "@/components/home/VoiceUploadSheet";
-import FriendsModal from "@/components/FriendsModal";
+import DraftsModal from "@/components/home/DraftsModal";
 import { MyDispatchContext, MyUserContext } from "@/configs/Context";
 import { useLocation } from "@/hooks/useLocation";
 import { useRecorder } from "@/hooks/useRecorder";
@@ -28,6 +28,7 @@ import { markPromptedAR } from "@/storage/voiceARProgress";
 import WalkthroughOverlay, { WalkthroughStep } from "@/components/onboarding/WalkthroughOverlay";
 import { Dimensions } from "react-native";
 import { useNotifications } from "@/hooks/useNotifications";
+import { DraftStorage, VoiceDraft } from "@/utils/draftStorage";
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -51,7 +52,7 @@ export default function HomeScreen() {
   const primaryFabColor = isDark ? "#ffffff" : currentTheme.colors.primary;
   const { location } = useLocation();
   const { visibility, setVisibility } = useVisibility("PUBLIC");
-  const params = useLocalSearchParams<{ selectPinId?: string; autoPlay?: string }>();
+  const params = useLocalSearchParams<{ selectPinId?: string; autoPlay?: string; lat?: string; lng?: string }>();
 
   // Bounding box state for map-based fetching
   const [bbox, setBbox] = useState<BoundingBox | undefined>(undefined);
@@ -190,7 +191,12 @@ export default function HomeScreen() {
   const [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null);
   const [cameraVisible, setCameraVisible] = useState(false);
   const [uploadSheetVisible, setUploadSheetVisible] = useState(false);
-  const [friendsVisible, setFriendsVisible] = useState(false);
+  const [draftsVisible, setDraftsVisible] = useState(false);
+
+  const [pendingTranscription, setPendingTranscription] = useState<string | null>(null);
+  const [pendingEmotionLabel, setPendingEmotionLabel] = useState<string>("Bình yên");
+  const [pendingVisibility, setPendingVisibility] = useState<Visibility>("PUBLIC");
+  const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
 
   useEffect(() => {
     if (location && !bbox && !lastBboxKeyRef.current) {
@@ -303,12 +309,60 @@ export default function HomeScreen() {
     handledSelectParamRef.current = selectPinId;
 
     const idNum = Number(selectPinId);
-    const target = accumulatedPins.find((p) => p.id === idNum);
-    if (target) {
-      setExternalSelectedPin(target);
-      setAutoPlayPin(params.autoPlay === "1");
-    }
-  }, [params.selectPinId, params.autoPlay, accumulatedPins]);
+    
+    const findAndSelectPin = async () => {
+      let target = accumulatedPins.find((p) => p.id === idNum);
+      
+      // If we have lat/lng in params, focus map immediately for better UX
+      if (params.lat && params.lng) {
+        const pLat = parseFloat(params.lat);
+        const pLng = parseFloat(params.lng);
+        if (!isNaN(pLat) && !isNaN(pLng)) {
+           // Move map even if we don't have the full pin object yet
+           if (mapRef.current) {
+            const region = {
+              latitude: pLat,
+              longitude: pLng,
+              latitudeDelta: 0.005,
+              longitudeDelta: 0.005,
+            };
+            const map = mapRef.current as any;
+            if (map.animateToRegion) {
+              map.animateToRegion(region, 800);
+            }
+           }
+        }
+      }
+
+      if (!target) {
+        try {
+          const { authApis, endpoints } = await import("@/configs/Apis");
+          const api = authApis();
+          const res = await api.get(endpoints.voiceDetail(idNum));
+          target = res.data?.data;
+          
+          if (target) {
+            // Add to accumulated pins so it stays on map
+            setAccumulatedPins(prev => {
+              if (prev.some(p => p.id === target?.id)) return prev;
+              return [...prev, target!];
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching shared pin:", error);
+        }
+      }
+
+      if (target) {
+        handleSelectMapPin(target);
+        if (params.autoPlay === "true" || params.autoPlay === "1") {
+          setAutoPlayPin(true);
+        }
+      }
+    };
+
+    findAndSelectPin();
+  }, [params.selectPinId, params.autoPlay, accumulatedPins, handleSelectMapPin]);
 
   const { isRecording, record, stop } = useRecorder({
     onRecordingComplete: (uri) => {
@@ -329,9 +383,24 @@ export default function HomeScreen() {
     setUploadSheetVisible(true);
   };
 
+  const handleSelectDraft = (draft: VoiceDraft) => {
+    setPendingAudioUri(draft.audioUri);
+    setPendingPhotoUri(draft.photoUri);
+    setPendingTranscription(draft.transcription);
+    setPendingEmotionLabel(draft.emotionLabel);
+    setPendingVisibility(draft.visibility);
+    setActiveDraftId(draft.id);
+    setDraftsVisible(false);
+    setUploadSheetVisible(true);
+  };
+
   const resetFlow = () => {
     setPendingAudioUri(null);
     setPendingPhotoUri(null);
+    setPendingTranscription(null);
+    setPendingEmotionLabel("Bình yên");
+    setPendingVisibility("PUBLIC");
+    setActiveDraftId(null);
     setCameraVisible(false);
     setUploadSheetVisible(false);
   };
@@ -435,6 +504,9 @@ export default function HomeScreen() {
         onPressDiscoveredPin={handlePressDiscoveredPin}
         externalSelectedPin={externalSelectedPin}
         onSelectPin={handleSelectMapPin}
+        onDeletePin={(id) => {
+          setAccumulatedPins(prev => prev.filter(p => p.id !== id));
+        }}
         autoPlayPin={autoPlayPin}
         onRegionChangeComplete={handleRegionChangeComplete}
         ref={mapRef as any}
@@ -485,7 +557,7 @@ export default function HomeScreen() {
           <TouchableOpacity
             activeOpacity={0.8}
             style={styles.exploreButton}
-            onPress={() => setFriendsVisible(true)}
+            onPress={() => router.push('/friends')}
           >
             <View style={[styles.exploreIconContainer, { backgroundColor: isDark ? 'rgba(139, 92, 246, 0.2)' : 'rgba(139, 92, 246, 0.1)' }]}>
               <Ionicons name="people" size={22} color="#8b5cf6" />
@@ -535,9 +607,11 @@ export default function HomeScreen() {
       />
 
       <QuickActions
-        onFriends={() => setFriendsVisible(true)}
-        onNotifications={() => router.push('/(tabs)/notification')}
+        onFriends={() => router.push('/friends')}
+        onNotifications={() => router.push('/(tabs)/notification?from=home')}
         onChat={() => router.push("/chat")}
+        onDrafts={() => setDraftsVisible(true)}
+        onAlbum={() => router.push('/(tabs)/album')}
         receivedCount={receivedCount}
         unreadCount={unreadCount}
       />
@@ -571,12 +645,24 @@ export default function HomeScreen() {
         audioUri={pendingAudioUri}
         photoUri={pendingPhotoUri}
         location={location}
-        visibility={visibility}
+        visibility={pendingVisibility}
+        initialTranscription={pendingTranscription}
+        initialEmotionLabel={pendingEmotionLabel}
         onClose={resetFlow}
-        onUploadSuccess={() => { refetch(); resetFlow(); }}
+        onUploadSuccess={async () => { 
+          if (activeDraftId) {
+            await DraftStorage.deleteDraft(activeDraftId);
+          }
+          refetch(); 
+          resetFlow(); 
+        }}
       />
 
-      <FriendsModal visible={friendsVisible} onClose={() => setFriendsVisible(false)} />
+      <DraftsModal
+        visible={draftsVisible}
+        onClose={() => setDraftsVisible(false)}
+        onSelectDraft={handleSelectDraft}
+      />
 
       {arOverlayVisible && nearbyARPin && typeof nearbyARDistance === "number" && (
         <ExploreOverlay

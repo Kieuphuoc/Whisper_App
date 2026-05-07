@@ -17,6 +17,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text } from '@/components/ui/text';
+import { theme } from '@/constants/Theme';
+import { BubbleBackground } from '@/components/ui/BubbleBackground';
 
 import { MyUserContext } from '@/configs/Context';
 import { authApis, endpoints } from '@/configs/Apis';
@@ -43,6 +45,7 @@ export default function ChatDetailScreen() {
     const [room, setRoom] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
+    const [isOtherOnline, setIsOtherOnline] = useState(false);
 
     const { connected, on, off, joinRoom, leaveRoom } = useSocket(user?.id);
     const roomId = parseInt(id as string, 10);
@@ -58,6 +61,12 @@ export default function ChatDetailScreen() {
                 const currentRoom = roomsRes.data.data.find((r: any) => r.id === roomId);
                 setRoom(currentRoom);
 
+                // Initial online status
+                if (currentRoom) {
+                    const otherMember = currentRoom.members?.find((m: any) => m.user?.id !== user?.id);
+                    setIsOtherOnline(otherMember?.user?.isOnline || otherMember?.user?.isActive || false);
+                }
+
                 const msgRes = await api.get(endpoints.chatMessages(roomId));
                 const fetchedMessages = msgRes.data.data.map((m: any) => ({
                     id: m.id.toString(),
@@ -65,10 +74,14 @@ export default function ChatDetailScreen() {
                     isMine: m.senderId === user?.id,
                     senderAvatar: m.sender?.avatar,
                     createdAt: m.createdAt,
+                    type: m.type, // Store the type
                     attachments: m.type === 'FILE' ? [{ type: 'pdf', label: 'Document' }] : []
                 }));
 
                 setMessages(fetchedMessages);
+
+                // Mark notifications for this room as read
+                api.put(endpoints.notificationRoomRead(roomId)).catch(() => {});
             } catch (error) {
                 console.error('Error fetching chat data:', error);
             } finally {
@@ -90,6 +103,7 @@ export default function ChatDetailScreen() {
                     return [...prev, {
                         id: msg.id.toString(),
                         text: msg.content,
+                        type: msg.type, // Store the type
                         isMine: msg.senderId === user?.id,
                         senderAvatar: msg.sender?.avatar,
                         createdAt: msg.createdAt
@@ -104,7 +118,24 @@ export default function ChatDetailScreen() {
         };
     }, [connected, roomId, user?.id, joinRoom, leaveRoom, on, off]);
 
-    const handleSend = async (text: string) => {
+    // Listen for user status changes
+    useEffect(() => {
+        if (!connected || !room) return;
+
+        const handleUserStatus = (data: any) => {
+            const otherMember = room.members?.find((m: any) => m.user?.id !== user?.id);
+            if (otherMember && data.userId === otherMember.user?.id) {
+                setIsOtherOnline(!!data.isOnline);
+            }
+        };
+
+        on('user_status', handleUserStatus);
+        return () => {
+            off('user_status', handleUserStatus);
+        };
+    }, [connected, room, user?.id, on, off]);
+
+    const handleSend = async (text: string, type: string = 'TEXT') => {
         if (sending) return;
         setSending(true);
         try {
@@ -118,7 +149,7 @@ export default function ChatDetailScreen() {
 
             const res = await authApis(token).post(endpoints.chatSend(roomId), {
                 content: text.trim(),
-                type: 'TEXT',
+                type: type,
             });
 
             const sentMessage = res.data?.data;
@@ -128,6 +159,7 @@ export default function ChatDetailScreen() {
                     return [...prev, {
                         id: sentMessage.id.toString(),
                         text: sentMessage.content,
+                        type: sentMessage.type,
                         isMine: true,
                         createdAt: sentMessage.createdAt
                     }];
@@ -164,7 +196,7 @@ export default function ChatDetailScreen() {
     return (
         <View style={[styles.container, { backgroundColor: isDark ? '#05060a' : '#f5f7ff' }]}>
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
-            
+
             <View style={StyleSheet.absoluteFill}>
                 <LinearGradient
                     colors={isDark ? ['#000000', '#05060a', '#05060a'] : ['#f5f7ff', '#eef2ff', '#f8fafc']}
@@ -172,26 +204,16 @@ export default function ChatDetailScreen() {
                     end={{ x: 1, y: 1 }}
                     style={StyleSheet.absoluteFill}
                 />
-                <MotiView
-                    from={{ opacity: 0.15, scale: 1 }}
-                    animate={{ opacity: 0.35, scale: 1.4 }}
-                    transition={{ loop: true, type: 'timing', duration: 12000, repeatReverse: true }}
-                    style={[styles.auraCircle, { backgroundColor: isDark ? 'rgba(139,92,246,0.64)' : 'rgba(196,181,253,0.88)', top: '-14%', left: '-22%' }]}
-                />
-                <MotiView
-                    from={{ opacity: 0.1, scale: 1.2 }}
-                    animate={{ opacity: 0.25, scale: 0.9 }}
-                    transition={{ loop: true, type: 'timing', duration: 15000, repeatReverse: true }}
-                    style={[styles.auraCircle, { backgroundColor: isDark ? 'rgba(16,185,129,0.68)' : 'rgba(167,139,250,0.75)', bottom: '10%', right: '-24%' }]}
-                />
+                <BubbleBackground />
             </View>
 
             <BlurView intensity={isDark ? 28 : 54} tint={isDark ? "dark" : "light"} style={[styles.header, { paddingTop: insets.top }]}>
-                <Navbar 
-                    title={getDisplayName()} 
-                    subtitle={room?.isAnonymous ? "Kênh Chat Ẩn Danh" : "Cuộc trò chuyện"} 
+                <Navbar
+                    title={getDisplayName()}
+                    subtitle={room?.isAnonymous ? "Kênh Chat Ẩn Danh" : "Cuộc trò chuyện"}
                     avatarUrl={getDisplayAvatar()}
-                    isOnline={isOtherUserOnline()}
+                    isOnline={isOtherOnline}
+                    isLoading={loading}
                 />
             </BlurView>
 
@@ -240,8 +262,8 @@ export default function ChatDetailScreen() {
                                                 </View>
                                             </BlurView>
                                         </View>
-                                        <WelcomeMessage 
-                                            name={getDisplayName()} 
+                                        <WelcomeMessage
+                                            name={getDisplayName()}
                                             avatarUrl={getDisplayAvatar()}
                                         />
                                         <SuggestionCards />

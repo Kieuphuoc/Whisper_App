@@ -5,7 +5,6 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useColorScheme } from "nativewind";
 import React, { useContext, useState, useMemo } from 'react';
 import {
     ActivityIndicator,
@@ -16,21 +15,36 @@ import {
     ScrollView,
     TouchableOpacity,
     View,
+    useColorScheme,
+    StyleSheet,
+    StatusBar,
+    Dimensions,
 } from 'react-native';
 import { Text } from '@/components/ui/text';
+import { theme } from '@/constants/Theme';
+import { BubbleBackground } from '@/components/ui/BubbleBackground';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MotiView } from 'moti';
+import { BlurView } from 'expo-blur';
+
+const { width, height } = Dimensions.get('window');
 
 // Giữ nguyên các component import
 import { PageHeader } from '@/components/ui/PageHeader';
+import { Avatar } from '@/components/ui/Avatar';
 import { SettingInput } from '@/components/profile/SettingInput';
 
 export default function EditProfileScreen() {
-    const { colorScheme } = useColorScheme();
+    const colorScheme = useColorScheme() || 'light';
+    const isDark = colorScheme === 'dark';
+    const currentTheme = theme[colorScheme];
     const user = useContext(MyUserContext) as User | null;
     const dispatch = useContext(MyDispatchContext);
     const router = useRouter();
 
     // States
     const [displayName, setDisplayName] = useState(user?.displayName || '');
+    const [username, setUsername] = useState(user?.username || '');
     const [bio, setBio] = useState(user?.bio || '');
     const [avatar, setAvatar] = useState<ImagePicker.ImagePickerAsset | null>(null);
     const [loading, setLoading] = useState(false);
@@ -43,7 +57,7 @@ export default function EditProfileScreen() {
                 ? user.avatar
                 : `${BASE_URL}${user.avatar.startsWith('/') ? '' : '/'}${user.avatar}`;
         }
-        return 'https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg';
+        return null;
     }, [avatar, user?.avatar]);
 
     const pickImage = async () => {
@@ -67,8 +81,15 @@ export default function EditProfileScreen() {
 
     const handleUpdate = async () => {
         const trimmedName = displayName.trim();
+        const trimmedUsername = username.trim().toLowerCase();
+
         if (!trimmedName) {
             Alert.alert('Thông báo', 'Tên hiển thị không được để trống');
+            return;
+        }
+
+        if (trimmedUsername.length < 3) {
+            Alert.alert('Thông báo', 'Tên đăng nhập phải có ít nhất 3 ký tự');
             return;
         }
 
@@ -81,6 +102,7 @@ export default function EditProfileScreen() {
             // 1. Cập nhật thông tin cơ bản
             await api.put(endpoints.userMe, {
                 displayName: trimmedName,
+                username: trimmedUsername,
                 bio: bio.trim(),
             });
 
@@ -126,111 +148,106 @@ export default function EditProfileScreen() {
     };
 
     return (
-        <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            className="flex-1 bg-white dark:bg-gray-950"
-        >
+        <View style={styles.container}>
+            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
+
+            <View style={StyleSheet.absoluteFill}>
+                <LinearGradient
+                    colors={isDark ? ['#1e1b4b', '#000'] : ['#f5f3ff', '#fff']}
+                    style={StyleSheet.absoluteFill}
+                />
+                <BubbleBackground />
+            </View>
+
             <PageHeader
-                title="Chỉnh sửa hồ sơ"
-                subtitle="Cập nhật thông tin cá nhân của bạn"
-                rightElement={
-                    <TouchableOpacity
-                        onPress={handleUpdate}
-                        disabled={loading}
-                        style={{ paddingHorizontal: 12 }}
-                    >
-                        {loading ? (
-                            <ActivityIndicator size="small" color="#3cd3bf" />
-                        ) : (
-                            <Text style={{ color: '#3cd3bf', fontWeight: 'bold', fontSize: 18 }}>Lưu</Text>
-                        )}
-                    </TouchableOpacity>
-                }
+                title="Sửa hồ sơ"
+                subtitle="Cập nhật thông tin của bạn"
+                rightIcon="checkmark-done"
+                onRightPress={handleUpdate}
             />
 
-            <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: 120 }}
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                style={{ flex: 1 }}
             >
-                {/* Avatar Section */}
-                <View className="items-center py-8">
-                    <TouchableOpacity
-                        onPress={pickImage}
-                        activeOpacity={0.9}
-                        className="relative group"
-                    >
-                        <View className="p-1 rounded-2xl border-2 border-primary-500/20">
-                            <Image
-                                source={{ uri: avatarUri }}
-                                className="w-32 h-32 rounded-xl bg-gray-200"
-                            />
-                        </View>
-                        <View className="absolute bottom-1 right-1 w-9 h-9 rounded-full bg-primary-500 items-center justify-center border-4 border-white dark:border-gray-950 shadow-sm">
-                            <Ionicons name="camera" size={18} color="#fff" />
-                        </View>
-                    </TouchableOpacity>
-                    <Text className="mt-3 text-gray-400 text-sm font-medium">Nhấn để đổi ảnh</Text>
-                </View>
 
-                {/* Form Section */}
-                <View className="px-5 gap-y-6">
-                    <SettingInput
-                        label="Tên hiển thị"
-                        value={displayName}
-                        onChangeText={setDisplayName}
-                        placeholder="Tên của bạn"
-                        autoCapitalize="words"
-                    />
+                <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 120 }}
+                >
+                    {/* Avatar Section */}
+                    <View style={styles.avatarSection}>
+                        <Avatar
+                            uri={avatarUri}
+                            size={130}
+                            showLevel
+                            level={user?.level || 1}
+                            showCamera
+                            onPress={pickImage}
+                        />
+                        <Text style={[styles.avatarHint, { color: isDark ? '#9ca3af' : '#6b7280' }]}>Nhấn để đổi ảnh đại diện</Text>
+                    </View>
 
-                    <SettingInput
-                        label="Tiểu sử"
-                        value={bio}
-                        onChangeText={setBio}
-                        placeholder="Viết gì đó về bạn..."
-                        multiline
-                        numberOfLines={3}
-                        textAlignVertical="top"
-                        style={{ height: 100, paddingTop: 12 }}
-                    />
-
-                    <View className="h-[1px] bg-gray-100 dark:bg-gray-900 mx-2 my-2" />
-
-                    {/* Read-only Information */}
-                    <View className="opacity-70">
+                    {/* Form Section */}
+                    <View className="px-5 gap-y-6">
                         <SettingInput
-                            label="Tên đăng nhập"
-                            value={user?.username || 'user'}
-                            editable={false}
+                            label="Tên hiển thị"
+                            value={displayName}
+                            onChangeText={setDisplayName}
+                            placeholder="Tên của bạn"
+                            autoCapitalize="words"
+                        />
+
+                        <SettingInput
+                            label="Tên đăng nhập (ID)"
+                            value={username}
+                            onChangeText={setUsername}
+                            placeholder="username"
+                            autoCapitalize="none"
                             leftElement={<Text className="text-primary-500 font-bold mr-1 text-lg">@</Text>}
                         />
-                    </View>
 
-                    <View className="opacity-70">
                         <SettingInput
-                            label="Địa chỉ Email"
-                            value={user?.email || 'Chưa cập nhật'}
-                            editable={false}
-                            leftElement={<Ionicons name="mail-outline" size={20} color="#94a3b8" className="mr-2" />}
+                            label="Tiểu sử"
+                            value={bio}
+                            onChangeText={setBio}
+                            placeholder="Viết gì đó về bạn..."
+                            multiline
+                            numberOfLines={3}
+                            textAlignVertical="top"
+                            style={{ height: 100, paddingTop: 12 }}
                         />
-                    </View>
-                </View>
 
-                {/* Bottom Action */}
-                <View className="px-5 mt-10">
-                    <TouchableOpacity
-                        className={`py-4 rounded-2xl items-center shadow-lg shadow-primary-500/30 ${loading ? 'bg-primary-300' : 'bg-primary-500'}`}
-                        onPress={handleUpdate}
-                        disabled={loading}
-                        activeOpacity={0.8}
-                    >
-                        {loading ? (
-                            <ActivityIndicator color="#fff" />
-                        ) : (
-                            <Text className="text-white text-lg font-bold">Cập nhật ngay</Text>
-                        )}
-                    </TouchableOpacity>
-                </View>
-            </ScrollView>
-        </KeyboardAvoidingView>
+                        <View className="h-[1px] bg-gray-100 dark:bg-gray-900 mx-2 my-2" />
+
+                        <View className="px-2 pb-10">
+                            <Text style={[styles.infoNote, { color: isDark ? 'rgba(255,255,255,0.4)' : '#9ca3af' }]}>
+                                Tên đăng nhập (ID) là duy nhất và không thể trùng lặp.
+                            </Text>
+                        </View>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </View>
     );
 }
+
+const styles = StyleSheet.create({
+    container: { flex: 1 },
+    avatarSection: {
+        alignItems: 'center',
+        paddingVertical: 40,
+    },
+    avatarHint: {
+        marginTop: 15,
+        fontSize: 13,
+        fontWeight: '600',
+        opacity: 0.8,
+    },
+    infoNote: {
+        fontSize: 12,
+        lineHeight: 18,
+        textAlign: 'center',
+        paddingHorizontal: 20,
+    },
+});

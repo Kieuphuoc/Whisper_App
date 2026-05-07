@@ -71,6 +71,20 @@ export default function PrivacyCheckupScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity 
+                    className="flex-row items-center bg-gray-50 dark:bg-gray-900 p-4 rounded-2xl mb-4 border border-gray-100 dark:border-gray-800"
+                    onPress={() => router.push('/(tabs)/profile/privacy-zones')}
+                >
+                    <View className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 items-center justify-center mr-4">
+                        <Ionicons name="shield-checkmark" size={24} color="#3b82f6" />
+                    </View>
+                    <View className="flex-1">
+                        <Text style={{ fontSize: 16, fontWeight: '700', color: colorScheme === 'dark' ? '#fff' : '#111' }}>Vùng an toàn</Text>
+                        <Text style={{ fontSize: 13, color: colorScheme === 'dark' ? '#9ca3af' : '#6b7280', marginTop: 2 }}>Ẩn vị trí chính xác tại Nhà/Cơ quan</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                </TouchableOpacity>
+
+                <TouchableOpacity 
                     className="flex-row items-center bg-gray-50 dark:bg-gray-900 p-4 rounded-2xl border border-gray-100 dark:border-gray-800"
                     onPress={() => router.push('/(tabs)/profile/activity-status')}
                 >

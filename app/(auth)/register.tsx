@@ -3,15 +3,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
 import React, { useState, useContext } from 'react';
-import { Image, StatusBar, TextInput, TouchableOpacity, View, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { Image, StatusBar, TextInput, TouchableOpacity, View, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Text } from '@/components/ui/text';
 import Apis, { endpoints } from '../../configs/Apis';
 import { MyDispatchContext } from '../../configs/Context';
 
 type UserRegister = {
     username?: string;
+    email?: string;
     password?: string;
+    confirmPassword?: string;
     displayName?: string;
+    avatar?: string;
 };
 
 type InfoField = {
@@ -19,6 +23,7 @@ type InfoField = {
     icon: keyof typeof Ionicons.glyphMap;
     secureTextEntry: boolean;
     field: keyof UserRegister;
+    keyboardType?: 'default' | 'email-address';
 };
 
 export default function RegisterScreen() {
@@ -30,10 +35,17 @@ export default function RegisterScreen() {
 
     const info: InfoField[] = [
         {
-            label: 'Tên hiển thị (Tùy chọn)',
+            label: 'Tên hiển thị',
             icon: 'person-outline',
             secureTextEntry: false,
             field: 'displayName',
+        },
+        {
+            label: 'Email',
+            icon: 'mail-outline',
+            secureTextEntry: false,
+            field: 'email',
+            keyboardType: 'email-address',
         },
         {
             label: 'Username',
@@ -47,7 +59,26 @@ export default function RegisterScreen() {
             secureTextEntry: true,
             field: 'password',
         },
+        {
+            label: 'Xác nhận mật khẩu',
+            icon: 'checkmark-circle-outline',
+            secureTextEntry: true,
+            field: 'confirmPassword',
+        },
     ];
+
+    const pickImage = async () => {
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.7,
+        });
+
+        if (!result.canceled) {
+            setUser({ ...user, avatar: result.assets[0].uri });
+        }
+    };
 
     const setState = (value: string, field: keyof UserRegister) => {
         setUser({ ...user, [field]: value });
@@ -55,12 +86,20 @@ export default function RegisterScreen() {
     };
 
     const validate = (): boolean => {
-        if (!user?.username?.trim() || !user?.password?.trim()) {
-            setMsg('Vui lòng nhập đầy đủ tài khoản và mật khẩu!');
+        if (!user?.username?.trim() || !user?.password?.trim() || !user?.email?.trim()) {
+            setMsg('Vui lòng nhập đầy đủ thông tin bắt buộc!');
+            return false;
+        }
+        if (!user.email.includes('@')) {
+            setMsg('Email không hợp lệ!');
             return false;
         }
         if (user.password.length < 6) {
             setMsg('Mật khẩu phải có ít nhất 6 ký tự!');
+            return false;
+        }
+        if (user.password !== user.confirmPassword) {
+            setMsg('Mật khẩu xác nhận không khớp!');
             return false;
         }
         return true;
@@ -72,12 +111,23 @@ export default function RegisterScreen() {
         try {
             setLoading(true);
 
-            // Using FormData as requested by previous implementation
             const formData = new FormData();
             formData.append('username', user.username!.trim());
+            formData.append('email', user.email!.trim());
             formData.append('password', user.password!.trim());
             if (user.displayName) {
                 formData.append('displayName', user.displayName.trim());
+            }
+
+            if (user.avatar) {
+                const filename = user.avatar.split('/').pop() || 'avatar.jpg';
+                const match = /\.(\w+)$/.exec(filename);
+                const type = match ? `image/${match[1]}` : `image/jpeg`;
+                formData.append('avatar', {
+                    uri: user.avatar,
+                    name: filename,
+                    type,
+                } as any);
             }
 
             const res = await Apis.post(endpoints['register'], formData, {
@@ -108,41 +158,50 @@ export default function RegisterScreen() {
     };
 
     return (
-        <View className="flex-1 bg-[#1a1a1a]">
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            className="flex-1 bg-[#1a1a1a]"
+        >
             <StatusBar barStyle="light-content" />
 
-            {/* Background Image */}
-            <Image
-                source={{ uri: 'https://i.pinimg.com/736x/8f/4f/83/8f4f836b45cae5270f1d717af7158070.jpg' }}
-                className="absolute w-full h-full"
+            <View 
+                className="absolute w-full h-full bg-[#1a1a1a]" 
             />
             <BlurView intensity={20} className="absolute inset-0 bg-neutral-900/60" />
 
-            {/* Content */}
             <ScrollView
-                contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingVertical: 40 }}
+                contentContainerStyle={{ flexGrow: 1, paddingVertical: 60 }}
                 className="px-6"
                 keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
             >
                 {/* Header Section */}
-                <View className="items-center mb-8">
-                    <View className="w-20 h-20 rounded-full bg-white/95 justify-center items-center mb-5 shadow-violet-500/30 border-2 border-violet-500/20 elevation-12 overflow-hidden">
-                        <Image
-                            source={require('../../assets/images/doctor_strange_1.png')}
-                            className="w-full h-full"
-                        />
-                    </View>
-                    <Text className="text-2xl font-bold text-white mb-2 shadow-black/50" style={{ fontFamily: 'Quicksand_700Bold' }}>Whispery</Text>
-                    <Text className="text-base text-white/80 text-center shadow-black/50">Join our community today</Text>
+                <View className="items-center mb-6">
+                    <TouchableOpacity 
+                        onPress={pickImage}
+                        className="relative"
+                    >
+                        <View className="w-24 h-24 rounded-3xl bg-white/10 justify-center items-center overflow-hidden border-2 border-white/20">
+                            {user.avatar ? (
+                                <Image source={{ uri: user.avatar }} className="w-full h-full" />
+                            ) : (
+                                <Image 
+                                    source={require('../../assets/images/avatar.png')} 
+                                    className="w-full h-full"
+                                    resizeMode="contain"
+                                />
+                            )}
+                        </View>
+                        <View className="absolute -bottom-1 -right-1 w-8 h-8 bg-violet-500 rounded-full justify-center items-center border-2 border-[#1a1a1a]">
+                            <Ionicons name="add" size={20} color="white" />
+                        </View>
+                    </TouchableOpacity>
+                    <Text className="text-2xl font-bold text-white mt-4" style={{ fontFamily: 'Quicksand_700Bold' }}>Tạo tài khoản</Text>
+                    <Text className="text-sm text-white/60 mt-1">Bắt đầu hành trình khám phá Whisper</Text>
                 </View>
 
                 {/* Register Form */}
-                <View className="bento-container">
-                    <View className="items-center mb-6">
-                        <Text className="text-xl font-semibold text-neutral-900 mb-1">Create Account</Text>
-                        <Text className="text-sm text-neutral-500 text-center">Sign up to start your journey</Text>
-                    </View>
-
+                <View className="bento-container pt-10" style={{ backgroundColor: 'rgba(255, 255, 255, 0.85)' }}>
                     {info.map((i, index) => (
                         <View key={index} className="mb-4">
                             <View className="input-wrapper">
@@ -155,6 +214,7 @@ export default function RegisterScreen() {
                                     secureTextEntry={i.secureTextEntry && !showPassword}
                                     autoCapitalize="none"
                                     placeholderTextColor="#9ca3af"
+                                    keyboardType={i.keyboardType || 'default'}
                                 />
                                 {i.field === 'password' && (
                                     <TouchableOpacity
@@ -172,7 +232,6 @@ export default function RegisterScreen() {
                         </View>
                     ))}
 
-                    {/* Error Message Inline */}
                     {!!msg && (
                         <View className="flex-row items-center bg-red-50 rounded-xl p-3 mb-4 border border-red-200">
                             <Ionicons name="alert-circle-outline" size={16} color="#ef4444" />
@@ -180,9 +239,8 @@ export default function RegisterScreen() {
                         </View>
                     )}
 
-                    {/* Register Button */}
                     <TouchableOpacity
-                        className={`primary-button mt-2 ${loading ? 'opacity-70 bg-violet-400' : ''}`}
+                        className={`primary-button mt-4 ${loading ? 'opacity-70 bg-violet-400' : ''}`}
                         onPress={handleRegister}
                         disabled={loading}
                     >
@@ -191,20 +249,19 @@ export default function RegisterScreen() {
                         ) : (
                             <>
                                 <Ionicons name="person-add-outline" size={20} color="white" />
-                                <Text className="ml-2 text-base font-semibold text-white">Sign Up</Text>
+                                <Text className="ml-2 text-base font-semibold text-white">Đăng ký ngay</Text>
                             </>
                         )}
                     </TouchableOpacity>
 
-                    {/* Login Link */}
-                    <View className="flex-row justify-center items-center mt-6">
-                        <Text className="text-sm text-neutral-500">Already have an account? </Text>
+                    <View className="flex-row justify-center items-center mt-8">
+                        <Text className="text-sm text-neutral-500">Đã có tài khoản? </Text>
                         <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
-                            <Text className="text-sm font-bold text-violet-500">Sign in</Text>
+                            <Text className="text-sm font-bold text-violet-500">Đăng nhập</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
             </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
     );
 }

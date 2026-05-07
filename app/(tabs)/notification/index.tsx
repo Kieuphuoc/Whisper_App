@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useState, useMemo } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
     ActivityIndicator,
     Dimensions,
@@ -14,7 +14,9 @@ import {
     Image,
     SectionList,
     Modal,
+    Alert,
 } from 'react-native';
+import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView, AnimatePresence } from 'moti';
@@ -45,6 +47,7 @@ const NOTIF_CONFIG: Record<string, { icon: keyof typeof Ionicons.glyphMap; color
     COMMENT_REPLY: { icon: 'arrow-undo', colors: ['#60a5fa', '#1d4ed8'], label: 'Phản hồi bình luận' },
     FRIEND_VOICEPIN: { icon: 'mic', colors: ['#f59e0b', '#d97706'], label: 'VoicePin từ bạn bè' },
     SYSTEM_MESSAGE: { icon: 'information-circle', colors: ['#9ca3af', '#4b5563'], label: 'Thông báo hệ thống' },
+    NEW_MESSAGE: { icon: 'chatbubbles', colors: ['#10b981', '#3b82f6'], label: 'Tin nhắn mới' },
 };
 
 const DEFAULT_CONFIG = { icon: 'notifications' as keyof typeof Ionicons.glyphMap, colors: ['#9ca3af', '#4b5563'], label: 'Thông báo' };
@@ -87,23 +90,37 @@ const FilterTab = ({ label, active, onPress, isDark, theme }: { label: string, a
     </TouchableOpacity>
 );
 
-function NotifItem({ 
-    item, 
-    onRead, 
+function NotifItem({
+    item,
+    onRead,
     onAction,
     onNavigate,
-    isDark, 
-    theme 
-}: { 
-    item: Notification; 
-    onRead: (id: number) => void; 
+    isDark,
+    theme,
+    onDelete,
+}: {
+    item: Notification;
+    onRead: (id: number) => void;
     onAction: (id: number, action: string, data: any) => void;
     onNavigate: (item: Notification) => void;
-    isDark: boolean; 
-    theme: any 
+    isDark: boolean;
+    theme: any;
+    onDelete: (id: number) => void;
 }) {
     const config = NOTIF_CONFIG[item.type] ?? DEFAULT_CONFIG;
     const { data } = item;
+
+    const renderRightActions = () => {
+        return (
+            <TouchableOpacity
+                style={styles.deleteAction}
+                onPress={() => onDelete(item.id)}
+                activeOpacity={0.7}
+            >
+                <Ionicons name="trash-outline" size={24} color="#fff" />
+            </TouchableOpacity>
+        );
+    };
 
     const avatarUri = useMemo(() => {
         const url = data?.senderAvatar || data?.reactorAvatar || data?.commenterAvatar || data?.replierAvatar || data?.posterAvatar;
@@ -124,45 +141,51 @@ function NotifItem({
         const nameStyle = [styles.boldText, { color: isDark ? '#fff' : '#111827' }];
         const italicStyle = [styles.italicText, { color: isDark ? '#9ca3af' : '#64748b' }];
 
-        switch(item.type) {
-            case 'FRIEND_REQUEST': 
+        switch (item.type) {
+            case 'FRIEND_REQUEST':
                 return (
                     <Text numberOfLines={2} style={[styles.messageText, { color: isDark ? '#e2e8f0' : '#4b5563' }]}>
                         <Text style={nameStyle}>{data?.senderName || 'Ai đó'}</Text> đã gửi lời mời kết bạn.
                     </Text>
                 );
-            case 'FRIEND_ACCEPTED': 
+            case 'FRIEND_ACCEPTED':
                 return (
                     <Text numberOfLines={2} style={[styles.messageText, { color: isDark ? '#e2e8f0' : '#4b5563' }]}>
                         <Text style={nameStyle}>{data?.accepterName || 'Ai đó'}</Text> đã chấp nhận lời mời.
                     </Text>
                 );
-            case 'NEW_REACTION': 
+            case 'NEW_REACTION':
                 const emoji = REACTION_MAP[data?.reactionType] || '❤️';
                 return (
                     <Text numberOfLines={2} style={[styles.messageText, { color: isDark ? '#e2e8f0' : '#4b5563' }]}>
                         <Text style={nameStyle}>{data?.reactorName || 'Ai đó'}</Text> đã thả {emoji} vào bài đăng của bạn.
                     </Text>
                 );
-            case 'NEW_COMMENT': 
+            case 'NEW_COMMENT':
                 return (
                     <Text numberOfLines={2} style={[styles.messageText, { color: isDark ? '#e2e8f0' : '#4b5563' }]}>
                         <Text style={nameStyle}>{data?.commenterName || 'Ai đó'}</Text> đã bình luận: <Text style={italicStyle}>"{data?.snippet || '...'}"</Text>
                     </Text>
                 );
-            case 'COMMENT_REPLY': 
+            case 'COMMENT_REPLY':
                 return (
                     <Text numberOfLines={2} style={[styles.messageText, { color: isDark ? '#e2e8f0' : '#4b5563' }]}>
                         <Text style={nameStyle}>{data?.replierName || 'Ai đó'}</Text> đã phản hồi: <Text style={italicStyle}>"{data?.snippet || '...'}"</Text>
                     </Text>
                 );
-            case 'FRIEND_VOICEPIN': 
+            case 'FRIEND_VOICEPIN':
                 return (
                     <Text numberOfLines={2} style={[styles.messageText, { color: isDark ? '#e2e8f0' : '#4b5563' }]}>
                         <Text style={nameStyle}>{data?.posterName || 'Bạn bè'}</Text> vừa đăng: <Text style={italicStyle}>"{data?.voicePinContent || '...'}"</Text>
                     </Text>
                 );
-            case 'SYSTEM_MESSAGE': 
+            case 'NEW_MESSAGE':
+                return (
+                    <Text numberOfLines={2} style={[styles.messageText, { color: isDark ? '#e2e8f0' : '#4b5563' }]}>
+                        <Text style={nameStyle}>{data?.senderName || 'Ai đó'}</Text>: <Text style={italicStyle}>"{data?.content || data?.snippet || 'đã gửi một tin nhắn'}"</Text>
+                    </Text>
+                );
+            case 'SYSTEM_MESSAGE':
                 return (
                     <View style={styles.systemMessageContainer}>
                         <Ionicons name="shield-checkmark" size={14} color={isDark ? '#fbbf24' : '#d97706'} style={{ marginRight: 6 }} />
@@ -171,74 +194,82 @@ function NotifItem({
                         </Text>
                     </View>
                 );
-            default: 
+            default:
                 return <Text style={styles.messageText}>Bạn có thông báo mới.</Text>;
         }
     };
 
     return (
         <MotiView
-            from={{ opacity: 0, translateX: -10 }}
-            animate={{ opacity: 1, translateX: 0 }}
-            exit={{ opacity: 0, scale: 0.9 }}
+            from={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, translateX: -width }}
+            transition={{ type: 'timing', duration: 300 }}
             style={styles.itemWrapper}
         >
-            <TouchableOpacity
-                onPress={() => { onRead(item.id); onNavigate(item); }}
-                activeOpacity={0.9}
-                style={[
-                    styles.itemContainer, 
-                    { 
-                        borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.7)'
-                    }
-                ]}
+            <Swipeable
+                renderRightActions={renderRightActions}
+                friction={2}
+                rightThreshold={40}
+                onSwipeableOpen={() => onDelete(item.id)}
             >
-                <View style={styles.leftCol}>
-                    <View style={styles.avatarContainer}>
-                        {avatarUri ? (
-                            <Image source={{ uri: avatarUri }} style={styles.avatar} />
-                        ) : (
-                            <LinearGradient colors={config.colors as any} style={styles.avatarPlaceholder}>
-                                <Ionicons name={config.icon} size={20} color="#fff" />
-                            </LinearGradient>
+                <TouchableOpacity
+                    onPress={() => { onRead(item.id); onNavigate(item); }}
+                    activeOpacity={0.9}
+                    style={[
+                        styles.itemContainer,
+                        {
+                            borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.7)'
+                        }
+                    ]}
+                >
+                    <View style={styles.leftCol}>
+                        <View style={styles.avatarContainer}>
+                            {avatarUri ? (
+                                <Image source={{ uri: avatarUri }} style={styles.avatar} />
+                            ) : (
+                                <LinearGradient colors={config.colors as any} style={styles.avatarPlaceholder}>
+                                    <Ionicons name={config.icon} size={20} color="#fff" />
+                                </LinearGradient>
+                            )}
+                            {!item.isRead && <View style={[styles.unreadDot, { backgroundColor: theme.colors.primary }]} />}
+
+                            <View style={[styles.miniTypeIcon, { backgroundColor: config.colors[0] }]}>
+                                <Ionicons name={config.icon} size={10} color="#fff" />
+                            </View>
+                        </View>
+                    </View>
+
+                    <View style={styles.rightCol}>
+                        <View style={styles.itemMeta}>
+                            <Text style={[styles.notifTypeLabel, { color: config.colors[0] }]}>{config.label}</Text>
+                            <Text style={styles.timeText}>{timeAgo(item.createdAt)}</Text>
+                        </View>
+
+                        <View>
+                            {getMessage()}
+                        </View>
+
+                        {item.type === 'FRIEND_REQUEST' && !item.isRead && (
+                            <View style={styles.actionRow}>
+                                <TouchableOpacity
+                                    style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
+                                    onPress={() => onAction(item.id, 'ACCEPT_FRIEND', data)}
+                                >
+                                    <Text style={styles.actionButtonText}>Chấp nhận</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.actionButton, styles.secondaryAction, { borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]}
+                                    onPress={() => onAction(item.id, 'REJECT_FRIEND', data)}
+                                >
+                                    <Text style={[styles.actionButtonText, { color: isDark ? '#9ca3af' : '#6b7280' }]}>Xóa</Text>
+                                </TouchableOpacity>
+                            </View>
                         )}
-                        {!item.isRead && <View style={[styles.unreadDot, { backgroundColor: theme.colors.primary }]} />}
-                        
-                        <View style={[styles.miniTypeIcon, { backgroundColor: config.colors[0] }]}>
-                            <Ionicons name={config.icon} size={10} color="#fff" />
-                        </View>
                     </View>
-                </View>
-
-                <View style={styles.rightCol}>
-                    <View style={styles.itemMeta}>
-                        <Text style={[styles.notifTypeLabel, { color: config.colors[0] }]}>{config.label}</Text>
-                        <Text style={styles.timeText}>{timeAgo(item.createdAt)}</Text>
-                    </View>
-                    
-                    <View>
-                        {getMessage()}
-                    </View>
-
-                    {item.type === 'FRIEND_REQUEST' && !item.isRead && (
-                        <View style={styles.actionRow}>
-                            <TouchableOpacity 
-                                style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
-                                onPress={() => onAction(item.id, 'ACCEPT_FRIEND', data)}
-                            >
-                                <Text style={styles.actionButtonText}>Chấp nhận</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity 
-                                style={[styles.actionButton, styles.secondaryAction, { borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]}
-                                onPress={() => onAction(item.id, 'REJECT_FRIEND', data)}
-                            >
-                                <Text style={[styles.actionButtonText, { color: isDark ? '#9ca3af' : '#6b7280' }]}>Xóa</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-                </View>
-            </TouchableOpacity>
+                </TouchableOpacity>
+            </Swipeable>
         </MotiView>
     );
 }
@@ -249,6 +280,7 @@ export default function NotificationScreen() {
     const isDark = colorScheme === 'dark';
     const themeContext = theme[colorScheme];
     const router = useRouter();
+    const { from } = useLocalSearchParams<{ from?: string }>();
 
     const [notifs, setNotifs] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(false);
@@ -277,7 +309,7 @@ export default function NotificationScreen() {
     const handleNavigate = (item: Notification) => {
         const { data } = item;
         setShowDetail(false);
-        
+
         switch (item.type) {
             case 'NEW_REACTION':
             case 'NEW_COMMENT':
@@ -295,6 +327,11 @@ export default function NotificationScreen() {
             case 'FRIEND_ACCEPTED':
                 if (data?.accepterId) {
                     router.push({ pathname: '/user/[id]', params: { id: String(data.accepterId) } });
+                }
+                break;
+            case 'NEW_MESSAGE':
+                if (data?.roomId) {
+                    router.push({ pathname: `/chat/${data.roomId}` });
                 }
                 break;
             default:
@@ -373,184 +410,223 @@ export default function NotificationScreen() {
         } catch { /* Silent */ }
     };
 
+    const clearAll = () => {
+        Alert.alert(
+            'Xóa tất cả',
+            'Bạn có chắc chắn muốn xóa tất cả thông báo không?',
+            [
+                { text: 'Hủy', style: 'cancel' },
+                {
+                    text: 'Xóa tất cả',
+                    style: 'destructive',
+                    onPress: () => setNotifs([])
+                }
+            ]
+        );
+    };
+
+    const handleDelete = (id: number) => {
+        setNotifs(prev => prev.filter(n => n.id !== id));
+    };
+
     return (
-        <View style={[styles.container, { backgroundColor: themeContext.colors.background }]}>
-            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <View style={[styles.container, { backgroundColor: themeContext.colors.background }]}>
+                <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
 
-            <View style={StyleSheet.absoluteFill}>
-                <LinearGradient
-                    colors={isDark ? ['#1e1b4b', '#000'] : ['#f5f3ff', '#fff']}
-                    style={StyleSheet.absoluteFill}
-                />
-                <MotiView
-                    from={{ opacity: 0.2, scale: 1 }}
-                    animate={{ opacity: 0.4, scale: 1.5 }}
-                    transition={{ loop: true, type: 'timing', duration: 15000, repeatReverse: true }}
-                    style={[styles.auraCircle, { backgroundColor: isDark ? '#4338ca' : '#ddd6fe', top: -50, right: -100 }]}
-                />
-                <BlurView 
-                    intensity={isDark ? 100 : 60} 
-                    tint={isDark ? "dark" : "light"} 
-                    style={StyleSheet.absoluteFill} 
-                />
-            </View>
+                <View style={StyleSheet.absoluteFill}>
+                    <LinearGradient
+                        colors={isDark ? ['#1e1b4b', '#000'] : ['#f5f3ff', '#fff']}
+                        style={StyleSheet.absoluteFill}
+                    />
+                    <MotiView
+                        from={{ opacity: 0.2, scale: 1 }}
+                        animate={{ opacity: 0.4, scale: 1.5 }}
+                        transition={{ loop: true, type: 'timing', duration: 15000, repeatReverse: true }}
+                        style={[styles.auraCircle, { backgroundColor: isDark ? '#4338ca' : '#ddd6fe', top: -50, right: -100 }]}
+                    />
+                    <BlurView
+                        intensity={isDark ? 100 : 60}
+                        tint={isDark ? "dark" : "light"}
+                        style={StyleSheet.absoluteFill}
+                    />
+                </View>
 
-            <View style={styles.header}>
-                <View style={styles.headerLeft}>
-                    <TouchableOpacity
-                        onPress={() => {
-                            if (router.canGoBack()) {
-                                router.back();
-                            } else {
-                                router.replace('/(tabs)/home');
-                            }
-                        }}
-                        style={[styles.headerIconBtn, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
-                        activeOpacity={0.8}
-                    >
-                        <Ionicons name="arrow-back" size={20} color={themeContext.colors.primary} />
-                    </TouchableOpacity>
-                    <View>
-                        <Text style={[styles.title, { color: isDark ? '#fff' : '#111827' }]}>Thông báo</Text>
-                        <Text style={styles.subtitle}>Xem các hoạt động mới nhất</Text>
+                <View style={styles.header}>
+                    <View style={styles.headerLeft}>
+                        <TouchableOpacity
+                            onPress={() => {
+                                if (from === 'home') {
+                                    router.replace('/(tabs)/home');
+                                } else if (from === 'profile') {
+                                    router.replace('/(tabs)/profile');
+                                } else if (router.canGoBack()) {
+                                    router.back();
+                                } else {
+                                    router.replace('/(tabs)/home');
+                                }
+                            }}
+                            style={[styles.headerIconBtn, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
+                            activeOpacity={0.8}
+                        >
+                            <Ionicons name="arrow-back" size={20} color={themeContext.colors.primary} />
+                        </TouchableOpacity>
+                        <View>
+                            <Text style={[styles.title, { color: isDark ? '#fff' : '#111827' }]}>Thông báo</Text>
+                            <Text style={styles.subtitle}>Xem các hoạt động mới nhất</Text>
+                        </View>
+                    </View>
+                    <View style={styles.headerRight}>
+                        <TouchableOpacity
+                            onPress={markAllRead}
+                            style={[styles.headerIconBtn, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
+                        >
+                            <Ionicons name="checkmark-done" size={20} color={themeContext.colors.primary} />
+                        </TouchableOpacity>
                     </View>
                 </View>
-                <TouchableOpacity 
-                    onPress={markAllRead}
-                    style={[styles.headerIconBtn, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
-                >
-                    <Ionicons name="checkmark-done" size={20} color={themeContext.colors.primary} />
-                </TouchableOpacity>
-            </View>
 
-            <View style={styles.tabContainer}>
-                <FilterTab label="Tất cả" active={activeTab === 'all'} onPress={() => setActiveTab('all')} isDark={isDark} theme={themeContext} />
-                <FilterTab label="Lời mời" active={activeTab === 'requests'} onPress={() => setActiveTab('requests')} isDark={isDark} theme={themeContext} />
-                <FilterTab label="Tương tác" active={activeTab === 'interactions'} onPress={() => setActiveTab('interactions')} isDark={isDark} theme={themeContext} />
-            </View>
-
-            {loading && !refreshing ? (
-                <View style={styles.center}>
-                    <ActivityIndicator color={themeContext.colors.primary} size="large" />
-                    <Text style={{ marginTop: 15, color: '#9ca3af', fontWeight: '600' }}>Đang tải thông báo...</Text>
+                <View style={styles.tabContainer}>
+                    <FilterTab label="Tất cả" active={activeTab === 'all'} onPress={() => setActiveTab('all')} isDark={isDark} theme={themeContext} />
+                    <FilterTab label="Lời mời" active={activeTab === 'requests'} onPress={() => setActiveTab('requests')} isDark={isDark} theme={themeContext} />
+                    <FilterTab label="Tương tác" active={activeTab === 'interactions'} onPress={() => setActiveTab('interactions')} isDark={isDark} theme={themeContext} />
                 </View>
-            ) : (
-                <SectionList
-                    sections={sectionedData}
-                    keyExtractor={item => String(item.id)}
-                    stickySectionHeadersEnabled={false}
-                    contentContainerStyle={styles.listContent}
-                    refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={themeContext.colors.primary} />
-                    }
-                    renderItem={({ item }) => (
-                        <NotifItem 
-                            item={item} 
-                            onRead={handleRead} 
-                            onAction={handleAction}
-                            onNavigate={handlePressNotif}
-                            isDark={isDark} 
-                            theme={themeContext} 
-                        />
-                    )}
-                    renderSectionHeader={({ section: { title } }) => (
-                        <View style={styles.sectionHeader}>
-                            <View style={[styles.sectionDash, { backgroundColor: themeContext.colors.primary }]} />
-                            <Text style={[styles.sectionTitle, { color: isDark ? 'rgba(255,255,255,0.5)' : '#6b7280' }]}>
-                                {title}
-                            </Text>
-                        </View>
-                    )}
-                    ListEmptyComponent={
-                        <View style={styles.emptyContainer}>
-                            <MotiView
-                                from={{ opacity: 0, scale: 0.5 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ type: 'spring' }}
-                                style={styles.emptyIconBox}
-                            >
-                                <Ionicons name="radio" size={60} color={isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6"} />
-                            </MotiView>
-                            <Text style={styles.emptyText}>Hiện tại chưa có thông báo mới.</Text>
-                        </View>
-                    }
-                    ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-                />
-            )}
 
-            <Modal
-                visible={showDetail}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setShowDetail(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
-                    <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setShowDetail(false)} />
-                    
-                    <AnimatePresence>
-                        {showDetail && selectedNotif && (
-                            <MotiView
-                                from={{ opacity: 0, scale: 0.9, translateY: 20 }}
-                                animate={{ opacity: 1, scale: 1, translateY: 0 }}
-                                exit={{ opacity: 0, scale: 0.9, translateY: 20 }}
-                                style={[styles.modalContent, { backgroundColor: isDark ? '#1e1e2e' : '#fff' }]}
-                            >
-                                <View style={styles.modalHeader}>
-                                    <Text style={[styles.modalTitle, { color: isDark ? '#fff' : '#111827' }]}>Chi tiết thông báo</Text>
-                                    <TouchableOpacity onPress={() => setShowDetail(false)}>
-                                        <Ionicons name="close" size={24} color={isDark ? '#9ca3af' : '#6b7280'} />
-                                    </TouchableOpacity>
+                {loading && !refreshing ? (
+                    <View style={styles.center}>
+                        <ActivityIndicator color={themeContext.colors.primary} size="large" />
+                        <Text style={{ marginTop: 15, color: '#9ca3af', fontWeight: '600' }}>Đang tải thông báo...</Text>
+                    </View>
+                ) : (
+                    <SectionList
+                        sections={sectionedData}
+                        keyExtractor={item => String(item.id)}
+                        stickySectionHeadersEnabled={false}
+                        contentContainerStyle={styles.listContent}
+                        refreshControl={
+                            <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={themeContext.colors.primary} />
+                        }
+                        renderItem={({ item }) => (
+                            <NotifItem
+                                item={item}
+                                onRead={handleRead}
+                                onAction={handleAction}
+                                onNavigate={handlePressNotif}
+                                onDelete={handleDelete}
+                                isDark={isDark}
+                                theme={themeContext}
+                            />
+                        )}
+                        renderSectionHeader={({ section: { title } }) => (
+                            <View style={styles.sectionHeader}>
+                                <View style={styles.sectionHeaderLeft}>
+                                    <View style={[styles.sectionDash, { backgroundColor: themeContext.colors.primary }]} />
+                                    <Text style={[styles.sectionTitle, { color: isDark ? 'rgba(255,255,255,0.5)' : '#6b7280' }]}>
+                                        {title}
+                                    </Text>
                                 </View>
+                                <TouchableOpacity
+                                    onPress={clearAll}
+                                    style={styles.sectionClearBtn}
+                                    activeOpacity={0.6}
+                                >
+                                    <Ionicons name="close-outline" size={20} color={isDark ? 'rgba(255,255,255,0.3)' : '#9ca3af'} />
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                        ListEmptyComponent={
+                            <View style={styles.emptyContainer}>
+                                <MotiView
+                                    from={{ opacity: 0, scale: 0.5 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ type: 'spring' }}
+                                    style={styles.emptyIconBox}
+                                >
+                                    <Ionicons name="radio" size={60} color={isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6"} />
+                                </MotiView>
+                                <Text style={styles.emptyText}>Hiện tại chưa có thông báo mới.</Text>
+                            </View>
+                        }
+                        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+                    />
+                )}
 
-                                <View style={styles.modalBody}>
-                                    <View style={styles.modalIconBox}>
-                                        <LinearGradient 
-                                            colors={(NOTIF_CONFIG[selectedNotif.type] || DEFAULT_CONFIG).colors as any} 
-                                            style={styles.modalIconGradient}
-                                        >
-                                            <Ionicons name={(NOTIF_CONFIG[selectedNotif.type] || DEFAULT_CONFIG).icon} size={32} color="#fff" />
-                                        </LinearGradient>
+                <Modal
+                    visible={showDetail}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setShowDetail(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+                        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setShowDetail(false)} />
+
+                        <AnimatePresence>
+                            {showDetail && selectedNotif && (
+                                <MotiView
+                                    from={{ opacity: 0, scale: 0.9, translateY: 20 }}
+                                    animate={{ opacity: 1, scale: 1, translateY: 0 }}
+                                    exit={{ opacity: 0, scale: 0.9, translateY: 20 }}
+                                    style={[styles.modalContent, { backgroundColor: isDark ? '#1e1e2e' : '#fff' }]}
+                                >
+                                    <View style={styles.modalHeader}>
+                                        <Text style={[styles.modalTitle, { color: isDark ? '#fff' : '#111827' }]}>Chi tiết thông báo</Text>
+                                        <TouchableOpacity onPress={() => setShowDetail(false)}>
+                                            <Ionicons name="close" size={24} color={isDark ? '#9ca3af' : '#6b7280'} />
+                                        </TouchableOpacity>
                                     </View>
 
-                                    <Text style={[styles.modalTime, { color: '#9ca3af' }]}>
-                                        {new Date(selectedNotif.createdAt).toLocaleString('vi-VN')}
-                                    </Text>
+                                    <View style={styles.modalBody}>
+                                        <View style={styles.modalIconBox}>
+                                            <LinearGradient
+                                                colors={(NOTIF_CONFIG[selectedNotif.type] || DEFAULT_CONFIG).colors as any}
+                                                style={styles.modalIconGradient}
+                                            >
+                                                <Ionicons name={(NOTIF_CONFIG[selectedNotif.type] || DEFAULT_CONFIG).icon} size={32} color="#fff" />
+                                            </LinearGradient>
+                                        </View>
 
-                                    <Text style={[styles.modalMessage, { color: isDark ? '#e2e8f0' : '#334155' }]}>
-                                        {selectedNotif.type === 'SYSTEM_MESSAGE' 
-                                            ? selectedNotif.data?.message 
-                                            : selectedNotif.type === 'NEW_COMMENT' || selectedNotif.type === 'COMMENT_REPLY'
-                                                ? `${(selectedNotif.data?.commenterName || selectedNotif.data?.replierName)} đã để lại nội dung: "${selectedNotif.data?.snippet}"`
-                                                : selectedNotif.type === 'NEW_REACTION'
-                                                    ? `${selectedNotif.data?.reactorName} đã thả cảm xúc vào bài đăng của bạn.`
-                                                    : selectedNotif.type === 'FRIEND_VOICEPIN'
-                                                        ? `${selectedNotif.data?.posterName} vừa đăng nội dung mới: "${selectedNotif.data?.voicePinContent}"`
-                                                        : 'Bạn có một tương tác mới trên hệ thống.'
-                                        }
-                                    </Text>
-
-                                    {selectedNotif.type !== 'SYSTEM_MESSAGE' && (
-                                        <Text style={[styles.modalHint, { color: '#9ca3af' }]}>
-                                            Nhấn nút bên dưới để xem chi tiết đối tượng liên quan.
+                                        <Text style={[styles.modalTime, { color: '#9ca3af' }]}>
+                                            {new Date(selectedNotif.createdAt).toLocaleString('vi-VN')}
                                         </Text>
-                                    )}
-                                </View>
 
-                                <TouchableOpacity 
-                                    style={[styles.modalActionBtn, { backgroundColor: themeContext.colors.primary }]}
-                                    onPress={() => handleNavigate(selectedNotif)}
-                                >
-                                    <Text style={styles.modalActionBtnText}>
-                                        {selectedNotif.type === 'FRIEND_REQUEST' ? 'Xem trang cá nhân' : 'Xem chi tiết bài viết'}
-                                    </Text>
-                                </TouchableOpacity>
-                            </MotiView>
-                        )}
-                    </AnimatePresence>
-                </View>
-            </Modal>
-        </View>
+                                        <Text style={[styles.modalMessage, { color: isDark ? '#e2e8f0' : '#334155' }]}>
+                                            {selectedNotif.type === 'SYSTEM_MESSAGE'
+                                                ? selectedNotif.data?.message
+                                                : selectedNotif.type === 'NEW_COMMENT' || selectedNotif.type === 'COMMENT_REPLY'
+                                                    ? `${(selectedNotif.data?.commenterName || selectedNotif.data?.replierName)} đã để lại nội dung: "${selectedNotif.data?.snippet}"`
+                                                    : selectedNotif.type === 'NEW_REACTION'
+                                                        ? `${selectedNotif.data?.reactorName} đã thả cảm xúc vào bài đăng của bạn.`
+                                                        : selectedNotif.type === 'FRIEND_VOICEPIN'
+                                                            ? `${selectedNotif.data?.posterName} vừa đăng nội dung mới: "${selectedNotif.data?.voicePinContent}"`
+                                                            : selectedNotif.type === 'NEW_MESSAGE'
+                                                                ? `${selectedNotif.data?.senderName} đã nhắn cho bạn: "${selectedNotif.data?.content || selectedNotif.data?.snippet}"`
+                                                                : 'Bạn có một tương tác mới trên hệ thống.'
+                                            }
+                                        </Text>
+
+                                        {selectedNotif.type !== 'SYSTEM_MESSAGE' && (
+                                            <Text style={[styles.modalHint, { color: '#9ca3af' }]}>
+                                                Nhấn nút bên dưới để xem chi tiết đối tượng liên quan.
+                                            </Text>
+                                        )}
+                                    </View>
+
+                                    <TouchableOpacity
+                                        style={[styles.modalActionBtn, { backgroundColor: themeContext.colors.primary }]}
+                                        onPress={() => handleNavigate(selectedNotif)}
+                                    >
+                                        <Text style={styles.modalActionBtnText}>
+                                            {selectedNotif.type === 'FRIEND_REQUEST' ? 'Xem trang cá nhân' : 'Xem chi tiết bài viết'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                </MotiView>
+                            )}
+                        </AnimatePresence>
+                    </View>
+                </Modal>
+            </View>
+        </GestureHandlerRootView>
     );
 }
 
@@ -606,9 +682,18 @@ const styles = StyleSheet.create({
     sectionHeader: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
         marginTop: 25,
         marginBottom: 15,
+        paddingRight: 4,
+    },
+    sectionHeaderLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
         gap: 10,
+    },
+    sectionClearBtn: {
+        padding: 4,
     },
     sectionDash: { width: 3, height: 14, borderRadius: 2 },
     sectionTitle: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
@@ -769,5 +854,18 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '800',
+    },
+    headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    deleteAction: {
+        backgroundColor: '#ef4444',
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: 80,
+        height: '100%',
+        borderRadius: 28,
+        marginLeft: 10,
     },
 });

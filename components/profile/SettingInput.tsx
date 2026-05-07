@@ -14,8 +14,9 @@ export const SettingInput = ({ label, rightElement, leftElement, style, ...props
             <Text style={{
                 fontWeight: '700',
                 fontSize: 12,
+                lineHeight: 18,
                 color: '#6b7280',
-                marginBottom: 8,
+                marginBottom: 4,
                 marginLeft: 4,
                 textTransform: 'uppercase'
             }}>
@@ -29,6 +30,11 @@ export const SettingInput = ({ label, rightElement, leftElement, style, ...props
                 )}
                 <TextInput
                     className="flex-1 py-3 text-gray-700 dark:text-white"
+                    style={[{
+                        fontFamily: 'Quicksand_500Medium',
+                        fontSize: 16,
+                        lineHeight: 22,
+                    }, style]}
                     placeholderTextColor="#94a3b8"
                     textAlignVertical={props.multiline ? 'top' : 'center'}
                     {...props}

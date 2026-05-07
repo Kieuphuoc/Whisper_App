@@ -22,19 +22,22 @@ import { MotiView, AnimatePresence } from 'moti';
 import { BlurView } from 'expo-blur';
 import * as Haptics from "expo-haptics";
 import { MyUserContext } from '../../configs/Context';
+import { DraftStorage } from '@/utils/draftStorage';
 import { VinylRecord } from './voice-pin/VinylRecord';
 import { useCelebration } from '@/components/ui/CelebrationOverlay';
 
 const { width } = Dimensions.get('window');
 
 type Props = {
-    visible: boolean; j
+    visible: boolean;
     audioUri: string | null;
     photoUri: string | null;
     location: Location.LocationObject | null;
     visibility: Visibility;
     onClose: () => void;
     onUploadSuccess: () => void;
+    initialTranscription?: string | null;
+    initialEmotionLabel?: string;
 };
 
 export default function VoiceUploadSheet({
@@ -45,6 +48,8 @@ export default function VoiceUploadSheet({
     visibility,
     onClose,
     onUploadSuccess,
+    initialTranscription = null,
+    initialEmotionLabel = "Bình yên",
 }: Props) {
     const user = useContext(MyUserContext);
     const colorScheme = useColorScheme() || 'light';
@@ -62,10 +67,21 @@ export default function VoiceUploadSheet({
     const player = useAudioPlayer(audioUri || "");
     const { playing, status } = useAudioPlayerStatus(player);
 
-    const [transcription, setTranscription] = useState<string | null>(null);
-    const [emotionLabel, setEmotionLabel] = useState<string>("Bình yên");
+    const [transcription, setTranscription] = useState<string | null>(initialTranscription);
+    const [emotionLabel, setEmotionLabel] = useState<string>(initialEmotionLabel);
     const [isThinking, setIsThinking] = useState(false);
     const [showTranscription, setShowTranscription] = useState(false);
+
+    useEffect(() => {
+        if (visible) {
+            setTranscription(initialTranscription);
+            setEmotionLabel(initialEmotionLabel);
+            setSelectedVisibility(visibility);
+            if (initialTranscription) {
+                setShowTranscription(true);
+            }
+        }
+    }, [visible, initialTranscription, initialEmotionLabel, visibility]);
 
     const armRotate = armRotateAnim.interpolate({
         inputRange: [0, 1],
@@ -277,11 +293,46 @@ export default function VoiceUploadSheet({
         transcription: transcription,
     };
 
+    const handleSaveDraft = async () => {
+        if (!audioUri) return;
+        
+        await DraftStorage.saveDraft({
+            audioUri,
+            photoUri,
+            location,
+            visibility: selectedVisibility,
+            transcription,
+            emotionLabel,
+        });
+        
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        onClose();
+    };
+
     const handleClose = () => {
         if (player && playing) {
             player.pause();
         }
-        onClose();
+
+        Alert.alert(
+            "Rời khỏi",
+            "Bạn có muốn lưu lại bản nháp này để đăng sau không?",
+            [
+                {
+                    text: "Hủy bỏ",
+                    onPress: () => onClose(),
+                    style: "destructive"
+                },
+                {
+                    text: "Lưu nháp",
+                    onPress: handleSaveDraft,
+                },
+                {
+                    text: "Tiếp tục",
+                    style: "cancel"
+                }
+            ]
+        );
     };
 
     return (
@@ -301,8 +352,10 @@ export default function VoiceUploadSheet({
                             from={{ opacity: 0, translateY: -10 }}
                             animate={{ opacity: 1, translateY: 0 }}
                             transition={{ delay: 200 }}
+                            style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
                         >
-                            <Text style={[styles.cancelText, { color: isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.3)" }]}>Hủy bản thảo</Text>
+                            <Ionicons name="close-circle-outline" size={16} color={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.3)"} />
+                            <Text style={[styles.cancelText, { color: isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.3)" }]}>Đóng</Text>
                         </MotiView>
                     </TouchableOpacity>
 

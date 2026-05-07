@@ -1,15 +1,18 @@
 import React from 'react';
-import { View, StyleSheet, useColorScheme } from 'react-native';
+import { View, StyleSheet, useColorScheme, Image as RNImage } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Image } from 'expo-image';
 import { MotiView } from 'moti';
 import AttachmentCard from './AttachmentCard';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getStickerSource } from '../../constants/stickers';
+import SharedVoicePin from './SharedVoicePin';
 
 interface ChatMessageProps {
     message: {
         id: string;
         text: string;
+        type?: string;
         isMine: boolean;
         senderAvatar?: string;
         attachments?: Array<{ type: 'pdf' | 'doc'; label: string }>;
@@ -21,7 +24,7 @@ interface ChatMessageProps {
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
-    const { text, isMine, senderAvatar, attachments, createdAt, showAvatar, showTimestamp, showDateHeader } = message;
+    const { text, type, isMine, senderAvatar, attachments, createdAt, showAvatar, showTimestamp, showDateHeader } = message;
     const scheme = useColorScheme() || 'light';
     const isDark = scheme === 'dark';
 
@@ -38,8 +41,54 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
         return d.toLocaleDateString('vi-VN', options);
     };
 
-    const renderContent = (content: string) => {
-        const lines = content.split('\n');
+    const renderContent = () => {
+        if (type === 'STICKER') {
+            const stickerSource = getStickerSource(text);
+            if (stickerSource) {
+                return (
+                    <MotiView
+                        from={{ scale: 0.5 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', damping: 12 }}
+                    >
+                        <Image 
+                            source={stickerSource} 
+                            style={styles.stickerImage} 
+                            transition={0} 
+                        />
+                    </MotiView>
+                );
+            }
+        }
+
+        if (type === 'PIN') {
+            // Extract ID and coords from the link: https://whispery.app/voice/slug-id?lat=X&lng=Y
+            const parts = text.split('/');
+            const lastPart = parts[parts.length - 1] || "";
+            
+            // Extract pinId (digits before the first ? or at the end)
+            const idPart = lastPart.split('?')[0];
+            const idMatch = idPart.match(/(\d+)$/);
+            const pinId = idMatch ? idMatch[1] : idPart;
+
+            // Extract lat/lng from query params
+            const latMatch = text.match(/[?&]lat=([^&]+)/);
+            const lngMatch = text.match(/[?&]lng=([^&]+)/);
+            const lat = latMatch ? latMatch[1] : undefined;
+            const lng = lngMatch ? lngMatch[1] : undefined;
+
+            return (
+                <SharedVoicePin 
+                    pinId={pinId} 
+                    content={text.includes('voice/') ? undefined : text} 
+                    isMine={isMine} 
+                    lat={lat}
+                    lng={lng}
+                />
+            );
+        }
+
+        const lines = text.split('\n');
         return lines.map((line, index) => {
             const isListItem = /^\d+\./.test(line.trim());
             if (isListItem) {
@@ -59,6 +108,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
         });
     };
 
+    const isSticker = type === 'STICKER';
+
     return (
         <View>
             {showDateHeader && (
@@ -72,8 +123,12 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
                 </View>
             )}
             <MotiView
-                from={{ opacity: 0, translateY: 12, scale: 0.97 }}
-                animate={{ opacity: 1, translateY: 0 }}
+                from={{ 
+                    opacity: isSticker ? 1 : 0, 
+                    translateY: 12, 
+                    scale: isSticker ? 1 : 0.97 
+                }}
+                animate={{ opacity: 1, translateY: 0, scale: 1 }}
                 transition={{ type: 'spring', damping: 18, stiffness: 160 }}
                 style={[styles.container, isMine ? styles.containerMine : styles.containerOther, { marginBottom: showTimestamp ? 20 : 4 }]}
             >
@@ -89,14 +144,16 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
                 )}
 
                 <View style={[styles.bubbleWrapper, isMine ? styles.itemsEnd : styles.itemsStart]}>
-                    {isMine ? (
+                    {isSticker ? (
+                        renderContent()
+                    ) : isMine ? (
                         <LinearGradient
                             colors={['#8b5cf6', '#a78bfa']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 1 }}
                             style={[styles.bubble, styles.bubbleMine, !showAvatar && !isMine && { borderBottomLeftRadius: 18 }]}
                         >
-                            {renderContent(text)}
+                            {renderContent()}
                         </LinearGradient>
                     ) : (
                         <View
@@ -110,7 +167,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
                                 !showAvatar && !isMine && { borderBottomLeftRadius: 18 },
                             ]}
                         >
-                            {renderContent(text)}
+                            {renderContent()}
                         </View>
                     )}
 
@@ -179,9 +236,13 @@ const styles = StyleSheet.create({
         borderBottomRightRadius: 4,
     },
     bubbleOther: {
-        // Will be merged dynamically
         borderBottomLeftRadius: 4,
         borderWidth: 1,
+    },
+    stickerImage: {
+        width: 120,
+        height: 120,
+        resizeMode: 'contain',
     },
     textBase: {
         fontSize: 14.5,

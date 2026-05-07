@@ -189,10 +189,10 @@ export default function OtherUserProfileScreen() {
         }
     };
 
-    const avatarUri = useMemo(() => {
-        if (!user?.avatar) return 'https://jbagy.me/wp-content/uploads/2025/03/anh-avatar-vo-tri-meo-1.jpg';
-        if (user.avatar.startsWith('http')) return user.avatar;
-        return `${BASE_URL}${user.avatar.startsWith('/') ? '' : '/'}${user.avatar}`;
+    const avatarSource = useMemo(() => {
+        if (!user?.avatar) return require('@/assets/images/avatar.png');
+        const uri = user.avatar.startsWith('http') ? user.avatar : `${BASE_URL}${user.avatar.startsWith('/') ? '' : '/'}${user.avatar}`;
+        return { uri };
     }, [user]);
 
     const coverUri = useMemo(() => {
@@ -291,7 +291,7 @@ export default function OtherUserProfileScreen() {
                             transition={{ type: 'spring', damping: 15 }}
                             style={[styles.avatarOuter, { borderColor: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)' }]}
                         >
-                            <Image source={{ uri: avatarUri }} style={styles.avatar} />
+                            <Image source={avatarSource} style={styles.avatar} />
                             <View style={[styles.levelCapsule, { backgroundColor: currentTheme.colors.primary }]}>
                                 <Text style={styles.levelText}>XP {user.level || 1}</Text>
                             </View>
