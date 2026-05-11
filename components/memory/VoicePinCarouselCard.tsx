@@ -27,6 +27,9 @@ import { Avatar } from '@/components/ui/Avatar';
 
 const { width } = Dimensions.get('window');
 const PAGE_PADDING = 24;
+const WHISPER_PURPLE = '#8B5CF6';
+const WHISPER_PURPLE_LIGHT = '#C4B5FD';
+const WHISPER_PURPLE_DARK = '#5B21B6';
 
 const EMOTION_META: Record<string, { color: string; gradient: string[]; icon: keyof typeof Ionicons.glyphMap; vi: string }> = {
   Happy: { color: '#FFD700', gradient: ['#FFD700', '#FFA500'], icon: 'sunny', vi: 'Vui vẻ' },
@@ -56,6 +59,12 @@ function resolveAsset(path?: string) {
     if (path.startsWith('http')) return path;
     const cleanPath = path.startsWith('/') ? path.substring(1) : path;
     return `${BASE_URL}/${cleanPath}`;
+}
+
+function formatDuration(value?: number | string | null) {
+  const seconds = Number(value);
+  if (!Number.isFinite(seconds) || seconds <= 0) return '--';
+  return `${Math.round(seconds)}s`;
 }
 
 export interface VoicePinCarouselCardProps {
@@ -160,7 +169,7 @@ export function VoicePinCarouselCard({
           transition={{ loop: true, type: 'timing', duration: 3000 }}
           style={[
             StyleSheet.absoluteFill,
-            { backgroundColor: meta.color, opacity: 0.1, borderRadius: 40, transform: [{ scale: 1.1 }] },
+            { backgroundColor: WHISPER_PURPLE, opacity: 0.1, borderRadius: 40, transform: [{ scale: 1.1 }] },
           ]}
         />
 
@@ -188,11 +197,12 @@ export function VoicePinCarouselCard({
           {/* Aesthetic Overlay */}
           <LinearGradient
             colors={currentTheme.dark ? 
-                ['transparent', 'rgba(10,10,20,0.2)', 'rgba(10,10,20,0.8)', '#0a0a14'] :
-                ['transparent', 'rgba(255,255,255,0.3)', 'rgba(255,255,255,0.9)', 'rgba(255,255,255,1)']}
-            locations={[0, 0.4, 0.7, 1]}
+                ['transparent', 'rgba(91,33,182,0.12)', 'rgba(24,10,47,0.82)', '#0d0618'] :
+                ['transparent', 'rgba(139,92,246,0.12)', 'rgba(255,255,255,0.86)', 'rgba(255,255,255,1)']}
+            locations={[0, 0.35, 0.72, 1]}
             style={StyleSheet.absoluteFill}
           />
+          <View style={[styles.purpleOrb, { backgroundColor: currentTheme.dark ? 'rgba(139,92,246,0.24)' : 'rgba(139,92,246,0.18)' }]} />
 
           <View style={styles.header}>
             <View style={{ flexDirection: 'row', gap: 6, flex: 1, flexWrap: 'wrap' }}>
@@ -207,7 +217,7 @@ export function VoicePinCarouselCard({
                         }
                     ]}
                 >
-                    <Ionicons name={meta.icon} size={isGrid ? 12 : 14} color={meta.color} />
+                    <Ionicons name={meta.icon} size={isGrid ? 12 : 14} color={WHISPER_PURPLE_LIGHT} />
                     {!isGrid && <Text style={[styles.badgeText, { color: isDark ? '#FFF' : '#111827' }]}>{meta.vi}</Text>}
                 </BlurView>
 
@@ -222,25 +232,28 @@ export function VoicePinCarouselCard({
                 )}
             </View>
 
-            <View style={[styles.dateBadge, { backgroundColor: currentTheme.dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.05)' }]}>
-                <Text style={[styles.dateText, { color: currentTheme.dark ? '#FFF' : '#6b7280' }]}>{dateStr}</Text>
+            <View style={[styles.dateBadge, { backgroundColor: currentTheme.dark ? 'rgba(139,92,246,0.22)' : 'rgba(139,92,246,0.12)' }]}>
+                <Text style={[styles.dateText, { color: currentTheme.dark ? '#EDE9FE' : WHISPER_PURPLE_DARK }]}>{dateStr}</Text>
             </View>
           </View>
 
           {/* Content Body */}
           <View style={styles.body}>
-            <View style={styles.titleWrapper}>
-                <Text style={[styles.title, { 
-                    fontSize: isGrid ? 15 : 20,
-                    color: currentTheme.dark ? '#FFF' : '#111827',
-                    lineHeight: isGrid ? 20 : 26
-                }]} numberOfLines={2}>
-                    {pin.content || pin.transcription || 'Tiếng vọng Ký ức'}
-                </Text>
-                
+            <View style={styles.albumInfo}>
+                <View style={styles.kickerRow}>
+                    <View style={styles.albumAccent} />
+                    {!isGrid && <Text style={[styles.kickerText, { color: isDark ? WHISPER_PURPLE_LIGHT : WHISPER_PURPLE_DARK }]}>WHISPER AURA</Text>}
+                </View>
+
+                {!isGrid && (
+                    <Text style={[styles.emotionLabel, { color: currentTheme.dark ? '#FFF' : '#111827' }]} numberOfLines={1}>
+                        {meta.vi}
+                    </Text>
+                )}
+
                 <View style={styles.locationRow}>
-                    <Ionicons name="location" size={10} color={isDark ? "rgba(255,255,255,0.5)" : "#6b7280"} />
-                    <Text style={[styles.locationText, { color: isDark ? "rgba(255,255,255,0.5)" : "#6b7280" }]} numberOfLines={1}>
+                    <Ionicons name="location" size={11} color={isDark ? "rgba(255,255,255,0.66)" : "#6b7280"} />
+                    <Text style={[styles.locationText, { color: isDark ? "rgba(255,255,255,0.72)" : "#6b7280" }]} numberOfLines={1}>
                         {pin.address?.split(',')[0] || 'Unknown Aura'}
                     </Text>
                 </View>
@@ -258,8 +271,8 @@ export function VoicePinCarouselCard({
                     {/* Stats */}
                     <View style={styles.stats}>
                         <View style={styles.statItem}>
-                            <Ionicons name="mic" size={14} color={meta.color} />
-                            <Text style={[styles.statValue, { color: isDark ? '#fff' : '#4b5563' }]}>{pin.audioDuration ?? 0}s</Text>
+                            <Ionicons name="mic" size={14} color={WHISPER_PURPLE_LIGHT} />
+                            <Text style={[styles.statValue, { color: isDark ? '#fff' : '#4b5563' }]}>{formatDuration((pin as any).audioDuration ?? (pin as any).duration ?? null)}</Text>
                         </View>
                         <View style={styles.statItem}>
                             <Ionicons name="play" size={14} color={isDark ? "rgba(255,255,255,0.4)" : "#9ca3af"} />
@@ -280,7 +293,12 @@ export function VoicePinCarouselCard({
             )}
 
             {/* Bottom Accent Line */}
-            <View style={[styles.accentLine, { backgroundColor: meta.color }]} />
+            <LinearGradient
+                colors={[WHISPER_PURPLE_LIGHT, WHISPER_PURPLE, WHISPER_PURPLE_DARK]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.accentLine}
+            />
           </View>
         </View>
       </TouchableOpacity>
@@ -307,6 +325,15 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: 'hidden',
     borderWidth: 1,
+  },
+  purpleOrb: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    right: -52,
+    bottom: 70,
+    transform: [{ rotate: '-18deg' }],
   },
   header: {
     flexDirection: 'row',
@@ -345,21 +372,40 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 20,
-    paddingBottom: 24,
+    padding: 22,
+    paddingBottom: 26,
   },
-  titleWrapper: {
-    marginBottom: 8,
+  albumInfo: {
+    marginBottom: 14,
   },
-  title: {
+  kickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  albumAccent: {
+    width: 38,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: WHISPER_PURPLE,
+  },
+  kickerText: {
+    fontSize: 9,
     fontWeight: '900',
-    letterSpacing: -0.5,
+    letterSpacing: 1.4,
+  },
+  emotionLabel: {
+    fontSize: 26,
+    lineHeight: 31,
+    fontWeight: '900',
+    letterSpacing: -0.8,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 6,
+    marginTop: 8,
   },
   locationText: {
     fontSize: 11,
@@ -387,7 +433,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 2,
+    marginTop: 4,
     paddingTop: 4,
   },
   stats: {
@@ -412,10 +458,10 @@ const styles = StyleSheet.create({
   accentLine: {
     position: 'absolute',
     bottom: 0,
-    left: 20,
-    right: 20,
-    height: 3,
-    borderRadius: 1.5,
-    opacity: 0.6,
+    left: 22,
+    right: 22,
+    height: 4,
+    borderRadius: 999,
+    opacity: 0.85,
   },
 });

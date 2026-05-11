@@ -107,34 +107,57 @@ axiosInstance.interceptors.request.use(
 export const authApis = (token?: string) => {
   if (token) {
     // If token is explicitly passed, use it, but prefer the interceptor approach
-    return axios.create({
+    const instance = axios.create({
       baseURL: BASE_URL,
       headers: { Authorization: `Bearer ${token}` }
     });
+    instance.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        if (error.response?.status === 401) {
+          await handleUnauthorized();
+        }
+        return Promise.reject(error);
+      }
+    );
+    return instance;
   }
   return axiosInstance;
 };
 
 // Global logout notification mechanism
 let onUnauthorizedCallback: () => void = () => { };
+let unauthorizedHandling: Promise<void> | null = null;
 
 export const onUnauthorized = (callback: () => void) => {
   onUnauthorizedCallback = callback;
+};
+
+export const handleUnauthorized = async () => {
+  if (unauthorizedHandling) return unauthorizedHandling;
+
+  unauthorizedHandling = (async () => {
+    console.log("[Axios Interceptor] 401 Unauthorized detected. Clearing storage and logging out.");
+    try {
+      await AsyncStorage.multiRemove(['token', 'user']);
+      if (onUnauthorizedCallback) {
+        onUnauthorizedCallback();
+      }
+    } catch (e) {
+      console.error("Error during auto-logout", e);
+    } finally {
+      unauthorizedHandling = null;
+    }
+  })();
+
+  return unauthorizedHandling;
 };
 
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      console.log("[Axios Interceptor] 401 Unauthorized detected. Clearing storage and logging out.");
-      try {
-        await AsyncStorage.multiRemove(['token', 'user']);
-        if (onUnauthorizedCallback) {
-          onUnauthorizedCallback();
-        }
-      } catch (e) {
-        console.error("Error during auto-logout", e);
-      }
+      await handleUnauthorized();
     }
     return Promise.reject(error);
   }

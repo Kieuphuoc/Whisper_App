@@ -140,10 +140,12 @@ export default function LoginScreen() {
       <StatusBar barStyle="light-content" />
 
       {/* Background Image */}
-      <View 
-        className="absolute w-full h-full bg-[#1a1a1a]" 
+      <Image
+        source={require('../../assets/images/background-for-login.jpg')}
+        className="absolute w-full h-full"
+        resizeMode="cover"
       />
-      <BlurView intensity={20} className="absolute inset-0 bg-neutral-900/60" />
+      <BlurView intensity={10} className="absolute inset-0 bg-neutral-900/60" />
 
       {/* Content */}
       <ScrollView
@@ -160,19 +162,19 @@ export default function LoginScreen() {
               resizeMode="contain"
             />
           </View>
-          <Text 
+          <Text
             className="text-6xl text-white mb-2"
-            style={{ 
-              fontFamily: 'Quicksand_700Bold', 
+            style={{
+              fontFamily: 'Quicksand_700Bold',
               letterSpacing: -2,
-              textShadowColor: 'rgba(0, 0, 0, 0.4)', 
-              textShadowOffset: { width: 0, height: 4 }, 
-              textShadowRadius: 10 
+              textShadowColor: 'rgba(0, 0, 0, 0.4)',
+              textShadowOffset: { width: 0, height: 4 },
+              textShadowRadius: 10
             }}
           >
             Whispery
           </Text>
-          <Text 
+          <Text
             className="text-lg text-white/60 text-center tracking-widest uppercase"
             style={{ fontFamily: 'Quicksand_500Medium' }}
           >
@@ -214,7 +216,7 @@ export default function LoginScreen() {
                 )}
               </View>
               {i.field === 'password' && (
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => router.push('/(auth)/forgot-password')}
                   className="self-end mt-1 mb-2"
                 >
@@ -257,7 +259,7 @@ export default function LoginScreen() {
 
           {/* Social Login */}
           <View className="flex-row gap-3 mb-6">
-            <TouchableOpacity 
+            <TouchableOpacity
               className="social-button"
               onPress={() => promptAsync()}
               disabled={!request || loading}

@@ -3,6 +3,7 @@ import { View, TouchableOpacity, Image, StyleSheet, useColorScheme, ActivityIndi
 import { Text } from '@/components/ui/text';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import Animated, { FadeIn, FadeOut, FadeInUp, FadeOutDown } from 'react-native-reanimated';
 import { VoicePin } from '@/types';
@@ -20,6 +21,7 @@ type Props = {
 export default function VoicePinMiniCard({ pin, onClose, onRandomAgain, onPlayVoice }: Props) {
     const colorScheme = useColorScheme() || 'light';
     const currentTheme = theme[colorScheme];
+    const isDark = colorScheme === 'dark';
     const router = useRouter();
     
     const player = useAudioPlayer(pin.audioUrl);
@@ -69,8 +71,23 @@ export default function VoicePinMiniCard({ pin, onClose, onRandomAgain, onPlayVo
                 exiting={FadeOutDown}
                 style={{ width: '100%' }}
             >
-                <BlurView intensity={80} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={[styles.blurView, { borderRadius: currentTheme.radius.xl + 4 }]}>
-                <View style={[styles.content, { padding: currentTheme.spacing.lg }]}>
+                <BlurView 
+                    intensity={isDark ? 95 : 85} 
+                    tint={isDark ? 'dark' : 'light'} 
+                    style={[
+                        styles.blurView, 
+                        { 
+                            borderRadius: currentTheme.radius.xl + 4,
+                            borderColor: isDark ? 'rgba(139, 92, 246, 0.4)' : 'rgba(139, 92, 246, 0.2)',
+                            borderWidth: 1.5,
+                        }
+                    ]}
+                >
+                    <LinearGradient
+                        colors={isDark ? ['rgba(139, 92, 246, 0.05)', 'transparent'] : ['rgba(139, 92, 246, 0.03)', 'transparent']}
+                        style={StyleSheet.absoluteFill}
+                    />
+                    <View style={[styles.content, { padding: currentTheme.spacing.lg }]}>
                     {/* Header */}
                     <View style={styles.header}>
                         <TouchableOpacity onPress={navigateToProfile} style={styles.headerInfo}>

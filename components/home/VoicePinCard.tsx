@@ -220,7 +220,16 @@ export default function VoicePinTurntable({
               verticalDateLabel={new Date(pin.createdAt || new Date()).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join(' . ')}
               onPress={() => {
                 if (!player) return;
-                playing ? player.pause() : player.play();
+                if (playing) {
+                  player.pause();
+                } else {
+                  const currentTime = (player as any).currentTime;
+                  const duration = (player as any).duration;
+                  if (typeof currentTime === "number" && typeof duration === "number" && duration > 0 && currentTime >= duration - 0.1) {
+                    player.seekTo(0);
+                  }
+                  player.play();
+                }
               }}
               onTranscriptionToggle={handleToggleTranscription}
               onReportPress={() => setShowReportModal(true)}
@@ -307,7 +316,7 @@ export default function VoicePinTurntable({
         isVisible={showMoreSheet}
         onClose={() => setShowMoreSheet(false)}
         pin={pin}
-        isOwner={currentUser?.id === pin.user?.id}
+        isOwner={(currentUser as any)?.id === (pin.user as any)?.id}
         onDelete={handleDelete}
         onReport={() => {
           setShowMoreSheet(false);

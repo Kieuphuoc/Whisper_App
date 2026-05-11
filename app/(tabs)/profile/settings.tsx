@@ -272,6 +272,11 @@ export default function SettingsScreen() {
                             label="Kiểm tra quyền riêng tư" 
                             onPress={() => router.push('/(tabs)/profile/privacy-checkup')}
                         />
+                        <SettingItem 
+                            icon="shield-checkmark-outline" 
+                            label="Chính sách bảo mật" 
+                            onPress={() => router.push('/(tabs)/profile/privacy-policy')}
+                        />
                     </View>
                 </View>
 

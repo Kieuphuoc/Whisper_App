@@ -55,18 +55,31 @@ const FilterToggle: React.FC<FilterToggleProps> = ({
                 style={[
                     styles.container,
                     {
-                        backgroundColor: isDark ? 'rgba(18,18,18,0.9)' : 'rgba(255,255,255,0.95)',
-                        borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                        overflow: 'hidden',
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.15,
+                        shadowRadius: 8,
+                        elevation: 4,
                     }
                 ]}
             >
-                <BlurView
-                    intensity={isDark ? 20 : 40}
-                    tint={isDark ? 'dark' : 'light'}
-                    style={StyleSheet.absoluteFill}
-                />
-                
+                <View style={[
+                    StyleSheet.absoluteFill,
+                    {
+                        borderRadius: 24,
+                        overflow: 'hidden',
+                        backgroundColor: isDark ? 'rgba(18,18,18,0.9)' : 'rgba(255,255,255,0.95)',
+                        borderWidth: 1,
+                        borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                    }
+                ]}>
+                    <BlurView
+                        intensity={isDark ? 20 : 40}
+                        tint={isDark ? 'dark' : 'light'}
+                        style={StyleSheet.absoluteFill}
+                    />
+                </View>
+
                 {/* Animated Background Selector */}
                 <Animated.View
                     style={[
@@ -132,12 +145,6 @@ const styles = StyleSheet.create({
         height: 48,
         width: CONTAINER_WIDTH,
         alignItems: 'center',
-        borderWidth: 1,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 8,
-        elevation: 5,
     },
     selector: {
         position: 'absolute',

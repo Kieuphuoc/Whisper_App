@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import React, { useState, useContext, useEffect, useRef } from 'react';
+import { reverseGeocode } from '@/utils/geocoding';
 import {
     ActivityIndicator,
     Alert,
@@ -143,8 +144,12 @@ export default function VoiceUploadSheet({
             });
 
             if (res.data?.data) {
-                const { transcript, emotion_label } = res.data.data;
-
+                const { transcript, emotion_label, analysis_source } = res.data.data;
+                console.log('[VoiceUpload] Transcript result:', {
+                    source: analysis_source ?? 'unknown',
+                    transcript,
+                    emotionLabel: emotion_label ?? null,
+                });
                 // Cập nhật văn bản (nếu rỗng thì báo không tìm thấy)
                 setTranscription(transcript && transcript.trim().length > 0 ? transcript : "Không tìm thấy nội dung lời nói...");
 
@@ -178,6 +183,11 @@ export default function VoiceUploadSheet({
         setSelectedVisibility(v);
     };
 
+    const getAudioDurationSeconds = () => {
+        const duration = Number((status as any)?.duration ?? (player as any)?.duration ?? 0);
+        return Number.isFinite(duration) && duration > 0 ? Math.round(duration) : null;
+    };
+
     const handleUpload = async () => {
         // Stop playback before upload
         if (player && playing) {
@@ -199,14 +209,11 @@ export default function VoiceUploadSheet({
 
             let addressStr = '';
             try {
-                const [place] = await Location.reverseGeocodeAsync({
-                    latitude: location.coords.latitude,
-                    longitude: location.coords.longitude,
-                });
-                if (place) {
-                    const parts = [place.street, place.district, place.city, place.country].filter(Boolean);
-                    addressStr = parts.join(', ');
-                }
+                const geocoded = await reverseGeocode(
+                    location.coords.latitude,
+                    location.coords.longitude,
+                );
+                if (geocoded) addressStr = geocoded.detailedAddress;
             } catch {
                 // optional
             }
@@ -225,10 +232,24 @@ export default function VoiceUploadSheet({
             formData.append('latitude', String(location.coords.latitude));
             formData.append('longitude', String(location.coords.longitude));
             formData.append('visibility', selectedVisibility);
+            const audioDurationSeconds = getAudioDurationSeconds();
+            if (audioDurationSeconds !== null) {
+                formData.append('audioDuration', String(audioDurationSeconds));
+            }
 
             if (addressStr) {
                 formData.append('address', addressStr);
             }
+
+            // Gửi kết quả đã phân tích để server không cần re-analyze
+            // Chỉ gửi nếu đây là transcript thật (không phải error message từ failed API)
+            const isRealTranscription = transcription &&
+                !transcription.startsWith('Rất tiếc') &&
+                !transcription.startsWith('Không tìm thấy');
+            if (isRealTranscription) {
+                formData.append('transcription', transcription!);
+            }
+            formData.append('emotionLabel', emotionLabel);
 
             if (photoUri) {
                 const imageFileUri = photoUri.startsWith('file://') ? photoUri : `file://${photoUri}`;
@@ -244,7 +265,8 @@ export default function VoiceUploadSheet({
                     audio: audioFileUri,
                     lat: location.coords.latitude,
                     lng: location.coords.longitude,
-                    visibility: selectedVisibility
+                    visibility: selectedVisibility,
+                    audioDuration: audioDurationSeconds,
                 });
             }
 
@@ -393,7 +415,7 @@ export default function VoiceUploadSheet({
                                     style={[styles.transcriptionBox, { backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.02)", borderColor: currentTheme.colors.primary + '44' }]}
                                 >
                                     <Text style={[styles.transcriptionText, { color: currentTheme.colors.primary }]}>
-                                        "{transcription}"
+                                        {transcription}
                                     </Text>
                                 </MotiView>
                             )}
@@ -476,7 +498,6 @@ const styles = StyleSheet.create({
     transcriptionText: {
         fontSize: 14,
         fontStyle: 'italic',
-        textAlign: 'center',
-        lineHeight: 22,
+        lineHeight: 20,
     },
 });

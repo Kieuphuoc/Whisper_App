@@ -214,23 +214,21 @@ export function useVoicePinTurntable(pin: VoicePin, autoPlay: boolean) {
 
   useEffect(() => {
     const triggerDiscovery = async () => {
-      if (pin.type === "HIDDEN_AR" || pin.type?.toString() === "HIDDEN_AR") {
-        try {
-          const token = await AsyncStorage.getItem("token");
-          if (token) {
-            const api = authApis(token);
-            await api.post(endpoints.voiceDiscover(pin.id));
-          }
-        } catch (e) {
-          console.log("Internal discovery attempt:", e);
+      try {
+        const token = await AsyncStorage.getItem("token");
+        if (token) {
+          const api = authApis(token);
+          await api.post(endpoints.voiceDiscover(pin.id));
         }
+      } catch (e) {
+        console.log("Internal discovery attempt:", e);
       }
     };
 
-    if (autoPlay) {
+    if (autoPlay || playing) {
       triggerDiscovery();
     }
-  }, [autoPlay, pin.id, pin.type]);
+  }, [autoPlay, playing, pin.id, pin.type]);
 
   const spin = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
   const armRotate = armAnim.interpolate({ inputRange: [0, 1], outputRange: ["-10deg", "5deg"] });

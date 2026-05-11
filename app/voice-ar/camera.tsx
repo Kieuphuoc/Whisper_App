@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, TouchableOpacity, View, useColorScheme } from "react-native";
 import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
+import { useLocationContext } from "@/contexts/LocationContext";
 import { Text } from "@/components/ui/text";
 import Apis, { authApis, endpoints } from "@/configs/Apis";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -26,6 +27,7 @@ export default function VoiceARCameraScreen() {
   const { pinId } = useLocalSearchParams<Params>();
 
   const [permission, requestPermission] = useCameraPermissions();
+  const { permissionStatus: locationPermission } = useLocationContext();
   const [pin, setPin] = useState<VoicePin | null>(null);
   const [distance, setDistance] = useState<number | null>(null);
   const [deltaDeg, setDeltaDeg] = useState<number | null>(null);
@@ -65,13 +67,12 @@ export default function VoiceARCameraScreen() {
     })();
   }, [permission, requestPermission]);
 
+  // Chỉ bắt đầu high-accuracy watcher khi permission đã được cấp (từ LocationContext)
   useEffect(() => {
+    if (locationPermission !== "granted") return;
+
     let cancelled = false;
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (cancelled) return;
-      if (status !== "granted") return;
-
       posSubRef.current?.remove();
       headSubRef.current?.remove();
 
@@ -82,7 +83,7 @@ export default function VoiceARCameraScreen() {
       posSubRef.current = await Location.watchPositionAsync(
         { accuracy: Location.Accuracy.High, timeInterval: 1200, distanceInterval: 6 },
         (loc) => {
-          if (!pin) return;
+          if (cancelled || !pin) return;
           const me = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
           const target = { latitude: pin.latitude, longitude: pin.longitude };
 
@@ -113,7 +114,7 @@ export default function VoiceARCameraScreen() {
       posSubRef.current = null;
       headSubRef.current = null;
     };
-  }, [pin, unlockRadius, unlocked]);
+  }, [locationPermission, pin, unlockRadius, unlocked]);
 
   const xOffset = useMemo(() => {
     // Map delta [-90..90] degrees to horizontal shift [-120..120]

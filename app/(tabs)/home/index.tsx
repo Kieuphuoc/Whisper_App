@@ -113,12 +113,21 @@ export default function HomeScreen() {
       const pinsToProcess = latestPins || [];
       const pinMap = new Map(prev.map((p) => [p.id, p]));
 
-      let hasNewPins = false;
+      let hasChanges = false;
       if (pinsToProcess.length > 0) {
         for (const p of pinsToProcess) {
-          if (!pinMap.has(p.id)) {
+          const existing = pinMap.get(p.id);
+          if (!existing) {
             pinMap.set(p.id, p);
-            hasNewPins = true;
+            hasChanges = true;
+          } else if (
+            existing.audioDuration !== p.audioDuration ||
+            existing.transcription !== p.transcription ||
+            existing.status !== p.status ||
+            existing.updatedAt !== p.updatedAt
+          ) {
+            pinMap.set(p.id, { ...existing, ...p });
+            hasChanges = true;
           }
         }
       }
@@ -144,7 +153,7 @@ export default function HomeScreen() {
           return false;
         });
 
-        if (!hasNewPins && pins.length === initialCount && pins.length === prev.length) {
+        if (!hasChanges && pins.length === initialCount && pins.length === prev.length) {
           return prev;
         }
       }
@@ -171,7 +180,7 @@ export default function HomeScreen() {
         }
       }
 
-      if (pins.length === prev.length && pins.every((p, i) => p.id === prev[i].id)) {
+      if (!hasChanges && pins.length === prev.length && pins.every((p, i) => p.id === prev[i].id)) {
         return prev;
       }
 
@@ -463,11 +472,13 @@ export default function HomeScreen() {
       return;
     }
 
+    const latestPin = accumulatedPins.find((p) => p.id === pin.id) ?? pin;
+
     // 1. Check if already focused to avoid unnecessary delay
     const currentRegion = currentRegionRef.current;
     const isAlreadyFocused = currentRegion && 
-      Math.abs(currentRegion.latitude - pin.latitude) < 0.0001 &&
-      Math.abs(currentRegion.longitude - pin.longitude) < 0.0001 &&
+      Math.abs(currentRegion.latitude - latestPin.latitude) < 0.0001 &&
+      Math.abs(currentRegion.longitude - latestPin.longitude) < 0.0001 &&
       currentRegion.latitudeDelta <= 0.0051;
 
     const duration = isAlreadyFocused ? 0 : 800;
@@ -475,8 +486,8 @@ export default function HomeScreen() {
     // 2. Focus if needed
     if (mapRef.current && !isAlreadyFocused) {
       const region = {
-        latitude: pin.latitude,
-        longitude: pin.longitude,
+        latitude: latestPin.latitude,
+        longitude: latestPin.longitude,
         latitudeDelta: 0.005,
         longitudeDelta: 0.005,
       };
@@ -490,9 +501,9 @@ export default function HomeScreen() {
 
     // 3. Show card after focus (or immediately if already focused)
     setTimeout(() => {
-      setExternalSelectedPin(pin);
+      setExternalSelectedPin(latestPin);
     }, duration);
-  }, []);
+  }, [accumulatedPins]);
 
   return (
     <View style={styles.container}>
@@ -516,7 +527,16 @@ export default function HomeScreen() {
       <FilterToggle value={visibility} onChange={setVisibility} />
 
       {/* Explore Button: Left side below Filter */}
-      <View style={styles.exploreWrapper}>
+      <View style={[
+        styles.exploreWrapper,
+        {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.15,
+          shadowRadius: 10,
+          elevation: 5,
+        }
+      ]}>
         <View style={[
           styles.exploreBar,
           {
@@ -573,7 +593,16 @@ export default function HomeScreen() {
       </View>
 
       {/* Map Controls: Right side symmetrical to Explore bar */}
-      <View style={styles.mapControls}>
+      <View style={[
+        styles.mapControls,
+        {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.15,
+          shadowRadius: 10,
+          elevation: 5,
+        }
+      ]}>
         <View style={[
           styles.exploreBar,
           {
@@ -708,11 +737,6 @@ const styles = StyleSheet.create({
     padding: 6,
     alignItems: 'center',
     borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 8,
     width: 68,
   },
   exploreButton: {

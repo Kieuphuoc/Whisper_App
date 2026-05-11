@@ -256,11 +256,11 @@ export default function HistoryScreen() {
                                     {group.title}
                                 </Text>
                                 <View style={styles.grid}>
-                                    {group.data.map((item) => (
+                                    {group.data.filter(item => !!item.voicePin).map((item) => (
                                         <VoicePinCarouselCard
                                             key={item.id}
                                             pin={item.voicePin}
-                                            onPress={() => router.push({ pathname: '/(tabs)/home', params: { voicePinId: item.voicePin.id } })}
+                                            onPress={() => router.push({ pathname: '/(tabs)/home', params: { selectPinId: item.voicePin.id.toString() } })}
                                             currentTheme={currentTheme}
                                             cardWidth={(width - 48) / 2}
                                             cardSpacing={0}

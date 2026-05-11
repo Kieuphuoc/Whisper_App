@@ -164,11 +164,12 @@ export default function RegisterScreen() {
         >
             <StatusBar barStyle="light-content" />
 
-            <View 
-                className="absolute w-full h-full bg-[#1a1a1a]" 
+            <Image
+                source={require('../../assets/images/background-for-login.jpg')}
+                className="absolute w-full h-full"
+                resizeMode="cover"
             />
-            <BlurView intensity={20} className="absolute inset-0 bg-neutral-900/60" />
-
+            <BlurView intensity={10} className="absolute inset-0 bg-neutral-900/60" />
             <ScrollView
                 contentContainerStyle={{ flexGrow: 1, paddingVertical: 60 }}
                 className="px-6"
@@ -177,7 +178,7 @@ export default function RegisterScreen() {
             >
                 {/* Header Section */}
                 <View className="items-center mb-6">
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         onPress={pickImage}
                         className="relative"
                     >
@@ -185,8 +186,8 @@ export default function RegisterScreen() {
                             {user.avatar ? (
                                 <Image source={{ uri: user.avatar }} className="w-full h-full" />
                             ) : (
-                                <Image 
-                                    source={require('../../assets/images/avatar.png')} 
+                                <Image
+                                    source={require('../../assets/images/avatar.png')}
                                     className="w-full h-full"
                                     resizeMode="contain"
                                 />

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, TouchableOpacity, View, useColorScheme } from "react-native";
 import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
+import { useLocationContext } from "@/contexts/LocationContext";
 import { Text } from "@/components/ui/text";
 import Apis, { authApis, endpoints } from "@/configs/Apis";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -22,6 +23,7 @@ export default function VoiceARHuntScreen() {
   const router = useRouter();
   const { pinId } = useLocalSearchParams<Params>();
 
+  const { permissionStatus: locationPermission } = useLocationContext();
   const [pin, setPin] = useState<VoicePin | null>(null);
   const [distance, setDistance] = useState<number | null>(null);
   const [deltaDeg, setDeltaDeg] = useState<number | null>(null);
@@ -75,13 +77,12 @@ export default function VoiceARHuntScreen() {
     return "Đi theo hướng dẫn";
   }, [distance, unlockRadius]);
 
+  // Chỉ bắt đầu high-accuracy watcher khi permission đã được cấp (từ LocationContext)
   useEffect(() => {
+    if (locationPermission !== "granted") return;
+
     let cancelled = false;
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (cancelled) return;
-      if (status !== "granted") return;
-
       posSubRef.current?.remove();
       headSubRef.current?.remove();
 
@@ -92,7 +93,7 @@ export default function VoiceARHuntScreen() {
       posSubRef.current = await Location.watchPositionAsync(
         { accuracy: Location.Accuracy.High, timeInterval: 1500, distanceInterval: 8 },
         (loc) => {
-          if (!pin) return;
+          if (cancelled || !pin) return;
           const me = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
           const target = { latitude: pin.latitude, longitude: pin.longitude };
           const d = haversineDistanceMeters(me, target);
@@ -118,7 +119,7 @@ export default function VoiceARHuntScreen() {
       posSubRef.current = null;
       headSubRef.current = null;
     };
-  }, [pin]);
+  }, [locationPermission, pin]);
 
   return (
     <View style={[styles.container, { backgroundColor: isDark ? "#05060a" : "#f5f7ff" }]}>

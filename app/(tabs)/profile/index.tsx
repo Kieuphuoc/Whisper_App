@@ -176,9 +176,13 @@ export default function ProfileScreen() {
     }, [activeTab]);
 
 
-    useEffect(() => {
-        fetchData();
+    useFocusEffect(
+        useCallback(() => {
+            fetchData();
+        }, [])
+    );
 
+    useEffect(() => {
         // Start the periodic shimmer animation (every 6 seconds)
         shimmerProgress.value = withRepeat(
             withSequence(
@@ -351,40 +355,9 @@ export default function ProfileScreen() {
                             end={{ x: 1, y: 1 }}
                         />
                         {/* Mesh-like subtle overlays */}
-                        <MotiView
-                            from={{ opacity: 0.3, scale: 1 }}
-                            animate={{ opacity: 0.6, scale: 1.2 }}
-                            transition={{ loop: true, type: 'timing', duration: 8000, easing: Easing.inOut(Easing.sin) }}
-                            style={[styles.meshBlob, { backgroundColor: currentTheme.colors.secondary + '40', top: -50, left: -50 }]}
-                        />
-                        <MotiView
-                            from={{ opacity: 0.2, scale: 1.2 }}
-                            animate={{ opacity: 0.5, scale: 1 }}
-                            transition={{ loop: true, type: 'timing', duration: 10000, easing: Easing.inOut(Easing.sin), delay: 1000 }}
-                            style={[styles.meshBlob, { backgroundColor: '#7c3aed40', bottom: '20%', right: -50 }]}
-                        />
 
-                        {/* Centered Placeholder Content */}
-                        <View style={styles.emptyAuraContent}>
-                            <MotiView
-                                from={{ opacity: 0, translateY: 20 }}
-                                animate={{ opacity: 1, translateY: 0 }}
-                                transition={{ delay: 1200, type: 'spring' }}
-                                style={styles.emptyAuraIconContainer}
-                            >
-                                <BlurView intensity={20} tint={isDark ? "dark" : "light"} style={styles.emptyAuraBlurIcon}>
-                                    <Ionicons name="sparkles" size={40} color={isDark ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.8)"} />
-                                </BlurView>
-                            </MotiView>
-                            <MotiView
-                                from={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 1400, type: 'spring' }}
-                            >
-                                <Text style={styles.emptyAuraTitle}>Tỏa sáng với Aura!</Text>
-                                <Text style={styles.emptyAuraSubtitleText}>Chạm để thiết kế dấu ấn cá nhân của bạn</Text>
-                            </MotiView>
-                        </View>
+
+
                     </View>
                 )}
                 {/* Overlay to ensure readability */}
@@ -482,27 +455,63 @@ export default function ProfileScreen() {
                     <MotiView
                         from={{ opacity: 0, scale: 0.9, translateY: -20 }}
                         animate={{ opacity: 1, scale: 1, translateY: 0 }}
-                        style={{ paddingHorizontal: 20, marginBottom: 10 }}
+                        style={{ paddingHorizontal: 20, marginBottom: 20 }}
                     >
                         <TouchableOpacity 
                             onPress={() => router.push('/(tabs)/profile/privacy-zones')}
                             activeOpacity={0.9}
                         >
-                            <BlurView intensity={30} tint={isDark ? "dark" : "light"} style={{ borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255, 107, 107, 0.3)' }}>
-                                <LinearGradient
-                                    colors={['rgba(255, 107, 107, 0.15)', 'rgba(255, 107, 107, 0.05)']}
-                                    style={{ padding: 15, flexDirection: 'row', alignItems: 'center' }}
-                                >
-                                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255, 107, 107, 0.2)', alignItems: 'center', justify: 'center', marginRight: 12 }}>
-                                        <Ionicons name="shield-outline" size={24} color="#ff6b6b" style={{marginTop: 7}}/>
+                            <View style={[
+                                styles.mainGlassCard, 
+                                { 
+                                    marginBottom: 0, 
+                                    padding: 16,
+                                    backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.7)',
+                                    borderColor: isDark ? 'rgba(255, 107, 107, 0.4)' : 'rgba(255, 107, 107, 0.2)',
+                                    borderWidth: 1.5,
+                                }
+                            ]}>
+                                <BlurView intensity={isDark ? 15 : 10} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <View style={{ 
+                                        width: 44, 
+                                        height: 44, 
+                                        borderRadius: 22, 
+                                        backgroundColor: isDark ? 'rgba(255, 107, 107, 0.2)' : 'rgba(255, 107, 107, 0.1)', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'center', 
+                                        marginRight: 15,
+                                        borderWidth: 1,
+                                        borderColor: 'rgba(255, 107, 107, 0.3)',
+                                    }}>
+                                        <Ionicons name="shield-checkmark" size={24} color="#ff6b6b" />
                                     </View>
                                     <View style={{ flex: 1 }}>
-                                        <Text style={{ fontSize: 15, fontWeight: '700', color: isDark ? '#fff' : '#111' }}>Bảo vệ sự riêng tư của bạn</Text>
-                                        <Text style={{ fontSize: 12, color: isDark ? 'rgba(255,255,255,0.7)' : '#666' }}>Thiết lập "Vùng an toàn" để ẩn vị trí nhà riêng ngay!</Text>
+                                        <Text style={{ 
+                                            fontSize: 16, 
+                                            fontWeight: '800', 
+                                            color: isDark ? '#fff' : '#111',
+                                            letterSpacing: -0.3
+                                        }}>Bảo vệ sự riêng tư</Text>
+                                        <Text style={{ 
+                                            fontSize: 13, 
+                                            color: isDark ? 'rgba(255,255,255,0.6)' : '#666',
+                                            marginTop: 2,
+                                            fontWeight: '500'
+                                        }}>Thiết lập "Vùng an toàn" ngay!</Text>
                                     </View>
-                                    <Ionicons name="chevron-forward" size={20} color={isDark ? 'rgba(255,255,255,0.5)' : '#999'} />
-                                </LinearGradient>
-                            </BlurView>
+                                    <View style={{
+                                        width: 32,
+                                        height: 32,
+                                        borderRadius: 16,
+                                        backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        <Ionicons name="chevron-forward" size={18} color={isDark ? 'rgba(255,255,255,0.8)' : '#444'} />
+                                    </View>
+                                </View>
+                            </View>
                         </TouchableOpacity>
                     </MotiView>
                 )}
@@ -541,46 +550,7 @@ export default function ProfileScreen() {
                         </MotiView>
 
                         {/* FLOATING STATS BUBBLES - STRANGE ASYMMETRIC LAYOUT */}
-                        <View style={styles.bubblesContainer}>
-                            <MotiView
-                                from={{ scale: 0, translateX: 20 }}
-                                animate={{ scale: 1, translateX: 0 }}
-                                transition={{ delay: 300 }}
-                                style={[styles.statBubble, styles.bubbleLarge]}
-                            >
-                                <BlurView intensity={40} tint={isDark ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: currentTheme.colors.primary + (isDark ? '50' : '20') }]} />
-                                <Text style={[styles.bubbleValue, { color: isDark ? '#fff' : currentTheme.colors.primary }]}>{stats?.totalListens || 0}</Text>
-                                <Text style={[styles.bubbleLabel, { color: isDark ? '#fff' : currentTheme.colors.textMuted }]}>Listens</Text>
-                            </MotiView>
 
-                            <MotiView
-                                from={{ scale: 0, translateY: 20 }}
-                                animate={{ scale: 1, translateY: 0 }}
-                                transition={{ delay: 450 }}
-                                style={[styles.statBubble, styles.bubbleMedium, { bottom: -5, left: -35 }]}
-                            >
-                                <BlurView intensity={40} tint={isDark ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: currentTheme.colors.secondary + (isDark ? '50' : '20') }]} />
-                                <Text style={[styles.bubbleValueMedium, { color: isDark ? '#fff' : currentTheme.colors.secondary }]}>{stats?.voicePinCount || 0}</Text>
-                                <Text style={[styles.bubbleLabelMedium, { color: isDark ? '#fff' : currentTheme.colors.textMuted }]}>Voices</Text>
-                            </MotiView>
-
-                            <TouchableOpacity
-                                style={{ position: 'absolute', right: -10, top: -35, zIndex: 100 }} 
-                                onPress={() => router.push('/friends')}
-                                activeOpacity={0.7}
-                            >
-                                <MotiView
-                                    from={{ scale: 0, translateY: -20 }}
-                                    animate={{ scale: 1, translateY: 0 }}
-                                    transition={{ delay: 600 }}
-                                    style={[styles.statBubble, styles.bubbleSmall]}
-                                >
-                                    <BlurView intensity={40} tint={isDark ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: '#10b981' + (isDark ? '50' : '20') }]} />
-                                    <Text style={[styles.bubbleValueSmall, { color: isDark ? '#fff' : '#059669' }]}>{stats?.friendCount || 0}</Text>
-                                    <Text style={[styles.bubbleLabelSmall, { color: isDark ? '#fff' : currentTheme.colors.textMuted }]}>Friends</Text>
-                                </MotiView>
-                            </TouchableOpacity>
-                        </View>
                     </View>
 
                     {/* GLASS VIBE SECTION */}
@@ -721,6 +691,31 @@ export default function ProfileScreen() {
                                 />
                                 <Ionicons name="settings-outline" size={20} color={isDark ? "#fff" : currentTheme.colors.text} />
                             </TouchableOpacity>
+                        </View>
+
+                        {/* User Stats Row */}
+                        <View style={{ 
+                            borderTopWidth: 1, 
+                            borderTopColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                            marginTop: 20,
+                            paddingTop: 20,
+                            flexDirection: 'row',
+                            justifyContent: 'space-around'
+                        }}>
+                            <View style={{ alignItems: 'center' }}>
+                                <Text style={{ fontSize: 20, fontWeight: '800', color: isDark ? '#fff' : '#111' }}>{stats.listens || 0}</Text>
+                                <Text style={{ fontSize: 12, fontWeight: '600', color: isDark ? 'rgba(255,255,255,0.6)' : '#666', marginTop: 2 }}>Lượt nghe</Text>
+                            </View>
+                            <View style={{ width: 1, height: 30, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }} />
+                            <View style={{ alignItems: 'center' }}>
+                                <Text style={{ fontSize: 20, fontWeight: '800', color: isDark ? '#fff' : '#111' }}>{stats.voices || 0}</Text>
+                                <Text style={{ fontSize: 12, fontWeight: '600', color: isDark ? 'rgba(255,255,255,0.6)' : '#666', marginTop: 2 }}>VoicePins</Text>
+                            </View>
+                            <View style={{ width: 1, height: 30, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }} />
+                            <View style={{ alignItems: 'center' }}>
+                                <Text style={{ fontSize: 20, fontWeight: '800', color: isDark ? '#fff' : '#111' }}>{stats.friends || 0}</Text>
+                                <Text style={{ fontSize: 12, fontWeight: '600', color: isDark ? 'rgba(255,255,255,0.6)' : '#666', marginTop: 2 }}>Bạn bè</Text>
+                            </View>
                         </View>
                     </MotiView>
 

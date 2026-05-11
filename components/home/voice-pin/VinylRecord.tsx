@@ -53,6 +53,12 @@ interface VinylRecordProps {
   onMorePress?: () => void;
 }
 
+function formatDuration(value?: number | string | null) {
+  const seconds = Number(value);
+  if (!Number.isFinite(seconds) || seconds <= 0) return "--";
+  return `${Math.round(seconds)}s`;
+}
+
 export function VinylRecord({
   pin,
   playing,
@@ -275,7 +281,7 @@ export function VinylRecord({
             }]}>
               <Ionicons name="mic-outline" size={12} color={emotionColor} />
               <Text style={[styles.statTextSmall, { color: isDark ? "#F5F5F4" : "#1E293B" }]}>
-                {pin.audioDuration ?? 0}s
+                {formatDuration(pin.audioDuration ?? pin.duration ?? null)}
               </Text>
             </View>
             <View style={[styles.statPillSmall, {
