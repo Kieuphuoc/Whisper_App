@@ -53,7 +53,7 @@ export default function OtherUserProfileScreen() {
 
     const [user, setUser] = useState<User | null>(null);
     const [stats, setStats] = useState<any>(null);
-    const [friendStatus, setFriendStatus] = useState<string>('none'); 
+    const [friendStatus, setFriendStatus] = useState<string>('none');
     const [friendshipId, setFriendshipId] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -137,7 +137,7 @@ export default function OtherUserProfileScreen() {
                 Alert.alert('Yêu cầu đăng nhập', 'Bạn cần đăng nhập để kết bạn.');
                 return;
             }
-            const res = await authApis(token).post(endpoints.friendRequest, { receiverId: user.id });
+            const res = await authApis(token).post(endpoints.friendRequest, { receiverId: Number(id) });
             const newFriendshipId = res.data?.data?.id || res.data?.id;
             setFriendStatus('pending_sent');
             if (newFriendshipId) setFriendshipId(newFriendshipId);
@@ -179,7 +179,7 @@ export default function OtherUserProfileScreen() {
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) return;
-            const res = await authApis(token).post(endpoints.chatPrivate(user.id.toString()));
+            const res = await authApis(token).post(endpoints.chatPrivate(id as string));
             const roomId = res.data?.data?.id || res.data?.id;
             if (roomId) {
                 router.push({ pathname: '/chat/[id]', params: { id: roomId.toString() } });
@@ -391,9 +391,9 @@ export default function OtherUserProfileScreen() {
                                 </TouchableOpacity>
                             ) : friendStatus === 'pending_received' ? (
                                 <>
-                                    <TouchableOpacity 
-                                        onPress={() => handleRespond('accept')} 
-                                        style={[styles.glassMainButton, { flex: 2 }]} 
+                                    <TouchableOpacity
+                                        onPress={() => handleRespond('accept')}
+                                        style={[styles.glassMainButton, { flex: 2 }]}
                                         activeOpacity={0.9}
                                     >
                                         <LinearGradient colors={['#10b981', '#059669']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
@@ -402,9 +402,9 @@ export default function OtherUserProfileScreen() {
                                             <Text style={styles.mainActionText}>Chấp nhận</Text>
                                         </View>
                                     </TouchableOpacity>
-                                    <TouchableOpacity 
-                                        onPress={() => handleRespond('reject')} 
-                                        style={[styles.glassMainButton, { flex: 1, marginLeft: 10, backgroundColor: 'rgba(239, 68, 68, 0.2)' }]} 
+                                    <TouchableOpacity
+                                        onPress={() => handleRespond('reject')}
+                                        style={[styles.glassMainButton, { flex: 1, marginLeft: 10, backgroundColor: 'rgba(239, 68, 68, 0.2)' }]}
                                         activeOpacity={0.9}
                                     >
                                         <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />

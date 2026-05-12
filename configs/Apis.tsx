@@ -67,6 +67,8 @@ export const endpoints = {
   friendList: (userId: string | number) => `/friend/list/${userId}`,
   friendPending: "/friend/pending",
   friendRequest: "/friend/request",
+  friendInviteToken: "/friend/invite-token",
+  friendInvite: "/friend/invite",
   friendRespond: (id: string | number) => `/friend/request/${id}/respond`,
   friendCancel: (id: string | number) => `/friend/request/${id}`,
   friendRemove: "/friend/remove",

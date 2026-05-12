@@ -19,6 +19,7 @@ import {
     useColorScheme,
     TextInput,
     RefreshControl,
+    Share,
 } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { BlurView } from 'expo-blur';
@@ -33,6 +34,31 @@ import { Avatar as GlobalAvatar } from '@/components/ui/Avatar';
 
 const { width, height } = Dimensions.get('window');
 
+const buildFriendInviteLink = (inviteToken: string) => `app://friends?invite=${encodeURIComponent(inviteToken)}`;
+
+const extractFriendInviteTokenFromLink = (value: string): string | null => {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    const paramMatch = trimmed.match(/[?&]invite=([^&#]+)/i);
+    if (paramMatch?.[1]) return decodeURIComponent(paramMatch[1]);
+
+    return trimmed.startsWith('v1.') ? trimmed : null;
+};
+
+const extractFriendIdFromLink = (value: string): number | null => {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    const paramMatch = trimmed.match(/[?&](?:friendId|userId|uid)=([^&#]+)/i);
+    const candidate = paramMatch?.[1]
+        ? decodeURIComponent(paramMatch[1])
+        : trimmed.match(/(?:\/user\/|\/friends?\/)(\d+)/i)?.[1] ?? trimmed;
+    const friendId = Number(candidate);
+
+    return Number.isInteger(friendId) && friendId > 0 ? friendId : null;
+};
+
 // ─── Types ────────────────────────────────────────────────
 interface FriendUser {
     id: number;
@@ -44,6 +70,8 @@ interface FriendUser {
 interface PendingRequest {
     id: number;
     status: 'PENDING';
+    senderId?: number;
+    receiverId?: number;
     sender?: FriendUser;
     receiver?: FriendUser;
     createdAt: string;
@@ -53,6 +81,10 @@ interface PendingRequest {
 
 // ─── Main Screen ───────────────────────────────────────────
 type Tab = 'friends' | 'requests';
+
+type RequestListItem =
+    | { isHeader: true; title: string; count: number }
+    | (PendingRequest & { isHeader?: false; direction: 'received' | 'sent' });
 
 // ─── Tabs Component ──────────────────────────────────────
 const FilterTab = ({ label, active, onPress, isDark, theme }: { label: string, active: boolean, onPress: () => void, isDark: boolean, theme: any }) => (
@@ -80,7 +112,7 @@ const FilterTab = ({ label, active, onPress, isDark, theme }: { label: string, a
 );
 
 export default function FriendsScreen() {
-    const { mode } = useLocalSearchParams<{ mode?: string }>();
+    const { mode, invite, friendId, link } = useLocalSearchParams<{ mode?: string; invite?: string; friendId?: string; link?: string }>();
     const isSelectMode = mode === 'select';
     const user = useContext(MyUserContext);
     const router = useRouter();
@@ -92,6 +124,11 @@ export default function FriendsScreen() {
     const [friends, setFriends] = useState<FriendUser[]>([]);
     const [pending, setPending] = useState<PendingRequest[]>([]);
     const [loading, setLoading] = useState(false);
+    const [suggestions, setSuggestions] = useState<FriendUser[]>([]);
+    const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+    const [friendLinkInput, setFriendLinkInput] = useState('');
+    const [linkSubmitting, setLinkSubmitting] = useState(false);
+    const [processedInviteParam, setProcessedInviteParam] = useState<string | null>(null);
 
     const navigateToProfile = (userId: number) => {
         router.push(`/user/${userId}`);
@@ -105,7 +142,51 @@ export default function FriendsScreen() {
         }
     };
 
+    const loadSuggestions = useCallback(async () => {
+        try {
+            setSuggestionsLoading(true);
+            const token = await AsyncStorage.getItem('token');
+            if (!token) return;
+            const api = authApis(token);
+            // Fetch public voices to discover users
+            const res = await api.get(endpoints.voicePublic);
+            const voices = res.data?.data || [];
 
+            // Extract unique users who are not 'me' and not already friends
+            const discoveredUsers: FriendUser[] = [];
+            const seenIds = new Set<number>();
+            if (user?.id) seenIds.add(user.id);
+
+            // Also don't suggest people who are already friends
+            friends.forEach(f => seenIds.add(f.id));
+
+            voices.forEach((v: any) => {
+                const u = v.user;
+                if (u && !seenIds.has(u.id)) {
+                    discoveredUsers.push(u);
+                    seenIds.add(u.id);
+                }
+            });
+
+            // If not enough from voices, try a broad search for common letter 'a'
+            if (discoveredUsers.length < 5) {
+                const searchRes = await api.get(endpoints.searchUsers('a'));
+                const searchUsers = searchRes.data?.data || [];
+                searchUsers.forEach((u: FriendUser) => {
+                    if (!seenIds.has(u.id)) {
+                        discoveredUsers.push(u);
+                        seenIds.add(u.id);
+                    }
+                });
+            }
+
+            setSuggestions(discoveredUsers.slice(0, 10));
+        } catch (e) {
+            console.error('Load suggestions error:', e);
+        } finally {
+            setSuggestionsLoading(false);
+        }
+    }, [user?.id, friends, pending]);
 
     const load = useCallback(async () => {
         if (!user) return;
@@ -144,21 +225,28 @@ export default function FriendsScreen() {
         load();
     }, [load]);
 
+    // Tạm tắt phần gợi ý kết bạn theo yêu cầu.
+    // useEffect(() => {
+    //     if (friends.length === 0 && !loading) {
+    //         loadSuggestions();
+    //     }
+    // }, [friends.length, loading]);
 
 
-
-    const sendRequest = async (targetUserId: number) => {
+    const sendRequest = async (targetUserId: number): Promise<boolean> => {
         try {
             const token = await AsyncStorage.getItem('token');
-            if (!token) return;
+            if (!token) return false;
             const res = await authApis(token).post(endpoints.friendRequest, { receiverId: targetUserId });
             const newRequest = res.data?.data || res.data;
             if (newRequest) {
                 setPending(prev => [...prev, newRequest]);
             }
             Alert.alert('Thành công', 'Đã gửi lời mời kết bạn.');
+            return true;
         } catch (error: any) {
             Alert.alert('Lỗi', error.response?.data?.message || 'Không thể gửi lời mời.');
+            return false;
         }
     };
 
@@ -274,268 +362,415 @@ export default function FriendsScreen() {
         return safeFriends.some(f => f.id === targetId);
     };
 
+    const handleShareFriendLink = async () => {
+        if (!user?.id) {
+            Alert.alert('Lỗi', 'Không tìm thấy thông tin tài khoản.');
+            return;
+        }
+
+        try {
+            const token = await AsyncStorage.getItem('token');
+            if (!token) return;
+
+            const res = await authApis(token).get(endpoints.friendInviteToken);
+            const inviteToken = res.data?.data?.token;
+            if (!inviteToken) {
+                Alert.alert('Lỗi', 'Không thể tạo link kết bạn.');
+                return;
+            }
+
+            const inviteLink = buildFriendInviteLink(inviteToken);
+            await Share.share({
+                title: 'Kết bạn trên Whisper',
+                message: `Kết bạn với mình trên Whisper: ${inviteLink}`,
+                url: inviteLink,
+            });
+        } catch {
+            Alert.alert('Lỗi', 'Không thể chia sẻ link kết bạn.');
+        }
+    };
+
+    const handleSubmitFriendLink = useCallback(async (rawLink?: string) => {
+        const value = rawLink ?? friendLinkInput;
+        const inviteToken = extractFriendInviteTokenFromLink(value);
+
+        if (inviteToken) {
+            setLinkSubmitting(true);
+            try {
+                const token = await AsyncStorage.getItem('token');
+                if (!token) return;
+
+                const res = await authApis(token).post(endpoints.friendInvite, { token: inviteToken });
+                const newRequest = res.data?.data || res.data;
+                if (newRequest) {
+                    setPending(prev => [...prev, newRequest]);
+                }
+                Alert.alert('Thành công', 'Đã gửi lời mời kết bạn.');
+                setFriendLinkInput('');
+                setTab('requests');
+                load();
+            } catch (error: any) {
+                Alert.alert('Lỗi', error.response?.data?.message || 'Không thể xử lý link kết bạn.');
+            } finally {
+                setLinkSubmitting(false);
+            }
+            return;
+        }
+
+        const targetUserId = extractFriendIdFromLink(value);
+
+        if (!targetUserId) {
+            Alert.alert('Link không hợp lệ', 'Vui lòng dán link kết bạn hợp lệ.');
+            return;
+        }
+        if (targetUserId === user?.id) {
+            Alert.alert('Không thể kết bạn', 'Đây là link của chính bạn.');
+            return;
+        }
+        if (isFriend(targetUserId)) {
+            Alert.alert('Đã là bạn bè', 'Hai bạn đã kết bạn rồi.');
+            return;
+        }
+        if (isPending(targetUserId)) {
+            Alert.alert('Đã có lời mời', 'Lời mời kết bạn với người này đang chờ xử lý.');
+            return;
+        }
+
+        setLinkSubmitting(true);
+        try {
+            const sent = await sendRequest(targetUserId);
+            if (sent) {
+                setFriendLinkInput('');
+                setTab('requests');
+                load();
+            }
+        } finally {
+            setLinkSubmitting(false);
+        }
+    }, [friendLinkInput, user?.id, safeFriends, pending, load]);
+
+    useEffect(() => {
+        const inviteParam = invite ?? friendId ?? link;
+        if (!inviteParam || inviteParam === processedInviteParam) return;
+
+        setProcessedInviteParam(inviteParam);
+        setFriendLinkInput(inviteParam);
+        handleSubmitFriendLink(inviteParam);
+    }, [invite, friendId, link, processedInviteParam, handleSubmitFriendLink]);
+
     return (
         <View style={[styles.container, { backgroundColor: currentTheme.colors.background }]}>
-                <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
 
-                {/* AURA BACKGROUND - matches Chat/Notification page */}
-                <View style={StyleSheet.absoluteFill}>
-                    <LinearGradient
-                        colors={isDark ? ['#1e1b4b', '#000'] : ['#f5f3ff', '#fff']}
-                        style={StyleSheet.absoluteFill}
-                    />
-                    <MotiView
-                        from={{ opacity: 0.2, scale: 1 }}
-                        animate={{ opacity: 0.4, scale: 1.5 }}
-                        transition={{ loop: true, type: 'timing', duration: 15000, repeatReverse: true }}
-                        style={[
-                            styles.auraCircle,
-                            { backgroundColor: isDark ? '#4338ca' : '#ddd6fe', top: -50, right: -100 },
-                        ]}
-                    />
-                    <BlurView
-                        intensity={isDark ? 100 : 60}
-                        tint={isDark ? 'dark' : 'light'}
-                        style={StyleSheet.absoluteFill}
-                    />
+            {/* AURA BACKGROUND - matches Chat/Notification page */}
+            <View style={StyleSheet.absoluteFill}>
+                <LinearGradient
+                    colors={isDark ? ['#1e1b4b', '#000'] : ['#f5f3ff', '#fff']}
+                    style={StyleSheet.absoluteFill}
+                />
+                <MotiView
+                    from={{ opacity: 0.2, scale: 1 }}
+                    animate={{ opacity: 0.4, scale: 1.5 }}
+                    transition={{ loop: true, type: 'timing', duration: 15000, repeatReverse: true }}
+                    style={[
+                        styles.auraCircle,
+                        { backgroundColor: isDark ? '#4338ca' : '#ddd6fe', top: -50, right: -100 },
+                    ]}
+                />
+                <BlurView
+                    intensity={isDark ? 100 : 60}
+                    tint={isDark ? 'dark' : 'light'}
+                    style={StyleSheet.absoluteFill}
+                />
+            </View>
+
+            {/* Content Container */}
+            <View style={styles.content}>
+                {/* HEADER - using PageHeader for sync */}
+                <PageHeader
+                    title="Bạn bè"
+                    subtitle="Gợi ý & kết nối"
+                    backIcon="chevron-back"
+                    onBack={handleClose}
+                />
+
+                {/* TABS - exactly matching Notification page */}
+                <View style={styles.tabContainer}>
+                    <FilterTab label="Tất cả" active={tab === 'friends'} onPress={() => setTab('friends')} isDark={isDark} theme={currentTheme} />
+                    <FilterTab label="Lời mời" active={tab === 'requests'} onPress={() => setTab('requests')} isDark={isDark} theme={currentTheme} />
                 </View>
 
-                {/* Content Container */}
-                <View style={styles.content}>
-                    {/* HEADER - using PageHeader for sync */}
-                    <PageHeader 
-                        title="Bạn bè"
-                        subtitle="Gợi ý & kết nối"
-                        backIcon="chevron-back"
-                        onBack={handleClose}
-                    />
 
-                    {/* TABS - exactly matching Notification page */}
-                    <View style={styles.tabContainer}>
-                        <FilterTab label="Tất cả" active={tab === 'friends'} onPress={() => setTab('friends')} isDark={isDark} theme={currentTheme} />
-                        <FilterTab label="Lời mời" active={tab === 'requests'} onPress={() => setTab('requests')} isDark={isDark} theme={currentTheme} />
-                    </View>
+                <AnimatePresence>
+                    {loading ? (
+                        <MotiView
+                            key="loading"
+                            from={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            style={styles.centered}
+                        >
+                            <ActivityIndicator color="#8b5cf6" size="large" />
+                        </MotiView>
+                    ) : tab === 'friends' ? (
+                        <MotiView
+                            key="friends-list"
+                            from={{ opacity: 0, translateY: 20 }}
+                            animate={{ opacity: 1, translateY: 0 }}
+                            style={{ flex: 1 }}
+                        >
+                            <FlatList
+                                data={safeFriends}
+                                keyExtractor={f => String(f.id)}
+                                contentContainerStyle={styles.listContent}
+                                showsVerticalScrollIndicator={false}
+                                ListHeaderComponent={!isSelectMode ? (
+                                    <MotiView
+                                        from={{ opacity: 0, translateY: 12 }}
+                                        animate={{ opacity: 1, translateY: 0 }}
+                                        style={styles.inviteCard}
+                                    >
+                                        <View style={styles.inviteHeader}>
+                                            <View style={styles.inviteIconBox}>
+                                                <Ionicons name="link" size={20} color="#8b5cf6" />
+                                            </View>
+                                            <View style={{ flex: 1 }}>
+                                                <Text style={[styles.inviteTitle, { color: currentTheme.colors.text }]}>Kết bạn bằng link</Text>
+                                                <Text style={styles.inviteSubtitle}>Chia sẻ link của bạn hoặc dán link bạn bè gửi.</Text>
+                                            </View>
+                                        </View>
 
+                                        <View style={styles.linkInputRow}>
+                                            <TextInput
+                                                value={friendLinkInput}
+                                                onChangeText={setFriendLinkInput}
+                                                placeholder="Dán link kết bạn..."
+                                                placeholderTextColor="#9ca3af"
+                                                autoCapitalize="none"
+                                                autoCorrect={false}
+                                                style={[styles.linkInput, { color: currentTheme.colors.text }]}
+                                            />
+                                            <TouchableOpacity
+                                                style={[styles.linkSubmitBtn, linkSubmitting && styles.disabledBtn]}
+                                                onPress={() => handleSubmitFriendLink()}
+                                                disabled={linkSubmitting}
+                                                activeOpacity={0.85}
+                                            >
+                                                {linkSubmitting ? (
+                                                    <ActivityIndicator size="small" color="#fff" />
+                                                ) : (
+                                                    <Ionicons name="person-add" size={18} color="#fff" />
+                                                )}
+                                            </TouchableOpacity>
+                                        </View>
 
-                    <AnimatePresence>
-                        {loading ? (
-                            <MotiView
-                                key="loading"
-                                from={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                style={styles.centered}
-                            >
-                                <ActivityIndicator color="#8b5cf6" size="large" />
-                            </MotiView>
-                        ) : tab === 'friends' ? (
-                            <MotiView
-                                key="friends-list"
-                                from={{ opacity: 0, translateY: 20 }}
-                                animate={{ opacity: 1, translateY: 0 }}
-                                style={{ flex: 1 }}
-                            >
-                                <FlatList
-                                    data={safeFriends}
-                                    keyExtractor={f => String(f.id)}
-                                    contentContainerStyle={styles.listContent}
-                                    showsVerticalScrollIndicator={false}
-                                    refreshControl={
-                                        <RefreshControl
-                                            refreshing={loading}
-                                            onRefresh={load}
-                                            tintColor="#8b5cf6"
-                                            colors={['#8b5cf6']}
-                                        />
+                                        <TouchableOpacity
+                                            style={styles.shareLinkBtn}
+                                            onPress={handleShareFriendLink}
+                                            activeOpacity={0.85}
+                                        >
+                                            <Ionicons name="share-social-outline" size={18} color="#8b5cf6" />
+                                            <Text style={styles.shareLinkText}>Gửi link của tôi</Text>
+                                        </TouchableOpacity>
+                                    </MotiView>
+                                ) : null}
+                                refreshControl={
+                                    <RefreshControl
+                                        refreshing={loading}
+                                        onRefresh={load}
+                                        tintColor="#8b5cf6"
+                                        colors={['#8b5cf6']}
+                                    />
+                                }
+                                renderItem={({ item, index }) => (
+                                    <MotiView
+                                        from={{ opacity: 0, scale: 0.9, translateX: -20 }}
+                                        animate={{ opacity: 1, scale: 1, translateX: 0 }}
+                                        transition={{ delay: index * 50, type: 'timing' }}
+                                        style={styles.friendCardWrap}
+                                    >
+                                        <TouchableOpacity
+                                            style={styles.glassCard}
+                                            onPress={() => navigateToProfile(item.id)}
+                                            activeOpacity={0.9}
+                                        >
+                                            <GlobalAvatar uri={item.avatar} size={48} />
+                                            <View style={styles.cardInfo}>
+                                                <Text style={styles.cardName}>{item.displayName ?? item.username}</Text>
+                                                <Text style={styles.cardSub}>@{item.username}</Text>
+                                            </View>
+                                            {isSelectMode ? (
+                                                <TouchableOpacity
+                                                    style={[styles.smallActionBtn, { backgroundColor: currentTheme.colors.primary }]}
+                                                    onPress={async (e) => {
+                                                        e.stopPropagation();
+                                                        handleStartChat(item.id);
+                                                    }}
+                                                >
+                                                    <Ionicons name="chatbubble-ellipses" size={18} color="#fff" />
+                                                </TouchableOpacity>
+                                            ) : (
+                                                <View style={{ flexDirection: 'row', gap: 8 }}>
+                                                    <TouchableOpacity
+                                                        style={[styles.smallActionBtn, { backgroundColor: currentTheme.colors.primary + '20' }]}
+                                                        onPress={(e) => {
+                                                            e.stopPropagation();
+                                                            handleStartChat(item.id);
+                                                        }}
+                                                    >
+                                                        <Ionicons name="chatbubble-ellipses" size={18} color={currentTheme.colors.primary} />
+                                                    </TouchableOpacity>
+
+                                                    <TouchableOpacity
+                                                        style={styles.actionBtn}
+                                                        onPress={(e) => {
+                                                            e.stopPropagation();
+                                                            removeFriend(item.id);
+                                                        }}
+                                                    >
+                                                        <Ionicons name="ellipsis-vertical" size={20} color="#9ca3af" />
+                                                    </TouchableOpacity>
+                                                </View>
+                                            )}
+                                        </TouchableOpacity>
+                                    </MotiView>
+                                )}
+                                ListEmptyComponent={
+                                    <View style={styles.emptyContainer}>
+                                        <Text style={styles.emptyText}>Bạn chưa có ai trong danh sách</Text>
+                                        {/* Tạm tắt UI gợi ý kết bạn theo yêu cầu. */}
+                                    </View>
+                                }
+                            />
+                        </MotiView>
+                    ) : (
+                        <MotiView
+                            key="requests-list"
+                            from={{ opacity: 0, translateY: 20 }}
+                            animate={{ opacity: 1, translateY: 0 }}
+                            style={{ flex: 1 }}
+                        >
+                            <FlatList<RequestListItem>
+                                data={[
+                                    ...(received.length > 0 ? [{ isHeader: true as const, title: 'Lời mời đã nhận', count: received.length }] : []),
+                                    ...received.map(r => ({ ...r, direction: 'received' as const })),
+                                    ...(sent.length > 0 ? [{ isHeader: true as const, title: 'Yêu cầu đã gửi', count: sent.length }] : []),
+                                    ...sent.map(r => ({ ...r, direction: 'sent' as const })),
+                                ] satisfies RequestListItem[]}
+                                keyExtractor={r => r.isHeader ? `header-${r.title}` : `${r.direction || 'req'}-${r.id}`}
+                                contentContainerStyle={styles.listContent}
+                                showsVerticalScrollIndicator={false}
+                                refreshControl={
+                                    <RefreshControl
+                                        refreshing={loading}
+                                        onRefresh={load}
+                                        tintColor="#8b5cf6"
+                                        colors={['#8b5cf6']}
+                                    />
+                                }
+                                renderItem={({ item, index }) => {
+                                    if (item.isHeader) {
+                                        return (
+                                            <MotiView
+                                                from={{ opacity: 0, translateX: -10 }}
+                                                animate={{ opacity: 1, translateX: 0 }}
+                                                style={styles.sectionHeaderContainer}
+                                            >
+                                                <Text style={styles.sectionHeaderTitle}>{item.title}</Text>
+                                                <View style={styles.sectionHeaderBadge}>
+                                                    <Text style={styles.sectionHeaderBadgeText}>{item.count}</Text>
+                                                </View>
+                                            </MotiView>
+                                        );
                                     }
-                                    renderItem={({ item, index }) => (
+
+                                    const direction = item.direction || (item.senderId === user?.id ? 'sent' : 'received');
+                                    const who = direction === 'received' ? item.sender : item.receiver;
+                                    if (!who) return null;
+                                    return (
                                         <MotiView
-                                            from={{ opacity: 0, scale: 0.9, translateX: -20 }}
+                                            from={{ opacity: 0, scale: 0.9, translateX: 20 }}
                                             animate={{ opacity: 1, scale: 1, translateX: 0 }}
                                             transition={{ delay: index * 50, type: 'timing' }}
                                             style={styles.friendCardWrap}
                                         >
                                             <TouchableOpacity
                                                 style={styles.glassCard}
-                                                onPress={() => navigateToProfile(item.id)}
+                                                onPress={() => navigateToProfile(who.id)}
                                                 activeOpacity={0.9}
                                             >
-                                                <GlobalAvatar uri={item.avatar} size={48} />
+                                                <GlobalAvatar uri={who.avatar} size={48} />
                                                 <View style={styles.cardInfo}>
-                                                    <Text style={styles.cardName}>{item.displayName ?? item.username}</Text>
-                                                    <Text style={styles.cardSub}>@{item.username}</Text>
+                                                    <Text style={styles.cardName}>{who.displayName ?? who.username}</Text>
+                                                    <Text style={styles.cardSub}>
+                                                        {direction === 'received' ? 'Gửi lời mời kết bạn' : 'Đã gửi lời mời'}
+                                                    </Text>
                                                 </View>
-                                                {isSelectMode ? (
-                                                    <TouchableOpacity
-                                                        style={[styles.smallActionBtn, { backgroundColor: currentTheme.colors.primary }]}
-                                                        onPress={async (e) => {
-                                                            e.stopPropagation();
-                                                            handleStartChat(item.id);
-                                                        }}
-                                                    >
-                                                        <Ionicons name="chatbubble-ellipses" size={18} color="#fff" />
-                                                    </TouchableOpacity>
-                                                ) : (
-                                                    <View style={{ flexDirection: 'row', gap: 8 }}>
+
+                                                {direction === 'received' ? (
+                                                    <View style={styles.reqRowActions}>
                                                         <TouchableOpacity
-                                                            style={[styles.smallActionBtn, { backgroundColor: currentTheme.colors.primary + '20' }]}
+                                                            style={[styles.smallActionBtn, styles.acceptBtn]}
                                                             onPress={(e) => {
                                                                 e.stopPropagation();
-                                                                handleStartChat(item.id);
+                                                                respondRequest(item.id, 'accept');
                                                             }}
                                                         >
-                                                            <Ionicons name="chatbubble-ellipses" size={18} color={currentTheme.colors.primary} />
+                                                            <Ionicons name="checkmark" size={18} color="#fff" />
                                                         </TouchableOpacity>
-                                                        
                                                         <TouchableOpacity
-                                                            style={styles.actionBtn}
+                                                            style={[styles.smallActionBtn, styles.rejectBtn]}
                                                             onPress={(e) => {
                                                                 e.stopPropagation();
-                                                                removeFriend(item.id);
+                                                                respondRequest(item.id, 'reject');
                                                             }}
                                                         >
-                                                            <Ionicons name="ellipsis-vertical" size={20} color="#9ca3af" />
+                                                            <Ionicons name="close" size={18} color="#64748b" />
                                                         </TouchableOpacity>
                                                     </View>
+                                                ) : (
+                                                    <TouchableOpacity
+                                                        style={styles.pendingBadge}
+                                                        onPress={(e) => {
+                                                            e.stopPropagation();
+                                                            cancelRequest(item.id);
+                                                        }}
+                                                    >
+                                                        <Text style={[styles.pendingBadgeText, { color: '#ef4444' }]}>Thu hồi</Text>
+                                                    </TouchableOpacity>
                                                 )}
                                             </TouchableOpacity>
                                         </MotiView>
-                                    )}
-                                    ListEmptyComponent={
-                                        <View style={styles.emptyContainer}>
-                                            <Text style={styles.emptyText}>Bạn chưa có ai trong danh sách</Text>
-                                        </View>
-                                    }
-                                />
-                            </MotiView>
-                        ) : (
-                            <MotiView
-                                key="requests-list"
-                                from={{ opacity: 0, translateY: 20 }}
-                                animate={{ opacity: 1, translateY: 0 }}
-                                style={{ flex: 1 }}
-                            >
-                                <FlatList
-                                    data={[
-                                        ...(received.length > 0 ? [{ isHeader: true, title: 'Lời mời đã nhận', count: received.length }] : []),
-                                        ...received.map(r => ({ ...r, direction: 'received' as const })),
-                                        ...(sent.length > 0 ? [{ isHeader: true, title: 'Yêu cầu đã gửi', count: sent.length }] : []),
-                                        ...sent.map(r => ({ ...r, direction: 'sent' as const })),
-                                    ]}
-                                    keyExtractor={r => r.isHeader ? `header-${r.title}` : `${r.direction || 'req'}-${r.id}`}
-                                    contentContainerStyle={styles.listContent}
-                                    showsVerticalScrollIndicator={false}
-                                    refreshControl={
-                                        <RefreshControl
-                                            refreshing={loading}
-                                            onRefresh={load}
-                                            tintColor="#8b5cf6"
-                                            colors={['#8b5cf6']}
-                                        />
-                                    }
-                                    renderItem={({ item, index }) => {
-                                        if (item.isHeader) {
-                                            return (
-                                                <MotiView
-                                                    from={{ opacity: 0, translateX: -10 }}
-                                                    animate={{ opacity: 1, translateX: 0 }}
-                                                    style={styles.sectionHeaderContainer}
-                                                >
-                                                    <Text style={styles.sectionHeaderTitle}>{item.title}</Text>
-                                                    <View style={styles.sectionHeaderBadge}>
-                                                        <Text style={styles.sectionHeaderBadgeText}>{item.count}</Text>
-                                                    </View>
-                                                </MotiView>
-                                            );
-                                        }
-
-                                        const direction = item.direction || (item.senderId === user?.id ? 'sent' : 'received');
-                                        const who = direction === 'received' ? item.sender : item.receiver;
-                                        if (!who) return null;
-                                        return (
-                                            <MotiView
-                                                from={{ opacity: 0, scale: 0.9, translateX: 20 }}
-                                                animate={{ opacity: 1, scale: 1, translateX: 0 }}
-                                                transition={{ delay: index * 50, type: 'timing' }}
-                                                style={styles.friendCardWrap}
-                                            >
-                                                <TouchableOpacity
-                                                    style={styles.glassCard}
-                                                    onPress={() => navigateToProfile(who.id)}
-                                                    activeOpacity={0.9}
-                                                >
-                                                    <GlobalAvatar uri={who.avatar} size={48} />
-                                                    <View style={styles.cardInfo}>
-                                                        <Text style={styles.cardName}>{who.displayName ?? who.username}</Text>
-                                                        <Text style={styles.cardSub}>
-                                                            {direction === 'received' ? 'Gửi lời mời kết bạn' : 'Đã gửi lời mời'}
-                                                        </Text>
-                                                    </View>
-
-                                                    {direction === 'received' ? (
-                                                        <View style={styles.reqRowActions}>
-                                                            <TouchableOpacity
-                                                                style={[styles.smallActionBtn, styles.acceptBtn]}
-                                                                onPress={(e) => {
-                                                                    e.stopPropagation();
-                                                                    respondRequest(item.id, 'accept');
-                                                                }}
-                                                            >
-                                                                <Ionicons name="checkmark" size={18} color="#fff" />
-                                                            </TouchableOpacity>
-                                                            <TouchableOpacity
-                                                                style={[styles.smallActionBtn, styles.rejectBtn]}
-                                                                onPress={(e) => {
-                                                                    e.stopPropagation();
-                                                                    respondRequest(item.id, 'reject');
-                                                                }}
-                                                            >
-                                                                <Ionicons name="close" size={18} color="#64748b" />
-                                                            </TouchableOpacity>
-                                                        </View>
-                                                    ) : (
-                                                        <TouchableOpacity
-                                                            style={styles.pendingBadge}
-                                                            onPress={(e) => {
-                                                                e.stopPropagation();
-                                                                cancelRequest(item.id);
-                                                            }}
-                                                        >
-                                                            <Text style={[styles.pendingBadgeText, { color: '#ef4444' }]}>Thu hồi</Text>
-                                                        </TouchableOpacity>
-                                                    )}
-                                                </TouchableOpacity>
-                                            </MotiView>
-                                        );
-                                    }}
-                                    ListEmptyComponent={
-                                        <View style={styles.emptyContainer}>
-                                            <MotiView
-                                                from={{ opacity: 0, scale: 0.5 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                transition={{ type: 'spring', delay: 200 }}
-                                                style={styles.emptyIconBox}
-                                            >
-                                                <Ionicons
-                                                    name="mail"
-                                                    size={60}
-                                                    color={isDark ? 'rgba(255,255,255,0.2)' : '#f3f4f6'}
-                                                />
-                                            </MotiView>
-                                            <Text style={styles.emptyText}>Hộp thư đang trống</Text>
-                                            <Text style={styles.emptySubText}>
-                                                Bạn sẽ nhận được thông báo khi có lời mời mới.
-                                            </Text>
-                                        </View>
-                                    }
-                                />
-                            </MotiView>
-                        )}
-                    </AnimatePresence>
-                </View>
+                                    );
+                                }}
+                                ListEmptyComponent={
+                                    <View style={styles.emptyContainer}>
+                                        <MotiView
+                                            from={{ opacity: 0, scale: 0.5 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ type: 'spring', delay: 200 }}
+                                            style={styles.emptyIconBox}
+                                        >
+                                            <Ionicons
+                                                name="mail"
+                                                size={60}
+                                                color={isDark ? 'rgba(255,255,255,0.2)' : '#f3f4f6'}
+                                            />
+                                        </MotiView>
+                                        <Text style={styles.emptyText}>Hộp thư đang trống</Text>
+                                        <Text style={styles.emptySubText}>
+                                            Bạn sẽ nhận được thông báo khi có lời mời mới.
+                                        </Text>
+                                    </View>
+                                }
+                            />
+                        </MotiView>
+                    )}
+                </AnimatePresence>
             </View>
-        );
-    }
+        </View>
+    );
+}
 
 const styles = StyleSheet.create({
     container: {
@@ -606,6 +841,86 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingBottom: 40,
         gap: 12,
+    },
+    inviteCard: {
+        padding: 18,
+        borderRadius: 28,
+        backgroundColor: 'rgba(139, 92, 246, 0.08)',
+        borderColor: 'rgba(139, 92, 246, 0.18)',
+        borderWidth: 1.2,
+        marginBottom: 4,
+    },
+    inviteHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        marginBottom: 14,
+    },
+    inviteIconBox: {
+        width: 42,
+        height: 42,
+        borderRadius: 14,
+        backgroundColor: 'rgba(139, 92, 246, 0.14)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    inviteTitle: {
+        fontSize: 16,
+        fontWeight: '800',
+    },
+    inviteSubtitle: {
+        color: '#94a3b8',
+        fontSize: 12,
+        fontWeight: '600',
+        marginTop: 2,
+    },
+    linkInputRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    linkInput: {
+        flex: 1,
+        height: 46,
+        borderRadius: 16,
+        paddingHorizontal: 14,
+        backgroundColor: 'rgba(255,255,255,0.72)',
+        borderWidth: 1,
+        borderColor: 'rgba(139, 92, 246, 0.14)',
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    linkSubmitBtn: {
+        width: 46,
+        height: 46,
+        borderRadius: 16,
+        backgroundColor: '#8b5cf6',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#8b5cf6',
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+    },
+    disabledBtn: {
+        opacity: 0.65,
+    },
+    shareLinkBtn: {
+        marginTop: 12,
+        height: 42,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
+        gap: 8,
+        backgroundColor: 'rgba(255,255,255,0.5)',
+        borderWidth: 1,
+        borderColor: 'rgba(139, 92, 246, 0.12)',
+    },
+    shareLinkText: {
+        color: '#8b5cf6',
+        fontSize: 13,
+        fontWeight: '800',
     },
     friendCardWrap: {
         marginBottom: 12,

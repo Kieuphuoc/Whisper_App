@@ -321,8 +321,8 @@ export default function ProfileScreen() {
     const handleShareProfile = async () => {
         try {
             await Share.share({
-                message: `Kết bạn với mình trên Whispery nhé! Nhấn vào link để xem hồ sơ: https://whispery.app/user/${user?.username}`,
-                url: `https://whispery.app/user/${user?.username}`,
+                message: `Khám phá hồ sơ của mình trên Whispery! @${user?.username}`,
+                url: `https://whispery.app/user/${user?.username}`, // Mock URL for now
             });
         } catch (error: any) {
             Alert.alert('Lỗi', error.message);
@@ -440,11 +440,11 @@ export default function ProfileScreen() {
             >
                 <MotiView
                     from={{ scale: 0.9, opacity: 0 }}
-                    animate={{ 
-                        scale: !coverUri ? [1, 1.1, 1] : 1, 
-                        opacity: 1 
+                    animate={{
+                        scale: !coverUri ? [1, 1.1, 1] : 1,
+                        opacity: 1
                     }}
-                    transition={{ 
+                    transition={{
                         scale: !coverUri ? {
                             type: 'timing',
                             duration: 1500,
@@ -519,14 +519,14 @@ export default function ProfileScreen() {
                         animate={{ opacity: 1, scale: 1, translateY: 0 }}
                         style={{ paddingHorizontal: 20, marginBottom: 20 }}
                     >
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             onPress={() => router.push('/(tabs)/profile/privacy-zones')}
                             activeOpacity={0.9}
                         >
                             <View style={[
-                                styles.mainGlassCard, 
-                                { 
-                                    marginBottom: 0, 
+                                styles.mainGlassCard,
+                                {
+                                    marginBottom: 0,
                                     padding: 16,
                                     backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.7)',
                                     borderColor: isDark ? 'rgba(255, 107, 107, 0.4)' : 'rgba(255, 107, 107, 0.2)',
@@ -535,13 +535,13 @@ export default function ProfileScreen() {
                             ]}>
                                 <BlurView intensity={isDark ? 15 : 10} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                    <View style={{ 
-                                        width: 44, 
-                                        height: 44, 
-                                        borderRadius: 22, 
-                                        backgroundColor: isDark ? 'rgba(255, 107, 107, 0.2)' : 'rgba(255, 107, 107, 0.1)', 
-                                        alignItems: 'center', 
-                                        justifyContent: 'center', 
+                                    <View style={{
+                                        width: 44,
+                                        height: 44,
+                                        borderRadius: 22,
+                                        backgroundColor: isDark ? 'rgba(255, 107, 107, 0.2)' : 'rgba(255, 107, 107, 0.1)',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
                                         marginRight: 15,
                                         borderWidth: 1,
                                         borderColor: 'rgba(255, 107, 107, 0.3)',
@@ -549,14 +549,14 @@ export default function ProfileScreen() {
                                         <Ionicons name="shield-checkmark" size={24} color="#ff6b6b" />
                                     </View>
                                     <View style={{ flex: 1 }}>
-                                        <Text style={{ 
-                                            fontSize: 16, 
-                                            fontWeight: '800', 
+                                        <Text style={{
+                                            fontSize: 16,
+                                            fontWeight: '800',
                                             color: isDark ? '#fff' : '#111',
                                             letterSpacing: -0.3
                                         }}>Bảo vệ sự riêng tư</Text>
-                                        <Text style={{ 
-                                            fontSize: 13, 
+                                        <Text style={{
+                                            fontSize: 13,
                                             color: isDark ? 'rgba(255,255,255,0.6)' : '#666',
                                             marginTop: 2,
                                             fontWeight: '500'
@@ -756,8 +756,8 @@ export default function ProfileScreen() {
                         </View>
 
                         {/* User Stats Row */}
-                        <View style={{ 
-                            borderTopWidth: 1, 
+                        <View style={{
+                            borderTopWidth: 1,
                             borderTopColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
                             marginTop: 20,
                             paddingTop: 20,
@@ -902,10 +902,10 @@ export default function ProfileScreen() {
                                                     item?.icon;
                                                 let mascotIcon: any = rawIcon
                                                     ? {
-                                                          uri: String(rawIcon).startsWith('http')
-                                                              ? String(rawIcon)
-                                                              : `${BASE_URL}${String(rawIcon).startsWith('/') ? '' : '/'}${rawIcon}`,
-                                                      }
+                                                        uri: String(rawIcon).startsWith('http')
+                                                            ? String(rawIcon)
+                                                            : `${BASE_URL}${String(rawIcon).startsWith('/') ? '' : '/'}${rawIcon}`,
+                                                    }
                                                     : null;
                                                 if (name.includes('Lời nói đầu tiên')) mascotIcon = MASCOT_ICONS.first_voice;
                                                 else if (name.includes('sưu tầm')) mascotIcon = MASCOT_ICONS.voice_collector;
