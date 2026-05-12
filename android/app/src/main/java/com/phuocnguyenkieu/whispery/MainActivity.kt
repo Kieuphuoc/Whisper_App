@@ -1,4 +1,4 @@
-package com.phuocnguyenkieu.App
+package com.phuocnguyenkieu.whispery
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build
@@ -25,7 +25,7 @@ class MainActivity : ReactActivity() {
 
   /**
    * Returns the name of the main component registered from JavaScript. This is used to schedule
-   * rendering of the component.
+   * rendering of the main component.
    */
   override fun getMainComponentName(): String = "main"
 
@@ -59,7 +59,7 @@ class MainActivity : ReactActivity() {
       }
 
       // Use the default back button implementation on Android S
-      // because it's doing more than [Activity.moveTaskToBack] in fact.
+      // because it is doing more than [Activity.moveTaskToBack] in fact.
       super.invokeDefaultOnBackPressed()
   }
 }

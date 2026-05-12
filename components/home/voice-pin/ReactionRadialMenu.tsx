@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Dimensions } from 'react-native';
+import { StyleSheet, View, Dimensions, Image } from 'react-native';
 import Animated, { 
   useAnimatedStyle, 
   withSpring, 
@@ -11,12 +11,11 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { REACTION_TYPES } from './VoicePinConstants';
-import { Text } from '../../ui/text';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const MENU_SIZE = 260;
-const ITEM_SIZE = 56;
-const RADIUS = 85;
+const MENU_SIZE = 300;
+const ITEM_SIZE = 70;
+const RADIUS = 98;
 
 interface ReactionRadialMenuProps {
   visible: boolean;
@@ -28,7 +27,7 @@ interface ReactionRadialMenuProps {
 }
 
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
-const AnimatedIonicons = Animated.createAnimatedComponent(Ionicons as any);
+const AnimatedImage = Animated.createAnimatedComponent(Image);
 
 export function ReactionRadialMenu({ 
   visible, 
@@ -108,7 +107,6 @@ function ReactionItem({
   });
 
   const itemStyle = useAnimatedStyle(() => {
-    const scale = withSpring(isSelected.value ? 1.3 : 1, { damping: 12 });
     const opacity = withDelay(
       index * 40,
       withTiming(visible ? 1 : 0, { duration: 200 })
@@ -119,7 +117,6 @@ function ReactionItem({
       transform: [
         { translateX: tx },
         { translateY: ty },
-        { scale },
       ],
     };
   });
@@ -136,19 +133,9 @@ function ReactionItem({
     };
   });
 
-  const iconStyle = useAnimatedStyle(() => {
+  const reactionImageStyle = useAnimatedStyle(() => {
     return {
-      color: isSelected.value ? '#FFFFFF' : reaction.color,
-      transform: [
-        { scale: isSelected.value ? 1.2 : 1 }
-      ]
-    };
-  });
-
-  const labelStyle = useAnimatedStyle(() => {
-    return {
-      opacity: withSpring(isSelected.value ? 1 : 0),
-      transform: [{ translateY: withSpring(isSelected.value ? 45 : 35) }]
+      opacity: withSpring(isSelected.value ? 1 : 0.94),
     };
   });
 
@@ -159,19 +146,20 @@ function ReactionItem({
         tint={isDark ? "dark" : "light"} 
         style={[styles.itemBlur, blurStyle]}
       >
-        <Ionicons
-          name={reaction.icon} 
-          size={24} 
-          color={isSelected.value ? '#FFFFFF' : reaction.color}
-        />
+        {reaction.image ? (
+          <AnimatedImage
+            source={reaction.image}
+            style={[styles.reactionImage, reactionImageStyle]}
+            resizeMode="contain"
+          />
+        ) : (
+          <Ionicons
+            name={reaction.icon}
+            size={24}
+            color={isSelected.value ? '#FFFFFF' : reaction.color}
+          />
+        )}
       </AnimatedBlurView>
-      <Animated.View style={[styles.labelContainer, labelStyle]}>
-        <BlurView intensity={20} tint={isDark ? "dark" : "light"} style={styles.labelBlur}>
-          <Text style={[styles.labelText, { color: reaction.color }]}>
-            {reaction.label}
-          </Text>
-        </BlurView>
-      </Animated.View>
     </Animated.View>
   );
 }
@@ -216,22 +204,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#7c3aed',
     opacity: 0.8,
   },
-  labelContainer: {
-    position: 'absolute',
-    alignItems: 'center',
-    width: 120,
-  },
-  labelBlur: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  labelText: {
-    fontSize: 11,
-    fontWeight: '700',
-    textAlign: 'center',
+  reactionImage: {
+    width: 58,
+    height: 58,
   }
 });

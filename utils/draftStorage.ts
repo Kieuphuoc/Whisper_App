@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Visibility } from '../types';
 import * as Location from 'expo-location';
+import type { GhostEngineId } from '../constants/ghostEngines';
 
 const DRAFTS_KEY = '@whisper:voice_drafts';
 
@@ -10,6 +11,14 @@ export interface VoiceDraft {
     photoUri: string | null;
     location: Location.LocationObject | null;
     visibility: Visibility;
+    /** Ghost Voice: TTS từ transcript */
+    ghostVoice?: boolean;
+    /** Giọng Azure (vd vi-VN-HoaiMyNeural) */
+    ttsVoice?: string;
+    /** tts | rvc */
+    ghostEngine?: GhostEngineId;
+    /** @deprecated dùng ghostVoice */
+    isAnonymous?: boolean;
     transcription: string | null;
     emotionLabel: string;
     timestamp: number;

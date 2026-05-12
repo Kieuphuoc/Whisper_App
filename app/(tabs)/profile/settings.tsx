@@ -1,4 +1,4 @@
-import { authApis, endpoints } from '@/configs/Apis';
+import { authApis, BASE_URL, endpoints } from '@/configs/Apis';
 import { MyDispatchContext, MyUserContext } from '@/configs/Context';
 import { User } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -127,7 +127,9 @@ export default function SettingsScreen() {
     const getAvatarUri = (avatar?: string) => {
         if (!avatar) return null;
         if (avatar.startsWith('http')) return avatar;
-        return `http://10.5.1.149:5000${avatar.startsWith('/') ? '' : '/'}${avatar}`;
+        const base = (BASE_URL ?? '').replace(/\/$/, '');
+        if (!base) return null;
+        return `${base}${avatar.startsWith('/') ? '' : '/'}${avatar}`;
     };
 
     const avatarUri = getAvatarUri(user?.avatar);

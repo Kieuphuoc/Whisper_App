@@ -1,8 +1,7 @@
 import React from "react";
-import { Animated, TouchableOpacity, StyleSheet } from "react-native";
+import { Animated, Image, TouchableOpacity, StyleSheet } from "react-native";
 import { View as MotiView } from "moti";
 import { Ionicons } from "@expo/vector-icons";
-import { Text } from "../../ui/text";
 import { REACTION_TYPES } from "./VoicePinConstants";
 
 interface ReactionPickerProps {
@@ -38,19 +37,11 @@ export function ReactionPicker({ reactionAnim, toggleReactions, handleReaction, 
             transition={{ type: 'spring', damping: 15, delay: index * 60 }}
             style={styles.reactionBtnInner}
           >
-            <MotiView
-              animate={{
-                scale: [1, 1.25, 1],
-              }}
-              transition={{
-                loop: true,
-                duration: 2000,
-                delay: index * 200,
-              }}
-            >
+            {r.image ? (
+              <Image source={r.image} style={styles.reactionImage} resizeMode="contain" />
+            ) : (
               <Ionicons name={r.icon as any} size={26} color={r.color} />
-            </MotiView>
-            <Text style={[styles.reactionLabel, { color: r.color, opacity: 0.9 }]}>{r.label}</Text>
+            )}
           </MotiView>
         </TouchableOpacity>
       ))}
@@ -64,9 +55,9 @@ const styles = StyleSheet.create({
     bottom: 150,
     alignSelf: "center",
     flexDirection: "row",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 28,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 34,
     borderWidth: 1,
     elevation: 10,
     shadowColor: "#000",
@@ -74,24 +65,21 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 12,
     zIndex: 2000,
-    gap: 8,
+    gap: 10,
   },
   reactionBtn: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 20,
-    minWidth: 70,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderRadius: 30,
+    minWidth: 64,
   },
   reactionBtnInner: {
     alignItems: 'center',
-    gap: 4,
   },
-  reactionLabel: {
-    fontSize: 9,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+  reactionImage: {
+    width: 56,
+    height: 56,
   },
 });

@@ -1,18 +1,18 @@
 {
   "expo": {
-    "name": "App",
-    "slug": "App",
+    "name": "Whispery",
+    "slug": "whispery",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "app",
+    "scheme": "whispery",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "jsEngine": "hermes",
     "ios": {
       "supportsTablet": true,
       "jsEngine": "hermes",
-      "bundleIdentifier": "com.phuocnguyenkieu.App"
+      "bundleIdentifier": "com.phuocnguyenkieu.whispery"
     },
     "android": {
       "adaptiveIcon": {
@@ -29,7 +29,7 @@
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_LOCATION"
       ],
-      "package": "com.phuocnguyenkieu.App"
+      "package": "com.phuocnguyenkieu.whispery"
     },
     "web": {
       "bundler": "metro",

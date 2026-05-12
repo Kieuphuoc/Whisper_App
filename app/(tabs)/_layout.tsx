@@ -138,7 +138,7 @@ export default function TabLayout() {
                 options={{
                     title: 'Ký ức',
                     tabBarIcon: ({ color, focused }) => (
-                        <Ionicons name={focused ? "heart" : "heart-outline"} size={26} color={color} />
+                        <Ionicons name={focused ? "heart" : "heart-outline"} style={{ }} size={26} color={color} />
                     ),
                 }}
             />
@@ -158,7 +158,7 @@ export default function TabLayout() {
                 options={{
                     title: 'Hồ sơ',
                     tabBarIcon: ({ color, focused }) => (
-                        <Ionicons name={focused ? "person" : "person-outline"} size={26} color={color} />
+                        <Ionicons name={focused ? "person" : "person-outline"} style={{ paddingTop: 2 }} size={26} color={color} />
                     ),
                 }}
             />

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { View, Animated, TouchableOpacity, Image, ImageBackground, StyleSheet } from "react-native";
+import { View, Animated, TouchableOpacity, Image, ImageBackground, StyleSheet, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { View as MotiView, AnimatePresence } from "moti";
@@ -28,6 +28,8 @@ import * as Haptics from "expo-haptics";
 import { ReactionRadialMenu } from "./ReactionRadialMenu";
 import { REACTION_TYPES } from "./VoicePinConstants";
 import { Visibility } from "@/types";
+import { GHOST_TTS_VOICES } from "@/constants/ghostTtsVoices";
+import { GHOST_ENGINE_OPTIONS, type GhostEngineId } from "@/constants/ghostEngines";
 
 interface VinylRecordProps {
   pin: any;
@@ -49,6 +51,13 @@ interface VinylRecordProps {
   isCreationMode?: boolean;
   visibility?: Visibility;
   onVisibilityChange?: (v: Visibility) => void;
+  /** Ghost Voice — chuyển transcript sang giọng đọc AI (TTS) khi đăng */
+  ghostVoice?: boolean;
+  onGhostVoiceChange?: (next: boolean) => void;
+  ghostTtsVoiceId?: string;
+  onGhostTtsVoiceChange?: (id: string) => void;
+  ghostEngine?: GhostEngineId;
+  onGhostEngineChange?: (id: GhostEngineId) => void;
   onPost?: () => void;
   onMorePress?: () => void;
 }
@@ -79,6 +88,12 @@ export function VinylRecord({
   isCreationMode,
   visibility,
   onVisibilityChange,
+  ghostVoice,
+  onGhostVoiceChange,
+  ghostTtsVoiceId,
+  onGhostTtsVoiceChange,
+  ghostEngine,
+  onGhostEngineChange,
   onPost,
   onMorePress,
 }: VinylRecordProps) {
@@ -297,7 +312,20 @@ export function VinylRecord({
         )}
       </View>
 
-      <View style={styles.recordStage}>
+      <View
+        style={[
+          styles.recordStage,
+          isCreationMode &&
+            onGhostVoiceChange && {
+              paddingBottom:
+                ghostVoice && ghostEngine === "tts"
+                  ? 168
+                  : ghostVoice
+                    ? 138
+                    : 100,
+            },
+        ]}
+      >
         <WavyRipple
           isPlaying={playing}
           color={emotionColor}
@@ -341,7 +369,223 @@ export function VinylRecord({
         />
       </Animated.View>
 
-      <View style={styles.statusBarRow}>
+      <View style={styles.bottomDock}>
+        {isCreationMode && typeof ghostVoice === "boolean" && onGhostVoiceChange ? (
+          <MotiView
+            from={{ opacity: 0, translateY: 8 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: "spring", damping: 16 }}
+            style={styles.ghostCardWrapper}
+          >
+            <TouchableOpacity
+              onPress={() => {
+                onGhostVoiceChange(!ghostVoice);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+              activeOpacity={0.9}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: ghostVoice }}
+              accessibilityLabel="Ghost Voice — giọng đọc AI từ transcript"
+              style={[
+                styles.ghostCard,
+                {
+                  borderColor: ghostVoice
+                    ? `${theme.colors.primary}55`
+                    : isDark
+                      ? "rgba(255,255,255,0.1)"
+                      : "rgba(0,0,0,0.05)",
+                  backgroundColor: isDark ? "rgba(255, 255, 255, 0.03)" : "rgba(255, 255, 255, 0.7)",
+                },
+              ]}
+            >
+              <View style={styles.ghostLeftCol}>
+                <View style={styles.ghostAvatarBox}>
+                  <LinearGradient
+                    colors={
+                      ghostVoice
+                        ? (["#8b5cf6", "#6d28d9"] as const)
+                        : (["#9ca3af", "#4b5563"] as const)
+                    }
+                    style={styles.ghostAvatarGradient}
+                  >
+                    <Ionicons
+                      name={ghostVoice ? "eye-off" : "person"}
+                      size={20}
+                      color="#fff"
+                    />
+                  </LinearGradient>
+                  {ghostVoice ? (
+                    <View style={[styles.ghostMiniBadge, { backgroundColor: "#8b5cf6" }]}>
+                      <Ionicons name="sparkles" size={9} color="#fff" />
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+
+              <View style={styles.ghostRightCol}>
+                <View style={styles.ghostItemMeta}>
+                  <Text style={[styles.ghostTypeLabel, { color: theme.colors.primary }]}>GHOST VOICE</Text>
+                  <Text style={styles.ghostTimeText}>
+                    {ghostVoice ? "Đang bật" : "Tắt"}
+                  </Text>
+                </View>
+                <Text
+                  style={[styles.ghostMessage, { color: isDark ? "#e2e8f0" : "#4b5563" }]}
+                  numberOfLines={3}
+                >
+                  {ghostVoice
+                    ? (ghostEngine || "tts") === "rvc"
+                      ? "Giữ ngữ điệu & cảm xúc, đổi timbre qua dịch vụ RVC/So-VITS (server riêng)."
+                      : "Thay file đăng bằng giọng neural đọc transcript (Azure TTS)."
+                    : "Bật Ghost Voice rồi chọn TTS hoặc Đổi timbre (RVC)."}
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.ghostStatePill,
+                  ghostVoice
+                    ? {
+                        backgroundColor: isDark ? "rgba(124, 58, 237, 0.35)" : "rgba(124, 58, 237, 0.12)",
+                        borderColor: theme.colors.primary,
+                      }
+                    : {
+                        backgroundColor: "transparent",
+                        borderColor: isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)",
+                      },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.ghostStatePillText,
+                    { color: ghostVoice ? theme.colors.primary : isDark ? "#9ca3af" : "#6b7280" },
+                  ]}
+                >
+                  {ghostVoice ? "Bật" : "Tắt"}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </MotiView>
+        ) : null}
+
+        {isCreationMode &&
+        ghostVoice &&
+        ghostEngine &&
+        onGhostEngineChange ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.ghostEnginePicker}
+            contentContainerStyle={styles.ghostEnginePickerContent}
+          >
+            {GHOST_ENGINE_OPTIONS.map((opt) => {
+              const active = opt.id === ghostEngine;
+              return (
+                <TouchableOpacity
+                  key={opt.id}
+                  onPress={() => {
+                    onGhostEngineChange(opt.id);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                  activeOpacity={0.85}
+                  style={[
+                    styles.ghostEngineChip,
+                    {
+                      borderColor: active
+                        ? theme.colors.primary
+                        : isDark
+                          ? "rgba(156, 163, 175, 0.25)"
+                          : "rgba(156, 163, 175, 0.35)",
+                      backgroundColor: active
+                        ? isDark
+                          ? "rgba(124, 58, 237, 0.22)"
+                          : "rgba(124, 58, 237, 0.08)"
+                        : isDark
+                          ? "rgba(255,255,255,0.03)"
+                          : "rgba(255,255,255,0.55)",
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.ghostEngineChipLabel,
+                      { color: active ? theme.colors.primary : isDark ? "#e2e8f0" : "#374151" },
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                  <Text
+                    style={[styles.ghostEngineChipSub, { color: isDark ? "#9ca3af" : "#64748b" }]}
+                    numberOfLines={2}
+                  >
+                    {opt.subtitle}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        ) : null}
+
+        {isCreationMode &&
+        ghostVoice &&
+        ghostEngine === "tts" &&
+        typeof ghostTtsVoiceId === "string" &&
+        onGhostTtsVoiceChange ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.ghostVoicePicker}
+            contentContainerStyle={styles.ghostVoicePickerContent}
+          >
+            {GHOST_TTS_VOICES.map((v) => {
+              const active = v.id === ghostTtsVoiceId;
+              return (
+                <TouchableOpacity
+                  key={v.id}
+                  onPress={() => {
+                    onGhostTtsVoiceChange(v.id);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                  activeOpacity={0.85}
+                  style={[
+                    styles.ghostVoiceChip,
+                    {
+                      borderColor: active
+                        ? theme.colors.primary
+                        : isDark
+                          ? "rgba(156, 163, 175, 0.25)"
+                          : "rgba(156, 163, 175, 0.35)",
+                      backgroundColor: active
+                        ? isDark
+                          ? "rgba(124, 58, 237, 0.28)"
+                          : "rgba(124, 58, 237, 0.1)"
+                        : isDark
+                          ? "rgba(255,255,255,0.04)"
+                          : "rgba(255,255,255,0.65)",
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.ghostVoiceChipLabel,
+                      { color: active ? theme.colors.primary : isDark ? "#e2e8f0" : "#374151" },
+                    ]}
+                  >
+                    {v.label}
+                  </Text>
+                  <Text
+                    style={[styles.ghostVoiceChipSub, { color: isDark ? "#9ca3af" : "#64748b" }]}
+                    numberOfLines={1}
+                  >
+                    {v.subtitle}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        ) : null}
+
+        <View style={styles.statusBarRow}>
         <View style={styles.userProfileGlass}>
           <TouchableOpacity
             onPress={() => {
@@ -470,11 +714,19 @@ export function VinylRecord({
                         end={{ x: 1, y: 1 }}
                         style={styles.actionButtonGradient}
                       >
-                        <Ionicons
-                          name={activeReactionObj ? (activeReactionObj.icon as any) : "heart"}
-                          size={userReaction ? 18 : 16}
-                          color="#FFFFFF"
-                        />
+                        {activeReactionObj?.image ? (
+                          <Image
+                            source={activeReactionObj.image}
+                            style={styles.actionReactionImage}
+                            resizeMode="contain"
+                          />
+                        ) : (
+                          <Ionicons
+                            name={activeReactionObj ? (activeReactionObj.icon as any) : "heart"}
+                            size={userReaction ? 18 : 16}
+                            color="#FFFFFF"
+                          />
+                        )}
                       </LinearGradient>
                     </MotiView>
                   );
@@ -493,6 +745,7 @@ export function VinylRecord({
               </TouchableOpacity>
             </>
           )}
+        </View>
         </View>
       </View>
     </View>
@@ -720,11 +973,146 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     marginTop: 1,
   },
-  statusBarRow: {
+  bottomDock: {
     position: "absolute",
-    bottom: 16,
-    left: 16,
-    right: 16,
+    bottom: 12,
+    left: 10,
+    right: 10,
+    gap: 8,
+    zIndex: 12,
+  },
+  ghostCardWrapper: {
+    borderRadius: 28,
+    overflow: "hidden",
+  },
+  ghostCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    gap: 12,
+    borderWidth: 1.2,
+    borderRadius: 28,
+  },
+  ghostLeftCol: {
+    justifyContent: "center",
+  },
+  ghostAvatarBox: {
+    width: 48,
+    height: 48,
+    position: "relative",
+  },
+  ghostAvatarGradient: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  ghostMiniBadge: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  ghostRightCol: {
+    flex: 1,
+    gap: 3,
+    minWidth: 0,
+  },
+  ghostItemMeta: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  ghostTypeLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  ghostTimeText: {
+    fontSize: 10,
+    color: "#9ca3af",
+    fontWeight: "600",
+  },
+  ghostMessage: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "500",
+  },
+  ghostStatePill: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 12,
+    borderWidth: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  ghostStatePillText: {
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  ghostVoicePicker: {
+    maxHeight: 64,
+  },
+  ghostEnginePicker: {
+    maxHeight: 72,
+  },
+  ghostEnginePickerContent: {
+    gap: 8,
+    paddingVertical: 2,
+    paddingRight: 6,
+    alignItems: "stretch",
+  },
+  ghostEngineChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1.2,
+    minWidth: 132,
+    maxWidth: 200,
+  },
+  ghostEngineChipLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  ghostEngineChipSub: {
+    fontSize: 9,
+    fontWeight: "600",
+    marginTop: 3,
+    lineHeight: 12,
+  },
+  ghostVoicePickerContent: {
+    gap: 8,
+    paddingVertical: 2,
+    paddingRight: 6,
+    alignItems: "stretch",
+  },
+  ghostVoiceChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    borderWidth: 1.2,
+    minWidth: 120,
+  },
+  ghostVoiceChipLabel: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  ghostVoiceChipSub: {
+    fontSize: 10,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  statusBarRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -751,6 +1139,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
+  },
+  actionReactionImage: {
+    width: 32,
+    height: 32,
   },
   actionButtonBlur: {
     width: "100%",

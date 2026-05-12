@@ -18,7 +18,7 @@ import { BoundingBox, useVoicePins } from "@/hooks/useVoicePins";
 import { Ionicons } from "@expo/vector-icons";
 import { useDiscovery } from "@/hooks/useDiscovery";
 import VoicePinMiniCard from "@/components/discovery/VoicePinMiniCard";
-import { VoicePin } from "@/types";
+import { VoicePin, Visibility } from "@/types";
 import { theme } from "@/constants/Theme";
 import FilterToggle from "@/components/home/Filter";
 import QuickActions from "@/components/home/QuickActions";
@@ -29,6 +29,8 @@ import WalkthroughOverlay, { WalkthroughStep } from "@/components/onboarding/Wal
 import { Dimensions } from "react-native";
 import { useNotifications } from "@/hooks/useNotifications";
 import { DraftStorage, VoiceDraft } from "@/utils/draftStorage";
+import { DEFAULT_GHOST_TTS_VOICE_ID } from "@/constants/ghostTtsVoices";
+import { DEFAULT_GHOST_ENGINE_ID, type GhostEngineId } from "@/constants/ghostEngines";
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -51,7 +53,7 @@ export default function HomeScreen() {
   const glassSurface = isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.7)";
   const primaryFabColor = isDark ? "#ffffff" : currentTheme.colors.primary;
   const { location } = useLocation();
-  const { visibility, setVisibility } = useVisibility("PUBLIC");
+  const { visibility, setVisibility } = useVisibility("FRIENDS");
   const params = useLocalSearchParams<{ selectPinId?: string; autoPlay?: string; lat?: string; lng?: string }>();
 
   // Bounding box state for map-based fetching
@@ -204,7 +206,10 @@ export default function HomeScreen() {
 
   const [pendingTranscription, setPendingTranscription] = useState<string | null>(null);
   const [pendingEmotionLabel, setPendingEmotionLabel] = useState<string>("Bình yên");
-  const [pendingVisibility, setPendingVisibility] = useState<Visibility>("PUBLIC");
+  const [pendingVisibility, setPendingVisibility] = useState<Visibility>("FRIENDS");
+  const [pendingGhostVoice, setPendingGhostVoice] = useState(false);
+  const [pendingGhostTtsVoiceId, setPendingGhostTtsVoiceId] = useState(DEFAULT_GHOST_TTS_VOICE_ID);
+  const [pendingGhostEngine, setPendingGhostEngine] = useState<GhostEngineId>(DEFAULT_GHOST_ENGINE_ID);
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -272,7 +277,7 @@ export default function HomeScreen() {
             title: 'Định vị lại',
             description: 'Nếu bạn bị lạc trên bản đồ, chỉ cần nhấn vào đây để quay lại vị trí hiện tại của mình ngay lập tức!',
             icon: 'paper-plane',
-            targetPos: { top: 135, right: 20, width: 68, height: 60 }
+            targetPos: { bottom: 110, right: 20, width: 56, height: 56 }
           }
         ]);
         setWalkthroughVisible(true);
@@ -398,6 +403,9 @@ export default function HomeScreen() {
     setPendingTranscription(draft.transcription);
     setPendingEmotionLabel(draft.emotionLabel);
     setPendingVisibility(draft.visibility);
+    setPendingGhostVoice(!!draft.ghostVoice || !!draft.isAnonymous);
+    setPendingGhostTtsVoiceId(draft.ttsVoice || DEFAULT_GHOST_TTS_VOICE_ID);
+    setPendingGhostEngine(draft.ghostEngine === "rvc" ? "rvc" : DEFAULT_GHOST_ENGINE_ID);
     setActiveDraftId(draft.id);
     setDraftsVisible(false);
     setUploadSheetVisible(true);
@@ -408,7 +416,10 @@ export default function HomeScreen() {
     setPendingPhotoUri(null);
     setPendingTranscription(null);
     setPendingEmotionLabel("Bình yên");
-    setPendingVisibility("PUBLIC");
+    setPendingVisibility("FRIENDS");
+    setPendingGhostVoice(false);
+    setPendingGhostTtsVoiceId(DEFAULT_GHOST_TTS_VOICE_ID);
+    setPendingGhostEngine(DEFAULT_GHOST_ENGINE_ID);
     setActiveDraftId(null);
     setCameraVisible(false);
     setUploadSheetVisible(false);
@@ -592,9 +603,9 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Map Controls: Right side symmetrical to Explore bar */}
+      {/* Chat Button: right side near the top */}
       <View style={[
-        styles.mapControls,
+        styles.chatControls,
         {
           shadowColor: "#000",
           shadowOffset: { width: 0, height: 4 },
@@ -618,15 +629,62 @@ export default function HomeScreen() {
           />
           <TouchableOpacity
             style={styles.exploreButton}
-            onPress={recenterMap}
+            onPress={() => router.push("/chat")}
             activeOpacity={0.7}
           >
             <View style={[styles.exploreIconContainer, { backgroundColor: isDark ? 'rgba(139, 92, 246, 0.2)' : 'rgba(139, 92, 246, 0.1)' }]}>
-              <Ionicons name="paper-plane" size={24} color="#8b5cf6" />
+              <Ionicons name="chatbubble-ellipses" size={22} color="#8b5cf6" />
+              {unreadCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{unreadCount}</Text>
+                </View>
+              )}
             </View>
-            <Text style={[styles.exploreLabel, { color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)', fontSize: 9 }]}>Hiện tại</Text>
+            <Text style={[styles.exploreLabel, { color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)' }]}>Chat</Text>
           </TouchableOpacity>
         </View>
+      </View>
+
+      {/* Recenter map: circular FAB, right side aligned with QuickActions */}
+      <View style={[
+        styles.mapControls,
+        {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.15,
+          shadowRadius: 10,
+          elevation: 5,
+        }
+      ]}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Định vị lại vị trí hiện tại"
+          style={[
+            styles.recenterFab,
+            {
+              backgroundColor: isDark ? 'rgba(18,18,18,0.9)' : 'rgba(255,255,255,0.95)',
+              borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+            },
+          ]}
+          onPress={recenterMap}
+          activeOpacity={0.85}
+        >
+          <View style={styles.recenterFabInner}>
+            <BlurView
+              intensity={isDark ? 20 : 40}
+              tint={isDark ? 'dark' : 'light'}
+              style={StyleSheet.absoluteFill}
+            />
+            <View
+              style={[
+                styles.recenterFabIconWrap,
+                { backgroundColor: isDark ? 'rgba(139, 92, 246, 0.2)' : 'rgba(139, 92, 246, 0.1)' },
+              ]}
+            >
+              <Ionicons name="paper-plane" size={22} color="#8b5cf6" />
+            </View>
+          </View>
+        </TouchableOpacity>
       </View>
 
       {/* Bottom Section: Primary Action & Menu */}
@@ -638,7 +696,6 @@ export default function HomeScreen() {
       <QuickActions
         onFriends={() => router.push('/friends')}
         onNotifications={() => router.push('/(tabs)/notification?from=home')}
-        onChat={() => router.push("/chat")}
         onDrafts={() => setDraftsVisible(true)}
         onAlbum={() => router.push('/(tabs)/album')}
         receivedCount={receivedCount}
@@ -677,6 +734,9 @@ export default function HomeScreen() {
         visibility={pendingVisibility}
         initialTranscription={pendingTranscription}
         initialEmotionLabel={pendingEmotionLabel}
+        initialGhostVoice={pendingGhostVoice}
+        initialGhostTtsVoiceId={pendingGhostTtsVoiceId}
+        initialGhostEngine={pendingGhostEngine}
         onClose={resetFlow}
         onUploadSuccess={async () => { 
           if (activeDraftId) {
@@ -721,6 +781,36 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   mapControls: {
+    position: "absolute",
+    right: 20,
+    bottom: 110,
+    zIndex: 1000,
+  },
+  recenterFab: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  recenterFabInner: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  recenterFabIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  chatControls: {
     position: "absolute",
     right: 20,
     top: 135,

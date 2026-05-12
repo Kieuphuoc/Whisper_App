@@ -1,7 +1,24 @@
+/**
+ * PATCHED VERSION of components/home/MapContainer.tsx với Spiderfy tích hợp.
+ *
+ * Để triển khai:
+ *   1. Copy useSpiderfy.ts  →  App/hooks/useSpiderfy.ts
+ *   2. Copy SpiderfyMarker.tsx  →  App/components/home/SpiderfyMarker.tsx
+ *      (sửa lại đường dẫn require image: '../../assets/images/marker_hidden_voice.png')
+ *   3. Copy SpiderfyLegs.tsx  →  App/components/home/SpiderfyLegs.tsx
+ *   4. Thay toàn bộ App/components/home/MapContainer.tsx bằng file này
+ *
+ * VẤN ĐỀ CẦN GIẢI QUYẾT TRƯỚC KHI DEPLOY:
+ *   - react-native-maps không hỗ trợ opt-out clustering cho từng Marker riêng lẻ.
+ *     Virtual spread markers vẫn bị library gom cluster nếu zoom quá nhỏ.
+ *   - Giải pháp lâu dài: chuyển sang @rnmapbox/maps (SymbolLayer + ShapeSource)
+ *     hoặc render spiderfy overlay ngoài MapView bằng pointForCoordinate() API.
+ */
+
 import { VoicePin, VoiceType } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import { useState, useCallback, forwardRef, memo } from "react";
+import { useState, useCallback, forwardRef, memo, useMemo } from "react";
 import { StyleSheet, TouchableOpacity, View, useColorScheme } from "react-native";
 import { Text } from "@/components/ui/text";
 import MapView, { Callout, Marker, Region, MapType } from "react-native-maps";
@@ -16,6 +33,9 @@ import { Image } from "react-native";
 import RadarOverlay from "../discovery/RadarOverlay";
 import SpawnedVoicePin from "../discovery/SpawnedVoicePin";
 import { darkMapStyle } from "@/constants/MapStyles";
+import { useSpiderfy } from "@/hooks/useSpiderfy";
+import SpiderfyMarker from "./SpiderfyMarker";
+import SpiderfyLegs from "./SpiderfyLegs";
 
 
 const DEFAULT_DELTA = 0.01;
@@ -87,6 +107,32 @@ const MapSection = forwardRef<MapView, Props>(function MapSection(
       setInternalSelectedPin(pin);
     }
   };
+
+  // ── Spiderfy ──────────────────────────────────────────────────────────────
+  const { spiderfyState, isSpiderfyExiting, activateSpiderfy, collapseSpiderfy, cleanupSpiderfy } =
+    useSpiderfy();
+
+  /** Map each unique coordinate key to the list of pins sharing it. */
+  const pinsByCoord = useMemo(() => {
+    const map = new Map<string, VoicePin[]>();
+    for (const pin of pins) {
+      const key = `${pin.latitude.toFixed(6)},${pin.longitude.toFixed(6)}`;
+      map.set(key, [...(map.get(key) ?? []), pin]);
+    }
+    return map;
+  }, [pins]);
+
+  /**
+   * IDs of pins currently being displayed as virtual spiderfy markers.
+   * Their real markers are hidden to avoid showing a stacked pile underneath.
+   * With clustering kept ON, the cluster for these pins dissolves naturally
+   * because their Marker children are removed from the tree.
+   */
+  const spiderfyPinIds = useMemo(
+    () => new Set(spiderfyState?.virtualPins.map((vp) => vp.pin.id) ?? []),
+    [spiderfyState],
+  );
+
   const [mapType, setMapType] = useState<string>('dark');
   useColorScheme();
 
@@ -118,19 +164,45 @@ const MapSection = forwardRef<MapView, Props>(function MapSection(
     }) => {
       const { id, geometry, onPress, properties } = cluster;
       const count: number = properties.point_count;
-      const coord = {
-        latitude: geometry.coordinates[1],
-        longitude: geometry.coordinates[0],
-      };
+      const clusterLat = geometry.coordinates[1];
+      const clusterLng = geometry.coordinates[0];
+      const coord = { latitude: clusterLat, longitude: clusterLng };
+
+      // Detect pile-up: find any coordinate group with 2+ pins that sits
+      // within CLUSTER_EPSILON degrees of the cluster centroid.
+      // Avoid exact-match because supercluster shifts the centroid when mixing
+      // pile-up pins with nearby scattered ones.
+      const CLUSTER_EPSILON = 0.002; // ~200 m
+      let pileUpGroup: VoicePin[] = [];
+      for (const [, group] of pinsByCoord.entries()) {
+        if (group.length < 2) continue;
+        const { latitude: gLat, longitude: gLng } = group[0];
+        if (
+          Math.abs(gLat - clusterLat) < CLUSTER_EPSILON &&
+          Math.abs(gLng - clusterLng) < CLUSTER_EPSILON &&
+          group.length > pileUpGroup.length
+        ) {
+          pileUpGroup = group;
+        }
+      }
+      const isPileUp = pileUpGroup.length >= 2;
+      const handlePress = isPileUp
+        ? () => activateSpiderfy(pileUpGroup[0].latitude, pileUpGroup[0].longitude, pileUpGroup)
+        : onPress;
+
       const size = count < 5 ? 46 : count < 15 ? 54 : 64;
       const bg = count < 5 ? "#a5b4fc" : count < 15 ? "#8b5cf6" : "#6d28d9";
       return (
-        <ClusterMarker key={id} id={id} coordinate={coord} count={count} size={size} bg={bg} onPress={onPress} />
+        <ClusterMarker key={id} id={id} coordinate={coord} count={count} size={size} bg={bg} onPress={handlePress} />
       );
     },
-    []
+    [pinsByCoord, activateSpiderfy]
   );
 
+  // Keep clusteringEnabled always ON — toggling it off forces all accumulated
+  // pins to render as individual native markers at once, crashing iOS.
+  // Spiderfy pins are removed from the Marker children (spiderfyPinIds filter)
+  // which dissolves their cluster naturally without a mass marker explosion.
   const clusteringEnabled = pins.length >= MIN_PINS_FOR_CLUSTERING;
   const initialRegion: Region = {
     latitude: location?.coords.latitude ?? FALLBACK_LAT,
@@ -162,43 +234,48 @@ const MapSection = forwardRef<MapView, Props>(function MapSection(
         customMapStyle={mapType === 'dark' ? darkMapStyle : []}
         userInterfaceStyle={mapType === 'dark' ? 'dark' : 'light'}
         onRegionChangeComplete={onRegionChangeComplete}
+        onPress={() => collapseSpiderfy()}
+        onPanDrag={() => collapseSpiderfy()}
+        onRegionChange={() => collapseSpiderfy()}
         clusteringEnabled={clusteringEnabled}
-        spiralEnabled={clusteringEnabled}
+        spiralEnabled={false}
         radius={30}
         minPoints={2}
         extent={512}
         nodeSize={64}
         renderCluster={renderCluster}
       >
-        {pins.map((pin) => {
+        {pins.filter((pin) => !spiderfyPinIds.has(pin.id)).map((pin) => {
           const isAR = pin.type === VoiceType.HIDDEN_AR;
 
-          const pinImageUrl = pin.imageUrl ?? pin.images?.[0]?.imageUrl;
           const imageSource = (() => {
-            if (!pinImageUrl) return null;
-            if (pinImageUrl.startsWith('http')) return { uri: pinImageUrl };
-            return { uri: `${BASE_URL}${pinImageUrl.startsWith('/') ? '' : '/'}${pinImageUrl}` };
+            const userAvatar = pin.user?.avatar;
+            if (!userAvatar) return require('../../assets/images/marker_hidden_voice.png');
+            if (userAvatar.startsWith('http')) return { uri: userAvatar };
+            const fullUrl = `${BASE_URL}${userAvatar.startsWith('/') ? '' : '/'}${userAvatar}`;
+            return { uri: fullUrl };
           })();
-          const userAvatarSource = (() => {
-            const avatar = pin.user?.avatar;
-            if (!avatar) return null;
-            if (avatar.startsWith('http')) return { uri: avatar };
-            return { uri: `${BASE_URL}${avatar.startsWith('/') ? '' : '/'}${avatar}` };
-          })();
-          const userName = pin.user?.displayName ?? pin.user?.username ?? "Ẩn danh";
 
           return (
             <Marker
               key={pin.id}
               coordinate={{ latitude: pin.latitude, longitude: pin.longitude }}
-              onPress={() => setSelectedPin(pin)}
+              onPress={() => {
+                const key = `${pin.latitude.toFixed(6)},${pin.longitude.toFixed(6)}`;
+                const group = pinsByCoord.get(key) ?? [];
+                if (group.length > 1) {
+                  activateSpiderfy(pin.latitude, pin.longitude, group);
+                } else {
+                  setSelectedPin(pin);
+                }
+              }}
               anchor={{ x: 0.5, y: 1 }}
               tracksViewChanges={false}
             >
               {/* Custom pin marker */}
-              {!imageSource ? (
+              {!pin.user?.avatar ? (
                 <Image
-                  source={require('../../assets/images/marker_hidden_voice.png')}
+                  source={imageSource}
                   style={{ width: 70, height: 70 }}
                   resizeMode="contain"
                 />
@@ -211,7 +288,11 @@ const MapSection = forwardRef<MapView, Props>(function MapSection(
                     />
                     {/* Small icon overlay to indicate type */}
                     <View style={[styles.typeIndicator, { backgroundColor: "#8b5cf6" }]}>
-                      <Ionicons name={isAR ? "sparkles" : "mic"} size={8} color="#fff" />
+                      <Ionicons
+                        name={isAR ? "sparkles" : "mic"}
+                        size={8}
+                        color="#fff"
+                      />
                     </View>
                   </View>
                   <View style={[styles.markerTail, isAR && styles.markerTailAR]} />
@@ -221,16 +302,6 @@ const MapSection = forwardRef<MapView, Props>(function MapSection(
               {/* Callout card */}
               <Callout tooltip onPress={() => setSelectedPin(pin)}>
                 <View style={styles.callout}>
-                  <View style={styles.calloutUser}>
-                    {userAvatarSource ? (
-                      <Image source={userAvatarSource} style={styles.calloutAvatar} />
-                    ) : (
-                      <View style={styles.calloutAvatarFallback}>
-                        <Ionicons name="person" size={12} color="#fff" />
-                      </View>
-                    )}
-                    <Text style={styles.calloutUserName} numberOfLines={1}>{userName}</Text>
-                  </View>
                   <View style={styles.calloutHeader}>
                     <Ionicons
                       name={isAR ? "sparkles-outline" : "mic-outline"}
@@ -269,6 +340,30 @@ const MapSection = forwardRef<MapView, Props>(function MapSection(
             pin={discoveredPin}
             onPress={() => onPressDiscoveredPin?.()}
           />
+        )}
+
+        {/* ── Spiderfy overlay ─────────────────────────────────────── */}
+        {spiderfyState && (
+          <>
+            <SpiderfyLegs state={spiderfyState} />
+            {spiderfyState.virtualPins.map((vp, i) => (
+              <SpiderfyMarker
+                key={`spiderfy-${vp.pin.id}`}
+                virtualPin={vp}
+                index={i}
+                isExiting={isSpiderfyExiting}
+                onPress={() => {
+                  collapseSpiderfy();
+                  setSelectedPin(vp.pin);
+                }}
+                onAnimationEnd={
+                  i === spiderfyState.virtualPins.length - 1
+                    ? cleanupSpiderfy
+                    : undefined
+                }
+              />
+            ))}
+          </>
         )}
       </MapViewClustering>
 
@@ -384,17 +479,6 @@ const styles = StyleSheet.create({
     elevation: 8,
     gap: 4,
   },
-  calloutUser: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 },
-  calloutAvatar: { width: 22, height: 22, borderRadius: 11 },
-  calloutAvatarFallback: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "#8b5cf6",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  calloutUserName: { color: "#374151", fontSize: 12, fontWeight: "700", flex: 1 },
   calloutHeader: { flexDirection: "row", alignItems: "center", gap: 5 },
   calloutTitle: { fontWeight: "700", fontSize: 13, color: "#111827", flex: 1 },
   calloutMeta: { flexDirection: "row", alignItems: "center", gap: 3 },

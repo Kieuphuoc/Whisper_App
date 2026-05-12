@@ -31,8 +31,8 @@
         <action android:name="android.intent.action.VIEW"/>
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
-        <data android:scheme="app"/>
-        <data android:scheme="exp+app"/>
+        <data android:scheme="whispery"/>
+        <data android:scheme="exp+whispery"/>
       </intent-filter>
     </activity>
   </application>

@@ -431,7 +431,7 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/voice/{{voiceId}}/comments/",
+              "raw": "{{base_url}}/voice/{{voiceId}}/comment",
               "host": ["{{base_url}}"],
               "path": ["voice", "{{voiceId}}", "comments", ""]
             }
@@ -851,7 +851,7 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/comments/{{commentId}}/replies/",
+              "raw": "{{base_url}}/comment/{{commentId}}/replies",
               "host": ["{{base_url}}"],
               "path": ["comments", "{{commentId}}", "replies", ""]
             }

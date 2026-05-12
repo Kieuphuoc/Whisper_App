@@ -86,7 +86,7 @@ export default function VoicePinCarousel({
   if (pins.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <View style={styles.header}>
+        <View style={[styles.header, styles.emptyHeader]}>
           <View style={styles.titleRow}>
             <View style={[styles.iconDot, { backgroundColor: iconColor + '18' }]}>
               <Ionicons name={icon} size={16} color={iconColor} />
@@ -95,7 +95,7 @@ export default function VoicePinCarousel({
           </View>
         </View>
         <View style={styles.emptyContent}>
-          <Text style={{ color: currentTheme.colors.icon, fontSize: 14 }}>{emptyText}</Text>
+          <Text style={[styles.emptyText, { color: currentTheme.colors.icon }]}>{emptyText}</Text>
         </View>
       </View>
     );
@@ -181,6 +181,26 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 13, fontWeight: '500', marginTop: 1 },
   seeAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   seeAllText: { fontSize: 14, fontWeight: '700' },
-  emptyContainer: { marginBottom: 24 },
-  emptyContent: { paddingHorizontal: 24, paddingVertical: 12 },
+  emptyContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  emptyHeader: {
+    justifyContent: 'center',
+    width: '100%',
+    paddingHorizontal: 24,
+  },
+  emptyContent: {
+    width: '100%',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
 });

@@ -38,7 +38,7 @@ export default function LoginScreen() {
     webClientId: process.env.EXPO_PUBLIC_WEB_CLIENT_ID,
     // Thêm dòng này để tự động tạo redirectUri tương thích với Expo Go
     redirectUri: makeRedirectUri({
-      scheme: 'app',
+      scheme: 'whispery',
       preferLocalhost: true,
     }),
   });

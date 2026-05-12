@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
-import React, { useState, useContext, useEffect, useRef } from 'react';
+import React, { useState, useContext, useEffect, useRef, useMemo } from 'react';
 import { reverseGeocode } from '@/utils/geocoding';
 import {
     ActivityIndicator,
@@ -26,6 +26,8 @@ import { MyUserContext } from '../../configs/Context';
 import { DraftStorage } from '@/utils/draftStorage';
 import { VinylRecord } from './voice-pin/VinylRecord';
 import { useCelebration } from '@/components/ui/CelebrationOverlay';
+import { DEFAULT_GHOST_TTS_VOICE_ID } from '@/constants/ghostTtsVoices';
+import { DEFAULT_GHOST_ENGINE_ID, type GhostEngineId } from '@/constants/ghostEngines';
 
 const { width } = Dimensions.get('window');
 
@@ -39,6 +41,10 @@ type Props = {
     onUploadSuccess: () => void;
     initialTranscription?: string | null;
     initialEmotionLabel?: string;
+    /** Ghost Voice: chuyển lời nói sang giọng AI (TTS) khi đăng */
+    initialGhostVoice?: boolean;
+    initialGhostTtsVoiceId?: string;
+    initialGhostEngine?: GhostEngineId;
 };
 
 export default function VoiceUploadSheet({
@@ -51,6 +57,9 @@ export default function VoiceUploadSheet({
     onUploadSuccess,
     initialTranscription = null,
     initialEmotionLabel = "Bình yên",
+    initialGhostVoice = false,
+    initialGhostTtsVoiceId = DEFAULT_GHOST_TTS_VOICE_ID,
+    initialGhostEngine = DEFAULT_GHOST_ENGINE_ID,
 }: Props) {
     const user = useContext(MyUserContext);
     const colorScheme = useColorScheme() || 'light';
@@ -72,17 +81,23 @@ export default function VoiceUploadSheet({
     const [emotionLabel, setEmotionLabel] = useState<string>(initialEmotionLabel);
     const [isThinking, setIsThinking] = useState(false);
     const [showTranscription, setShowTranscription] = useState(false);
+    const [ghostVoice, setGhostVoice] = useState(!!initialGhostVoice);
+    const [ghostTtsVoiceId, setGhostTtsVoiceId] = useState(initialGhostTtsVoiceId);
+    const [ghostEngine, setGhostEngine] = useState<GhostEngineId>(initialGhostEngine);
 
     useEffect(() => {
         if (visible) {
             setTranscription(initialTranscription);
             setEmotionLabel(initialEmotionLabel);
             setSelectedVisibility(visibility);
+            setGhostVoice(!!initialGhostVoice);
+            setGhostTtsVoiceId(initialGhostTtsVoiceId || DEFAULT_GHOST_TTS_VOICE_ID);
+            setGhostEngine(initialGhostEngine || DEFAULT_GHOST_ENGINE_ID);
             if (initialTranscription) {
                 setShowTranscription(true);
             }
         }
-    }, [visible, initialTranscription, initialEmotionLabel, visibility]);
+    }, [visible, initialTranscription, initialEmotionLabel, visibility, initialGhostVoice, initialGhostTtsVoiceId, initialGhostEngine]);
 
     const armRotate = armRotateAnim.interpolate({
         inputRange: [0, 1],
@@ -199,6 +214,17 @@ export default function VoiceUploadSheet({
             return;
         }
 
+        const isRealTranscription = transcription &&
+            !transcription.startsWith('Rất tiếc') &&
+            !transcription.startsWith('Không tìm thấy');
+        if (ghostVoice && ghostEngine === 'tts' && !isRealTranscription) {
+            Alert.alert(
+                'Ghost Voice (TTS)',
+                'Cần có transcript để đọc TTS. Hãy bật xem nội dung / đợi phân tích, hoặc chuyển sang chế độ Đổi timbre (RVC) nếu server RVC đã sẵn sàng.',
+            );
+            return;
+        }
+
         try {
             setUploading(true);
             const token = await AsyncStorage.getItem('token');
@@ -232,6 +258,11 @@ export default function VoiceUploadSheet({
             formData.append('latitude', String(location.coords.latitude));
             formData.append('longitude', String(location.coords.longitude));
             formData.append('visibility', selectedVisibility);
+            formData.append('ghostVoice', ghostVoice ? 'true' : 'false');
+            if (ghostVoice) {
+                formData.append('ghostEngine', ghostEngine);
+                formData.append('ttsVoice', ghostTtsVoiceId);
+            }
             const audioDurationSeconds = getAudioDurationSeconds();
             if (audioDurationSeconds !== null) {
                 formData.append('audioDuration', String(audioDurationSeconds));
@@ -241,11 +272,7 @@ export default function VoiceUploadSheet({
                 formData.append('address', addressStr);
             }
 
-            // Gửi kết quả đã phân tích để server không cần re-analyze
-            // Chỉ gửi nếu đây là transcript thật (không phải error message từ failed API)
-            const isRealTranscription = transcription &&
-                !transcription.startsWith('Rất tiếc') &&
-                !transcription.startsWith('Không tìm thấy');
+            // Gửi kết quả đã phân tích để server không cần re-analyze (Ghost Voice TTS dùng transcript này)
             if (isRealTranscription) {
                 formData.append('transcription', transcription!);
             }
@@ -266,6 +293,9 @@ export default function VoiceUploadSheet({
                     lat: location.coords.latitude,
                     lng: location.coords.longitude,
                     visibility: selectedVisibility,
+                    ghostVoice,
+                    ghostEngine,
+                    ttsVoice: ghostTtsVoiceId,
                     audioDuration: audioDurationSeconds,
                 });
             }
@@ -294,8 +324,10 @@ export default function VoiceUploadSheet({
         } catch (err: any) {
             console.error('Upload failed:', err.response?.data || err.message);
 
-            const serverMessage = err.response?.data?.message;
-            if (serverMessage && serverMessage.includes('too quiet')) {
+            const serverMessage = err.response?.data?.message as string | undefined;
+            if (serverMessage && (serverMessage.includes('Ghost Voice') || serverMessage.includes('giọng AI') || serverMessage.includes('Azure') || serverMessage.includes('RVC') || serverMessage.includes('So-VITS') || serverMessage.includes('timbre') || serverMessage.includes('VOICE_CONVERSION'))) {
+                Alert.alert('Ghost Voice', serverMessage);
+            } else if (serverMessage && serverMessage.includes('too quiet')) {
                 Alert.alert('Âm thanh quá nhỏ', 'Mình chưa nghe rõ. Bạn thử nói to hơn hoặc kiểm tra micro nhé!');
             } else if (serverMessage && serverMessage.includes('moderationReason')) {
                 Alert.alert('Lỗi Database', 'Có lỗi xảy ra khi lưu dữ liệu. Hãy báo cho admin hoặc thử lại sau.');
@@ -307,13 +339,16 @@ export default function VoiceUploadSheet({
         }
     };
 
-    const mockPin = {
-        images: photoUri ? [{ imageUrl: photoUri }] : [],
-        user: user,
-        emotionLabel: emotionLabel,
-        listensCount: 0,
-        transcription: transcription,
-    };
+    const mockPin = useMemo(
+        () => ({
+            images: photoUri ? [{ imageUrl: photoUri }] : [],
+            user,
+            emotionLabel: emotionLabel,
+            listensCount: 0,
+            transcription: transcription,
+        }),
+        [photoUri, user, emotionLabel, transcription],
+    );
 
     const handleSaveDraft = async () => {
         if (!audioUri) return;
@@ -323,6 +358,9 @@ export default function VoiceUploadSheet({
             photoUri,
             location,
             visibility: selectedVisibility,
+            ghostVoice,
+            ghostEngine,
+            ttsVoice: ghostTtsVoiceId,
             transcription,
             emotionLabel,
         });
@@ -398,6 +436,12 @@ export default function VoiceUploadSheet({
                             isCreationMode={true}
                             visibility={selectedVisibility}
                             onVisibilityChange={handleToggleVisibility}
+                            ghostVoice={ghostVoice}
+                            onGhostVoiceChange={setGhostVoice}
+                            ghostTtsVoiceId={ghostTtsVoiceId}
+                            onGhostTtsVoiceChange={setGhostTtsVoiceId}
+                            ghostEngine={ghostEngine}
+                            onGhostEngineChange={setGhostEngine}
                             onPost={handleUpload}
                             theme={currentTheme}
                             onTranscriptionToggle={handleToggleTranscription}

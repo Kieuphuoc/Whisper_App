@@ -8,7 +8,6 @@ import { theme } from "@/constants/Theme";
 type QuickActionsProps = {
     onFriends?: () => void;
     onNotifications?: () => void;
-    onChat?: () => void;
     onDrafts?: () => void;
     onAlbum?: () => void;
     receivedCount?: number;
@@ -18,7 +17,6 @@ type QuickActionsProps = {
 const QuickActions: React.FC<QuickActionsProps> = ({
     onFriends,
     onNotifications,
-    onChat,
     onDrafts,
     onAlbum,
     receivedCount = 0,
@@ -40,8 +38,6 @@ const QuickActions: React.FC<QuickActionsProps> = ({
         }).start();
         setIsExpanded(!isExpanded);
     };
-
-    const totalBadge = receivedCount + unreadCount;
 
     const renderItem = (icon: keyof typeof Ionicons.glyphMap, onPress: () => void, delay: number, badge?: number) => {
         const translateY = animation.interpolate({
@@ -82,7 +78,6 @@ const QuickActions: React.FC<QuickActionsProps> = ({
 
     return (
         <View style={styles.container}>
-            {renderItem("chatbubble-ellipses", onChat!, 4)}
             {renderItem("notifications", onNotifications!, 3, unreadCount)}
             {renderItem("albums", onAlbum!, 2)}
             {renderItem("document-text", onDrafts!, 1)}
@@ -216,4 +211,4 @@ const styles = StyleSheet.create({
 });
 
 
-
+

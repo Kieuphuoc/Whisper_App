@@ -71,13 +71,13 @@ export function FloatingVibe({ type, onComplete }: VibeEffectProps) {
             borderStyle: "dashed",
           }]} />
         );
-      case "WOW":
+      case "ANGRY":
         return (
           <Animated.View style={[styles.glowPulse, { 
             transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 4] }) }], 
             opacity: anim.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 0.5, 0] }),
-            backgroundColor: "rgba(249, 115, 22, 0.3)",
-            shadowColor: "#f97316",
+            backgroundColor: "rgba(239, 68, 68, 0.3)",
+            shadowColor: "#ef4444",
             shadowRadius: 50,
           }]} />
         );

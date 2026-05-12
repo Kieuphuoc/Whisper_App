@@ -51,6 +51,38 @@ const MASCOT_ICONS: { [key: string]: any } = {
     popular_voice: require('@/assets/images/achievements/popular_voice.png'),
 };
 
+/** Backend có thể trả mảng trực tiếp hoặc bọc trong data / achievements */
+function parseAchievementList(res: any): any[] {
+    const root = res?.data;
+    if (Array.isArray(root)) return root;
+    if (Array.isArray(root?.data)) return root.data;
+    if (Array.isArray(root?.achievements)) return root.achievements;
+    if (Array.isArray(root?.results)) return root.results;
+    return [];
+}
+
+function achievementLabel(item: any): string {
+    const nested = item?.achievement;
+    return (
+        nested?.name ??
+        nested?.title ??
+        item?.name ??
+        item?.title ??
+        item?.achievement_name ??
+        ''
+    );
+}
+
+function achievementKey(item: any, index: number): string | number {
+    return (
+        item?.achievementId ??
+        item?.achievement_id ??
+        item?.id ??
+        item?.achievement?.id ??
+        index
+    );
+}
+
 const { width, height } = Dimensions.get('window');
 const BANNER_HEIGHT = height * (2 / 3);
 
@@ -99,6 +131,46 @@ export default function ProfileScreen() {
         avatar: "",
     };
 
+    const fetchTabData = async (tab: string, token: string | null = null, forceUserId: string | number | null = null) => {
+        setTabLoading(true);
+        try {
+            const authToken = token || await AsyncStorage.getItem('token');
+            if (!authToken) {
+                return;
+            }
+            const api = authApis(authToken);
+
+            const userId = forceUserId ?? user?.id;
+            if (!userId || userId === 'me' || userId === 0) {
+                return;
+            }
+
+            if (tab === 'voices') {
+                const res = await api.get(endpoints.voicePublicByUser(userId));
+                const list = res.data?.data;
+                setMyVoices(Array.isArray(list) ? list : []);
+            } else if (tab === 'achievements') {
+                let list: any[] = [];
+                try {
+                    const res = await api.get(endpoints.myAchievements);
+                    list = parseAchievementList(res);
+                } catch {
+                    try {
+                        const res = await api.get(endpoints.userAchievements(userId));
+                        list = parseAchievementList(res);
+                    } catch {
+                        list = [];
+                    }
+                }
+                setAchievements(list);
+            }
+        } catch (e) {
+            console.error(`Fetch ${tab} error:`, e);
+        } finally {
+            setTabLoading(false);
+        }
+    };
+
     const fetchData = async (isRefresh = false) => {
         isRefresh ? setRefreshing(true) : setLoading(true);
         try {
@@ -128,8 +200,9 @@ export default function ProfileScreen() {
                 await AsyncStorage.setItem('user', JSON.stringify(userData));
             }
 
-            // Fetch current tab data using the newly loaded user info
-            fetchTabData(activeTab, token, userData.id);
+            if (userData?.id && userData.id !== 0) {
+                fetchTabData(activeTab, token, userData.id);
+            }
         } catch (e) {
             console.error('Fetch profile error:', e);
             setStats(EMPTY_STATS);
@@ -140,39 +213,9 @@ export default function ProfileScreen() {
         }
     };
 
-    const fetchTabData = async (tab: string, token: string | null = null, forceUserId: string | number | null = null) => {
-        setTabLoading(true);
-        try {
-            const authToken = token || await AsyncStorage.getItem('token');
-            if (!authToken) return;
-            const api = authApis(authToken);
-
-            const userId = forceUserId || user?.id;
-            // Guard: If we don't have a valid user ID (and it's not a special string the backend expects),
-            // skip the fetch to avoid 400/NaN errors.
-            if (!userId || userId === 'me' || userId === 0) {
-                console.log(`[ProfileScreen] Skipping fetch for tab ${tab} - user ID not ready`);
-                return;
-            }
-
-            if (tab === 'voices') {
-                const res = await api.get(endpoints.voicePublicByUser(userId));
-                setMyVoices(res.data?.data || []);
-            } else if (tab === 'achievements') {
-                const res = await api.get(endpoints.userAchievements(userId));
-                setAchievements(res.data?.data || []);
-            }
-        } catch (e) {
-            console.error(`Fetch ${tab} error:`, e);
-        } finally {
-            setTabLoading(false);
-        }
-    };
-
     useEffect(() => {
-        if (!loading && user) {
-            fetchTabData(activeTab);
-        }
+        if (loading || !user?.id || user.id === 0) return;
+        fetchTabData(activeTab);
     }, [activeTab]);
 
 
@@ -304,6 +347,25 @@ export default function ProfileScreen() {
         const date = new Date(user.createdAt);
         return `Tham gia vào: ${date.getMonth() + 1}/${date.getFullYear()}`;
     }, [user]);
+
+    /** API có thể trả `{ data: [] }` trước khi backend ghi UserAchievement — hiển thị “Lời nói đầu tiên” nếu stats/pin chứng minh đã có VoicePin. */
+    const achievementsForDisplay = useMemo(() => {
+        if (achievements.length > 0) return achievements;
+        const pinCount = stats?.voicePinCount ?? 0;
+        const voiceListLen = myVoices.length;
+        if (pinCount > 0 || voiceListLen > 0) {
+            return [
+                {
+                    achievementId: 'local-first-voice',
+                    achievement: {
+                        name: 'Lời nói đầu tiên',
+                        iconUrl: '',
+                    },
+                },
+            ];
+        }
+        return achievements;
+    }, [achievements, stats?.voicePinCount, myVoices.length]);
 
     const bannerAnim = useAnimatedStyle(() => {
         return {
@@ -703,17 +765,17 @@ export default function ProfileScreen() {
                             justifyContent: 'space-around'
                         }}>
                             <View style={{ alignItems: 'center' }}>
-                                <Text style={{ fontSize: 20, fontWeight: '800', color: isDark ? '#fff' : '#111' }}>{stats.listens || 0}</Text>
+                                <Text style={{ fontSize: 20, fontWeight: '800', color: isDark ? '#fff' : '#111' }}>{stats?.totalListens ?? 0}</Text>
                                 <Text style={{ fontSize: 12, fontWeight: '600', color: isDark ? 'rgba(255,255,255,0.6)' : '#666', marginTop: 2 }}>Lượt nghe</Text>
                             </View>
                             <View style={{ width: 1, height: 30, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }} />
                             <View style={{ alignItems: 'center' }}>
-                                <Text style={{ fontSize: 20, fontWeight: '800', color: isDark ? '#fff' : '#111' }}>{stats.voices || 0}</Text>
+                                <Text style={{ fontSize: 20, fontWeight: '800', color: isDark ? '#fff' : '#111' }}>{stats?.voicePinCount ?? 0}</Text>
                                 <Text style={{ fontSize: 12, fontWeight: '600', color: isDark ? 'rgba(255,255,255,0.6)' : '#666', marginTop: 2 }}>VoicePins</Text>
                             </View>
                             <View style={{ width: 1, height: 30, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }} />
                             <View style={{ alignItems: 'center' }}>
-                                <Text style={{ fontSize: 20, fontWeight: '800', color: isDark ? '#fff' : '#111' }}>{stats.friends || 0}</Text>
+                                <Text style={{ fontSize: 20, fontWeight: '800', color: isDark ? '#fff' : '#111' }}>{stats?.friendCount ?? 0}</Text>
                                 <Text style={{ fontSize: 12, fontWeight: '600', color: isDark ? 'rgba(255,255,255,0.6)' : '#666', marginTop: 2 }}>Bạn bè</Text>
                             </View>
                         </View>
@@ -826,21 +888,36 @@ export default function ProfileScreen() {
                                         transition={{ type: 'timing' }}
                                         key="achievements"
                                     >
-                                        <View style={styles.achievementsGrid}>
-                                            {achievements.length > 0 ? achievements.map((item) => {
-                                                // Map to mascot icons
-                                                let mascotIcon = { uri: item.achievement?.iconUrl };
-                                                const name = item.achievement?.name || "";
-                                                if (name.includes("Lời nói đầu tiên")) mascotIcon = MASCOT_ICONS.first_voice;
-                                                else if (name.includes("sưu tầm")) mascotIcon = MASCOT_ICONS.voice_collector;
-                                                else if (name.includes("bạn") || name.toLowerCase().includes("giao thiệp")) mascotIcon = MASCOT_ICONS.social_butterfly;
-                                                else if (name.includes("thám hiểm")) mascotIcon = MASCOT_ICONS.explorer;
-                                                else if (name.includes("bình luận")) mascotIcon = MASCOT_ICONS.commenter;
-                                                else if (name.includes("phổ biến")) mascotIcon = MASCOT_ICONS.popular_voice;
+                                        <View
+                                            style={[
+                                                styles.achievementsGrid,
+                                                achievementsForDisplay.length === 0 && styles.achievementsGridWhenEmpty,
+                                            ]}
+                                        >
+                                            {achievementsForDisplay.length > 0 ? achievementsForDisplay.map((item, index) => {
+                                                const name = achievementLabel(item);
+                                                const rawIcon =
+                                                    item?.achievement?.iconUrl ??
+                                                    item?.iconUrl ??
+                                                    item?.icon;
+                                                let mascotIcon: any = rawIcon
+                                                    ? {
+                                                          uri: String(rawIcon).startsWith('http')
+                                                              ? String(rawIcon)
+                                                              : `${BASE_URL}${String(rawIcon).startsWith('/') ? '' : '/'}${rawIcon}`,
+                                                      }
+                                                    : null;
+                                                if (name.includes('Lời nói đầu tiên')) mascotIcon = MASCOT_ICONS.first_voice;
+                                                else if (name.includes('sưu tầm')) mascotIcon = MASCOT_ICONS.voice_collector;
+                                                else if (name.includes('bạn') || name.toLowerCase().includes('giao thiệp')) mascotIcon = MASCOT_ICONS.social_butterfly;
+                                                else if (name.includes('thám hiểm')) mascotIcon = MASCOT_ICONS.explorer;
+                                                else if (name.includes('bình luận')) mascotIcon = MASCOT_ICONS.commenter;
+                                                else if (name.includes('phổ biến')) mascotIcon = MASCOT_ICONS.popular_voice;
+                                                if (!mascotIcon) mascotIcon = MASCOT_ICONS.first_voice;
 
                                                 return (
                                                     <MotiView
-                                                        key={item.achievementId}
+                                                        key={String(achievementKey(item, index))}
                                                         from={{ opacity: 0, scale: 0.8 }}
                                                         animate={{ opacity: 1, scale: 1 }}
                                                         style={styles.achievementBadge}
@@ -849,7 +926,7 @@ export default function ProfileScreen() {
                                                             <Image source={mascotIcon} style={styles.badgeIcon} />
                                                         </View>
                                                         <Text style={[styles.badgeName, { color: isDark ? '#fff' : '#000' }]} numberOfLines={1}>
-                                                            {item.achievement?.name}
+                                                            {name || 'Thành tựu'}
                                                         </Text>
                                                     </MotiView>
                                                 );
@@ -1189,6 +1266,11 @@ const styles = StyleSheet.create({
         gap: 12,
         justifyContent: 'space-between',
     },
+    /** Một con (empty state): space-between đẩy nội dung lệch trái — căn giữa */
+    achievementsGridWhenEmpty: {
+        width: '100%',
+        justifyContent: 'center',
+    },
     achievementBadge: {
         width: (width - 64) / 3,
         alignItems: 'center',
@@ -1235,6 +1317,7 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     emptyContainer: {
+        width: '100%',
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 40,

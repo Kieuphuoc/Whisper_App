@@ -294,15 +294,6 @@ export default function MemoryScreen() {
         );
     }, [pins, searchQuery]);
 
-    const flashbackPin = useMemo(() => {
-        if (pins.length === 0) return null;
-        // Relaxation: Look for pins older than 1 day to ensure it shows up during testing/early usage
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        const olderPins = pins.filter(p => new Date(p.createdAt) < oneDayAgo);
-        if (olderPins.length === 0) return null;
-        return olderPins[Math.floor(Math.random() * olderPins.length)];
-    }, [pins]);
-
     const EMOTION_COLORS: Record<string, string> = {
         'Bình yên': '#10b981',
         'Vui vẻ': '#f59e0b',
@@ -555,40 +546,7 @@ export default function MemoryScreen() {
                     </MotiView>
                 )}
 
-                {/* 3. Flashback Section (Floating Highlight) */}
-                {flashbackPin && !searchQuery && (
-                    <MotiView
-                        from={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 600 }}
-                        style={styles.flashbackSection}
-                    >
-                        <TouchableOpacity 
-                            onPress={() => setSelectedPin(flashbackPin)}
-                            style={[styles.flashbackCard, { backgroundColor: isDark ? 'rgba(30, 30, 40, 0.4)' : 'rgba(255, 255, 255, 0.35)', borderColor: '#FFD70020', overflow: 'hidden' }]}
-                        >
-                            <BlurView intensity={isDark ? 40 : 60} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
-                            <View style={{ zIndex: 1 }}>
-                                <View style={styles.flashbackHeader}>
-                                    <View style={styles.flashbackBadge}>
-                                        <Ionicons name="flash" size={14} color="#FFD700" />
-                                        <Text style={styles.flashbackTitle}>Ngày này năm xưa</Text>
-                                    </View>
-                                    <Ionicons name="chevron-forward" size={16} color={currentTheme.colors.textMuted} />
-                                </View>
-                                <Text style={[styles.flashbackText, { color: currentTheme.colors.text }]} numberOfLines={2}>
-                                    "{flashbackPin.content || flashbackPin.transcription || 'Một ký ức đang chờ bạn...'}"
-                                </Text>
-                                <View style={styles.flashbackFooter}>
-                                    <Ionicons name="location-outline" size={12} color={currentTheme.colors.textMuted} />
-                                    <Text style={[styles.flashbackMeta, { color: currentTheme.colors.textSecondary }]}>{flashbackPin.address || 'Đâu đó trong quá khứ'}</Text>
-                                </View>
-                            </View>
-                        </TouchableOpacity>
-                    </MotiView>
-                )}
-
-                {/* 4. Unified Memory Feed */}
+                {/* 3. Unified Memory Feed */}
                 <View style={styles.timelineHeader}>
                     <Text style={[styles.sectionHeading, { color: currentTheme.colors.text }]}>Kho lưu trữ</Text>
                     <View style={styles.filterContainer}>
@@ -825,53 +783,6 @@ const styles = StyleSheet.create({
         flex: 1,
         fontStyle: 'italic',
         opacity: 0.9,
-    },
-
-    // --- Flashback ---
-    flashbackSection: {
-        paddingHorizontal: 20,
-        marginBottom: 32,
-    },
-    flashbackCard: {
-        padding: 24,
-        borderRadius: 32,
-        overflow: 'hidden',
-        borderWidth: 1,
-    },
-    flashbackHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    flashbackBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    flashbackTitle: {
-        fontSize: 14,
-        fontWeight: '900',
-        color: '#FFD700',
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-    },
-    flashbackText: {
-        fontSize: 16,
-        lineHeight: 24,
-        fontWeight: '700',
-        fontStyle: 'italic',
-    },
-    flashbackFooter: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 12,
-        gap: 6,
-    },
-    flashbackMeta: {
-        fontSize: 11,
-        fontWeight: '600',
-        opacity: 0.5,
     },
 
     // --- Timeline Section ---

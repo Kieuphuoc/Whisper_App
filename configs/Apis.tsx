@@ -41,8 +41,8 @@ export const endpoints = {
   voiceDiscover: (id: string | number) => `/voice/${id}/discover`,
   voiceReactions: (id: string | number): string => `/voice/${id}/reactions/`,
   voiceAnalyze: "/voice/analyze/",
-  voiceComments: (id: string | number): string => `/voice/${id}/comments/`,
-  commentReplies: (commentId: string | number): string => `/comments/${commentId}/replies/`,
+  voiceComments: (id: string | number): string => `/voice/${id}/comment`,
+  commentReplies: (commentId: string | number): string => `/comment/${commentId}/replies`,
 
   // Reactions
   reaction: "/reaction/",

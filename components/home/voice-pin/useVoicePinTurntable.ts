@@ -111,7 +111,6 @@ export function useVoicePinTurntable(pin: VoicePin, autoPlay: boolean) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         break;
       case "LOVE":
-      case "WOW":
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         break;
       case "SAD":

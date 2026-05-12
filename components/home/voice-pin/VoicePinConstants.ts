@@ -7,10 +7,10 @@ export const VISIBILITY_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
 };
 
 export const REACTION_TYPES = [
-  { type: "LIKE", label: "Thích", icon: "thumbs-up" as const, color: "#3b82f6" },
-  { type: "LOVE", label: "Yêu", icon: "heart" as const, color: "#f43f5e" },
-  { type: "LAUGH", label: "Haha", icon: "happy" as const, color: "#f59e0b" },
-  { type: "WOW", label: "Wow", icon: "alert-circle" as const, color: "#f97316" },
+  { type: "LIKE", label: "Thích", icon: "thumbs-up" as const, color: "#3b82f6", image: require("../../../assets/reactions/like.webp") },
+  { type: "LOVE", label: "Yêu", icon: "heart" as const, color: "#f43f5e", image: require("../../../assets/reactions/love.webp") },
+  { type: "LAUGH", label: "Haha", icon: "happy" as const, color: "#f59e0b", image: require("../../../assets/reactions/cry.webp") },
+  { type: "ANGRY", label: "Giận", icon: "flame" as const, color: "#ef4444", image: require("../../../assets/reactions/angry.webp") },
 ] as const;
 
 export type ReactionType = (typeof REACTION_TYPES)[number]["type"];

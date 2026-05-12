@@ -1,4 +1,4 @@
-package com.phuocnguyenkieu.App
+package com.phuocnguyenkieu.whispery
 
 import android.app.Application
 import android.content.res.Configuration

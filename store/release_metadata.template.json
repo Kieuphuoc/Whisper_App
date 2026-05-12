@@ -1,0 +1,11 @@
+{
+  "appName": "Whispery",
+  "subtitle": "",
+  "shortDescription": "One or two sentences for the store listing.",
+  "fullDescription": "Longer description for App Store / Play Console. Replace before submit.",
+  "keywords": "voice,social,map,memory",
+  "privacyPolicyUrl": "https://whispery.app/privacy",
+  "supportUrl": "https://whispery.app/support",
+  "marketingUrl": "https://whispery.app",
+  "screenshotsNote": "Add 6.7\" and 6.1\" iPhone screenshots and required tablet sizes in App Store Connect / Play Console."
+}

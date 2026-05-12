@@ -95,9 +95,9 @@ packagingOptions {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.phuocnguyenkieu.App'
+    namespace 'com.phuocnguyenkieu.whispery'
     defaultConfig {
-        applicationId 'com.phuocnguyenkieu.App'
+        applicationId 'com.phuocnguyenkieu.whispery'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
