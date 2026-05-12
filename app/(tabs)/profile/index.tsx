@@ -321,8 +321,8 @@ export default function ProfileScreen() {
     const handleShareProfile = async () => {
         try {
             await Share.share({
-                message: `Khám phá hồ sơ của mình trên Whispery! @${user?.username}`,
-                url: `https://whispery.app/user/${user?.username}`, // Mock URL for now
+                message: `Kết bạn với mình trên Whispery nhé! Nhấn vào link để xem hồ sơ: https://whispery.app/user/${user?.username}`,
+                url: `https://whispery.app/user/${user?.username}`,
             });
         } catch (error: any) {
             Alert.alert('Lỗi', error.message);

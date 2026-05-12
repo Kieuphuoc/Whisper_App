@@ -137,7 +137,7 @@ export default function OtherUserProfileScreen() {
                 Alert.alert('Yêu cầu đăng nhập', 'Bạn cần đăng nhập để kết bạn.');
                 return;
             }
-            const res = await authApis(token).post(endpoints.friendRequest, { receiverId: Number(id) });
+            const res = await authApis(token).post(endpoints.friendRequest, { receiverId: user.id });
             const newFriendshipId = res.data?.data?.id || res.data?.id;
             setFriendStatus('pending_sent');
             if (newFriendshipId) setFriendshipId(newFriendshipId);
@@ -179,7 +179,7 @@ export default function OtherUserProfileScreen() {
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) return;
-            const res = await authApis(token).post(endpoints.chatPrivate(id as string));
+            const res = await authApis(token).post(endpoints.chatPrivate(user.id.toString()));
             const roomId = res.data?.data?.id || res.data?.id;
             if (roomId) {
                 router.push({ pathname: '/chat/[id]', params: { id: roomId.toString() } });

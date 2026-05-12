@@ -92,8 +92,6 @@ export default function FriendsScreen() {
     const [friends, setFriends] = useState<FriendUser[]>([]);
     const [pending, setPending] = useState<PendingRequest[]>([]);
     const [loading, setLoading] = useState(false);
-    const [suggestions, setSuggestions] = useState<FriendUser[]>([]);
-    const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
     const navigateToProfile = (userId: number) => {
         router.push(`/user/${userId}`);
@@ -107,51 +105,7 @@ export default function FriendsScreen() {
         }
     };
 
-    const loadSuggestions = useCallback(async () => {
-        try {
-            setSuggestionsLoading(true);
-            const token = await AsyncStorage.getItem('token');
-            if (!token) return;
-            const api = authApis(token);
-            // Fetch public voices to discover users
-            const res = await api.get(endpoints.voicePublic);
-            const voices = res.data?.data || [];
 
-            // Extract unique users who are not 'me' and not already friends
-            const discoveredUsers: FriendUser[] = [];
-            const seenIds = new Set<number>();
-            if (user?.id) seenIds.add(user.id);
-
-            // Also don't suggest people who are already friends
-            friends.forEach(f => seenIds.add(f.id));
-
-            voices.forEach((v: any) => {
-                const u = v.user;
-                if (u && !seenIds.has(u.id)) {
-                    discoveredUsers.push(u);
-                    seenIds.add(u.id);
-                }
-            });
-
-            // If not enough from voices, try a broad search for common letter 'a'
-            if (discoveredUsers.length < 5) {
-                const searchRes = await api.get(endpoints.searchUsers('a'));
-                const searchUsers = searchRes.data?.data || [];
-                searchUsers.forEach((u: FriendUser) => {
-                    if (!seenIds.has(u.id)) {
-                        discoveredUsers.push(u);
-                        seenIds.add(u.id);
-                    }
-                });
-            }
-
-            setSuggestions(discoveredUsers.slice(0, 10));
-        } catch (e) {
-            console.error('Load suggestions error:', e);
-        } finally {
-            setSuggestionsLoading(false);
-        }
-    }, [user?.id, friends, pending]);
 
     const load = useCallback(async () => {
         if (!user) return;
@@ -190,11 +144,7 @@ export default function FriendsScreen() {
         load();
     }, [load]);
 
-    useEffect(() => {
-        if (friends.length === 0 && !loading) {
-            loadSuggestions();
-        }
-    }, [friends.length, loading]);
+
 
 
     const sendRequest = async (targetUserId: number) => {
@@ -454,88 +404,6 @@ export default function FriendsScreen() {
                                     ListEmptyComponent={
                                         <View style={styles.emptyContainer}>
                                             <Text style={styles.emptyText}>Bạn chưa có ai trong danh sách</Text>
-                                            {suggestions.length > 0 && (
-                                                <MotiView
-                                                    from={{ opacity: 0, translateY: 20 }}
-                                                    animate={{ opacity: 1, translateY: 0 }}
-                                                    transition={{ delay: 400 }}
-                                                    style={styles.suggestionSection}
-                                                >
-                                                    <View style={styles.suggestionHeader}>
-                                                        <Text style={[styles.suggestionTitle, { color: currentTheme.colors.text }]}>Gợi ý cho bạn</Text>
-                                                        <TouchableOpacity onPress={loadSuggestions}>
-                                                            <Ionicons name="refresh" size={16} color={currentTheme.colors.primary} />
-                                                        </TouchableOpacity>
-                                                    </View>
-
-                                                    {suggestions.map((item, idx) => (
-                                                        <MotiView
-                                                            key={`suggest-${item.id}`}
-                                                            from={{ opacity: 0, translateX: -10 }}
-                                                            animate={{ opacity: 1, translateX: 0 }}
-                                                            transition={{ delay: 500 + idx * 100 }}
-                                                            style={styles.suggestionCard}
-                                                        >
-                                                            <TouchableOpacity
-                                                                style={styles.suggestionInner}
-                                                                onPress={() => navigateToProfile(item.id)}
-                                                            >
-                                                                <GlobalAvatar uri={item.avatar} size={40} />
-                                                                <View style={styles.suggestionInfo}>
-                                                                    <Text style={[styles.suggestionName, { color: currentTheme.colors.text }]} numberOfLines={1}>
-                                                                        {item.displayName || item.username}
-                                                                    </Text>
-                                                                    <Text style={styles.suggestionSub} numberOfLines={1}>
-                                                                        @{item.username}
-                                                                    </Text>
-                                                                </View>
-                                                                {(() => {
-                                                                    const sentReq = pending.find(p => p.senderId === user?.id && (p.receiverId === item.id || p.receiver?.id === item.id));
-                                                                    const receivedReq = pending.find(p => (p.receiverId === user?.id || p.receiver?.id === user?.id) && (p.senderId === item.id || p.sender?.id === item.id));
-
-                                                                    if (sentReq) {
-                                                                        return (
-                                                                            <TouchableOpacity
-                                                                                style={[styles.miniAddBtn, { backgroundColor: '#ef4444' }]}
-                                                                                onPress={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    cancelRequest(sentReq.id);
-                                                                                }}
-                                                                            >
-                                                                                <Ionicons name="close" size={14} color="#fff" />
-                                                                            </TouchableOpacity>
-                                                                        );
-                                                                    } else if (receivedReq) {
-                                                                        return (
-                                                                            <TouchableOpacity
-                                                                                style={[styles.miniAddBtn, { backgroundColor: '#10b981' }]}
-                                                                                onPress={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    respondRequest(receivedReq.id, 'accept');
-                                                                                }}
-                                                                            >
-                                                                                <Ionicons name="checkmark" size={14} color="#fff" />
-                                                                            </TouchableOpacity>
-                                                                        );
-                                                                    } else {
-                                                                        return (
-                                                                            <TouchableOpacity
-                                                                                style={[styles.miniAddBtn, { backgroundColor: currentTheme.colors.primary }]}
-                                                                                onPress={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    sendRequest(item.id);
-                                                                                }}
-                                                                            >
-                                                                                <Ionicons name="person-add" size={14} color="#fff" />
-                                                                            </TouchableOpacity>
-                                                                        );
-                                                                    }
-                                                                })()}
-                                                            </TouchableOpacity>
-                                                        </MotiView>
-                                                    ))}
-                                                </MotiView>
-                                            )}
                                         </View>
                                     }
                                 />
