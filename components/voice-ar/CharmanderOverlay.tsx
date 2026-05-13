@@ -1,4 +1,4 @@
-import "@expo/browser-polyfill";
+// import "@expo/browser-polyfill";
 import { Asset } from "expo-asset";
 import { GLView } from "expo-gl";
 import React, { useEffect, useMemo, useRef, useState } from "react";

@@ -128,7 +128,7 @@ export default function LoginScreen() {
 
   const info: InfoField[] = [
     {
-      label: 'Username',
+      label: 'Tên đăng nhập',
       icon: 'person-outline',
       secureTextEntry: false,
       field: 'username',
@@ -231,15 +231,15 @@ export default function LoginScreen() {
             className="text-lg text-white/60 text-center tracking-widest uppercase"
             style={{ fontFamily: 'Quicksand_500Medium' }}
           >
-            Capture moments
+            Ghi lại khoảnh khắc
           </Text>
         </View>
 
         {/* Login Form */}
         <View className="bento-container">
           <View className="items-center mb-6">
-            <Text className="text-xl font-semibold text-neutral-900 mb-1">Welcome back</Text>
-            <Text className="text-sm text-neutral-500 text-center">Sign in to continue your journey</Text>
+            <Text className="text-xl font-semibold text-neutral-900 mb-1">Chào mừng trở lại</Text>
+            <Text className="text-sm text-neutral-500 text-center">Đăng nhập để tiếp tục hành trình</Text>
           </View>
 
           {info.map((i, index) => (
@@ -298,40 +298,32 @@ export default function LoginScreen() {
             ) : (
               <>
                 <Ionicons name="log-in-outline" size={20} color="white" />
-                <Text className="ml-2 text-base font-semibold text-white">Sign In</Text>
+                <Text className="ml-2 text-base font-semibold text-white">Đăng nhập</Text>
               </>
             )}
           </TouchableOpacity>
 
           {/* Divider */}
-          <View className="flex-row items-center mb-6">
+          <View className="flex-row items-center mb-6 mt-6">
             <View className="flex-1 h-[1px] bg-neutral-200" />
-            <Text className="mx-4 text-sm text-neutral-400 font-medium">or continue with</Text>
+            <Text className="mx-4 text-sm text-neutral-400 font-medium">hoặc tiếp tục với</Text>
             <View className="flex-1 h-[1px] bg-neutral-200" />
           </View>
 
-          {/* Social Login */}
-          <View className="flex-row gap-3 mb-6">
-            <TouchableOpacity
-              className="social-button"
-              onPress={() => promptAsync()}
-              disabled={!request || loading}
-            >
-              <Ionicons name="logo-google" size={20} color="#ea4335" />
-              <Text className="ml-2 text-sm font-medium text-neutral-700">Google</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity className="social-button">
-              <Ionicons name="logo-apple" size={20} color="#000000" />
-              <Text className="ml-2 text-sm font-medium text-neutral-700">Apple</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            className="primary-button bg-white border border-neutral-200 mb-6"
+            onPress={() => promptAsync()}
+            disabled={!request || loading}
+          >
+            <Ionicons name="logo-google" size={20} color="#ea4335" />
+            <Text className="ml-2 text-base font-semibold text-neutral-900">Tiếp tục với Google</Text>
+          </TouchableOpacity>
 
           {/* Sign Up Link */}
           <View className="flex-row justify-center items-center">
-            <Text className="text-sm text-neutral-500">Don't have an account? </Text>
+            <Text className="text-sm text-neutral-500">Bạn chưa có tài khoản? </Text>
             <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-              <Text className="text-sm font-bold text-violet-500">Sign up</Text>
+              <Text className="text-sm font-bold text-violet-500">Đăng ký</Text>
             </TouchableOpacity>
           </View>
         </View>
