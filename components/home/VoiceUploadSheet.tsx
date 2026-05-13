@@ -22,13 +22,13 @@ import { theme } from '@/constants/Theme';
 import { MotiView, AnimatePresence } from 'moti';
 import { BlurView } from 'expo-blur';
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from 'expo-linear-gradient';
 import { MyUserContext } from '../../configs/Context';
 import { DraftStorage } from '@/utils/draftStorage';
 import { VinylRecord } from './voice-pin/VinylRecord';
 import { useCelebration } from '@/components/ui/CelebrationOverlay';
-// Ghost Voice tạm tắt (đang lỗi) — bật lại: mở comment import + props/state/upload bên dưới
-// import { DEFAULT_GHOST_TTS_VOICE_ID } from '@/constants/ghostTtsVoices';
-// import { DEFAULT_GHOST_ENGINE_ID, type GhostEngineId } from '@/constants/ghostEngines';
+import { AI_TRANSFORM_VOICES, DEFAULT_AI_TRANSFORM_VOICE_ID, type AiTransformOption } from '@/constants/aiTransform';
+import { gradioService } from '@/services/gradioService';
 
 const { width } = Dimensions.get('window');
 
@@ -42,9 +42,8 @@ type Props = {
     onUploadSuccess: () => void;
     initialTranscription?: string | null;
     initialEmotionLabel?: string;
-    // initialGhostVoice?: boolean;
-    // initialGhostTtsVoiceId?: string;
-    // initialGhostEngine?: GhostEngineId;
+    initialAiTransform?: boolean;
+    initialAiTransformVoiceId?: string;
 };
 
 export default function VoiceUploadSheet({
@@ -57,9 +56,8 @@ export default function VoiceUploadSheet({
     onUploadSuccess,
     initialTranscription = null,
     initialEmotionLabel = "Bình yên",
-    // initialGhostVoice = false,
-    // initialGhostTtsVoiceId = DEFAULT_GHOST_TTS_VOICE_ID,
-    // initialGhostEngine = DEFAULT_GHOST_ENGINE_ID,
+    initialAiTransform = false,
+    initialAiTransformVoiceId = DEFAULT_AI_TRANSFORM_VOICE_ID,
 }: Props) {
     const user = useContext(MyUserContext);
     const colorScheme = useColorScheme() || 'light';
@@ -74,25 +72,29 @@ export default function VoiceUploadSheet({
     const armRotateAnim = useRef(new Animated.Value(0)).current;
 
     // Audio Player using new expo-audio API
-    const player = useAudioPlayer(audioUri || "");
+    const [transformedAudioUri, setTransformedAudioUri] = useState<string | null>(null);
+    const [isTransforming, setIsTransforming] = useState(false);
+
+    const player = useAudioPlayer((aiTransformEnabled && transformedAudioUri) ? transformedAudioUri : (audioUri || ""));
     const { playing, status } = useAudioPlayerStatus(player);
 
     const [transcription, setTranscription] = useState<string | null>(initialTranscription);
     const [emotionLabel, setEmotionLabel] = useState<string>(initialEmotionLabel);
     const [isThinking, setIsThinking] = useState(false);
     const [showTranscription, setShowTranscription] = useState(false);
-    // const [ghostVoice, setGhostVoice] = useState(!!initialGhostVoice);
-    // const [ghostTtsVoiceId, setGhostTtsVoiceId] = useState(initialGhostTtsVoiceId);
-    // const [ghostEngine, setGhostEngine] = useState<GhostEngineId>(initialGhostEngine);
+    const [aiTransformEnabled, setAiTransformEnabled] = useState(!!initialAiTransform);
+    const [aiTransformVoiceId, setAiTransformVoiceId] = useState(initialAiTransformVoiceId);
+    const [showAiTransformModal, setShowAiTransformModal] = useState(false);
 
     useEffect(() => {
         if (visible) {
             setTranscription(initialTranscription);
             setEmotionLabel(initialEmotionLabel);
             setSelectedVisibility(visibility);
-            // setGhostVoice(!!initialGhostVoice);
-            // setGhostTtsVoiceId(initialGhostTtsVoiceId || DEFAULT_GHOST_TTS_VOICE_ID);
-            // setGhostEngine(initialGhostEngine || DEFAULT_GHOST_ENGINE_ID);
+            setAiTransformEnabled(!!initialAiTransform);
+            setAiTransformVoiceId(initialAiTransformVoiceId || DEFAULT_AI_TRANSFORM_VOICE_ID);
+            setTransformedAudioUri(null);
+            setIsTransforming(false);
             if (initialTranscription) {
                 setShowTranscription(true);
             }
@@ -186,6 +188,48 @@ export default function VoiceUploadSheet({
         }
     };
 
+    const handleTransformVoice = async (voiceId: string) => {
+        if (!audioUri) return;
+        
+        try {
+            setIsTransforming(true);
+            const selectedVoice = AI_TRANSFORM_VOICES.find(v => v.id === voiceId);
+            
+            if (!selectedVoice) {
+                throw new Error("Voice not found");
+            }
+
+            // Stop playback if playing
+            if (player && playing) {
+                player.pause();
+            }
+
+            const resultUri = await gradioService.transformVoice({
+                audioUri,
+                modelType: selectedVoice.modelType || "Beatrice v2",
+                targetSpeaker: selectedVoice.targetSpeaker || 0,
+            });
+
+            setTransformedAudioUri(resultUri);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            
+            // Auto-play the transformed voice
+            setTimeout(() => {
+                 if (player) {
+                     player.seekTo(0);
+                     player.play();
+                 }
+            }, 500);
+
+        } catch (error) {
+            console.error("Transform failed:", error);
+            Alert.alert("Lỗi", "Không thể biến đổi giọng nói lúc này.");
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        } finally {
+            setIsTransforming(false);
+        }
+    };
+
     const animateArm = (toValue: number) => {
         Animated.timing(armRotateAnim, {
             toValue,
@@ -217,13 +261,13 @@ export default function VoiceUploadSheet({
         const isRealTranscription = transcription &&
             !transcription.startsWith('Rất tiếc') &&
             !transcription.startsWith('Không tìm thấy');
-        // if (ghostVoice && ghostEngine === 'tts' && !isRealTranscription) {
-        //     Alert.alert(
-        //         'Ghost Voice (TTS)',
-        //         'Cần có transcript để đọc TTS. Hãy bật xem nội dung / đợi phân tích, hoặc chuyển sang chế độ Đổi timbre (RVC) nếu server RVC đã sẵn sàng.',
-        //     );
-        //     return;
-        // }
+        if (aiTransformEnabled && !isRealTranscription) {
+            Alert.alert(
+                'AI Transform',
+                'Cần có nội dung văn bản (transcript) để chuyển đổi giọng nói. Hãy bật xem nội dung và đợi AI phân tích xong nhé!',
+            );
+            return;
+        }
 
         try {
             setUploading(true);
@@ -246,8 +290,9 @@ export default function VoiceUploadSheet({
 
             const formData = new FormData();
 
-            // Ensure URI starts with file:// for proper FormData handling in React Native
-            const audioFileUri = audioUri.startsWith('file://') ? audioUri : `file://${audioUri}`;
+            // Use transformed audio if AI Transform is enabled and available
+            const finalAudioUri = (aiTransformEnabled && transformedAudioUri) ? transformedAudioUri : audioUri;
+            const audioFileUri = finalAudioUri.startsWith('file://') ? finalAudioUri : `file://${finalAudioUri}`;
 
             formData.append('file', {
                 uri: audioFileUri,
@@ -258,13 +303,10 @@ export default function VoiceUploadSheet({
             formData.append('latitude', String(location.coords.latitude));
             formData.append('longitude', String(location.coords.longitude));
             formData.append('visibility', selectedVisibility);
-            // Ghost Voice tắt — luôn false để server không chạy pipeline ghost
-            formData.append('ghostVoice', 'false');
-            // formData.append('ghostVoice', ghostVoice ? 'true' : 'false');
-            // if (ghostVoice) {
-            //     formData.append('ghostEngine', ghostEngine);
-            //     formData.append('ttsVoice', ghostTtsVoiceId);
-            // }
+            formData.append('aiTransform', aiTransformEnabled ? 'true' : 'false');
+            if (aiTransformEnabled) {
+                formData.append('voiceId', aiTransformVoiceId);
+            }
             const audioDurationSeconds = getAudioDurationSeconds();
             if (audioDurationSeconds !== null) {
                 formData.append('audioDuration', String(audioDurationSeconds));
@@ -324,10 +366,9 @@ export default function VoiceUploadSheet({
             console.error('Upload failed:', err.response?.data || err.message);
 
             const serverMessage = err.response?.data?.message as string | undefined;
-            // if (serverMessage && (serverMessage.includes('Ghost Voice') || serverMessage.includes('giọng AI') || serverMessage.includes('Azure') || serverMessage.includes('RVC') || serverMessage.includes('So-VITS') || serverMessage.includes('timbre') || serverMessage.includes('VOICE_CONVERSION'))) {
-            //     Alert.alert('Ghost Voice', serverMessage);
-            // } else
-            if (serverMessage && serverMessage.includes('too quiet')) {
+            if (serverMessage && (serverMessage.includes('AI Transform') || serverMessage.includes('giọng AI') || serverMessage.includes('Azure'))) {
+                Alert.alert('AI Transform', serverMessage);
+            } else if (serverMessage && serverMessage.includes('too quiet')) {
                 Alert.alert('Âm thanh quá nhỏ', 'Mình chưa nghe rõ. Bạn thử nói to hơn hoặc kiểm tra micro nhé!');
             } else if (serverMessage && serverMessage.includes('moderationReason')) {
                 Alert.alert('Lỗi Database', 'Có lỗi xảy ra khi lưu dữ liệu. Hãy báo cho admin hoặc thử lại sau.');
@@ -358,9 +399,8 @@ export default function VoiceUploadSheet({
             photoUri,
             location,
             visibility: selectedVisibility,
-            // ghostVoice,
-            // ghostEngine,
-            // ttsVoice: ghostTtsVoiceId,
+            aiTransform: aiTransformEnabled,
+            voiceId: aiTransformVoiceId,
             transcription,
             emotionLabel,
         });
@@ -436,16 +476,15 @@ export default function VoiceUploadSheet({
                             isCreationMode={true}
                             visibility={selectedVisibility}
                             onVisibilityChange={handleToggleVisibility}
-                            // ghostVoice={ghostVoice}
-                            // onGhostVoiceChange={setGhostVoice}
-                            // ghostTtsVoiceId={ghostTtsVoiceId}
-                            // onGhostTtsVoiceChange={setGhostTtsVoiceId}
-                            // ghostEngine={ghostEngine}
-                            // onGhostEngineChange={setGhostEngine}
+                            aiTransformEnabled={aiTransformEnabled}
+                            onAiTransformToggle={() => setAiTransformEnabled(!aiTransformEnabled)}
+                            aiTransformVoiceId={aiTransformVoiceId}
+                            onAiTransformVoiceChange={setAiTransformVoiceId}
+                            onAiTransformPress={() => setShowAiTransformModal(true)}
                             onPost={handleUpload}
                             theme={currentTheme}
                             onTranscriptionToggle={handleToggleTranscription}
-                            isThinking={isThinking}
+                            isThinking={isThinking || isTransforming}
                             showTranscription={showTranscription}
                         />
 
@@ -483,6 +522,101 @@ export default function VoiceUploadSheet({
                         )}
                     </AnimatePresence>
                 </View>
+
+                {/* AI Transform Selection Modal (Notification Style) */}
+                <Modal
+                    visible={showAiTransformModal}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setShowAiTransformModal(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+                        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setShowAiTransformModal(false)} />
+
+                        <AnimatePresence>
+                            {showAiTransformModal && (
+                                <MotiView
+                                    from={{ opacity: 0, scale: 0.9, translateY: 20 }}
+                                    animate={{ opacity: 1, scale: 1, translateY: 0 }}
+                                    exit={{ opacity: 0, scale: 0.9, translateY: 20 }}
+                                    style={[styles.modalContent, { backgroundColor: isDark ? '#1e1e2e' : '#fff' }]}
+                                >
+                                    <View style={styles.modalHeader}>
+                                        <View>
+                                            <Text style={[styles.modalTitle, { color: isDark ? '#fff' : '#111827' }]}>AI Transform</Text>
+                                            <Text style={styles.modalSubtitle}>Chọn kiểu giọng AI bạn muốn chuyển đổi</Text>
+                                        </View>
+                                        <TouchableOpacity onPress={() => setShowAiTransformModal(false)} style={styles.modalCloseBtn}>
+                                            <Ionicons name="close" size={24} color={isDark ? '#9ca3af' : '#6b7280'} />
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    <View style={styles.modalBody}>
+                                        {AI_TRANSFORM_VOICES.map((v) => {
+                                            const active = v.id === aiTransformVoiceId;
+                                            return (
+                                                <TouchableOpacity
+                                                    key={v.id}
+                                                    onPress={() => {
+                                                        setAiTransformVoiceId(v.id);
+                                                        setAiTransformEnabled(true);
+                                                        Haptics.selectionAsync();
+                                                    }}
+                                                    activeOpacity={0.8}
+                                                    style={[
+                                                        styles.voiceItem,
+                                                        {
+                                                            borderColor: active ? currentTheme.colors.primary : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'),
+                                                            backgroundColor: active 
+                                                                ? (isDark ? 'rgba(124, 58, 237, 0.15)' : 'rgba(124, 58, 237, 0.05)') 
+                                                                : (isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)')
+                                                        }
+                                                    ]}
+                                                >
+                                                    <LinearGradient colors={v.colors as any} style={styles.voiceIconBox}>
+                                                        <Ionicons name={v.icon as any} size={22} color="#fff" />
+                                                    </LinearGradient>
+                                                    <Text numberOfLines={1} style={[styles.voiceLabel, { color: active ? currentTheme.colors.primary : (isDark ? '#fff' : '#111827') }]}>
+                                                        {v.label}
+                                                    </Text>
+                                                    
+                                                    {active && (
+                                                        <MotiView from={{ scale: 0 }} animate={{ scale: 1 }} style={styles.checkIcon}>
+                                                            <Ionicons name="checkmark-circle" size={16} color={currentTheme.colors.primary} />
+                                                        </MotiView>
+                                                    )}
+                                                </TouchableOpacity>
+                                            );
+                                        })}
+                                    </View>
+
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.modalConfirmBtn, 
+                                            { backgroundColor: isTransforming ? '#9ca3af' : currentTheme.colors.primary }
+                                        ]}
+                                        disabled={isTransforming}
+                                        onPress={() => {
+                                            if (aiTransformEnabled && aiTransformVoiceId) {
+                                                handleTransformVoice(aiTransformVoiceId);
+                                            }
+                                            setShowAiTransformModal(false);
+                                        }}
+                                    >
+                                        {isTransforming ? (
+                                            <ActivityIndicator color="#fff" />
+                                        ) : (
+                                            <Text style={styles.modalConfirmText}>
+                                                {aiTransformEnabled ? 'Biến đổi & Hoàn tất' : 'Hoàn tất'}
+                                            </Text>
+                                        )}
+                                    </TouchableOpacity>
+                                </MotiView>
+                            )}
+                        </AnimatePresence>
+                    </View>
+                </Modal>
             </Animated.View>
         </Modal>
     );
@@ -543,5 +677,87 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontStyle: 'italic',
         lineHeight: 20,
+    },
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    modalContent: {
+        width: '100%',
+        borderRadius: 32,
+        padding: 24,
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 24,
+    },
+    modalTitle: {
+        fontSize: 24,
+        fontWeight: '900',
+        letterSpacing: -0.5,
+    },
+    modalSubtitle: {
+        fontSize: 13,
+        color: '#9ca3af',
+        fontWeight: '500',
+        marginTop: 2,
+    },
+    modalCloseBtn: {
+        padding: 4,
+    },
+    modalBody: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'flex-start',
+        gap: 12,
+        marginBottom: 24,
+    },
+    voiceItem: {
+        width: (width * 0.9 - 48 - 24) / 3, // (ModalWidth - Padding - Gaps) / 3
+        aspectRatio: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 10,
+        borderRadius: 24,
+        borderWidth: 1.5,
+        position: 'relative',
+    },
+    voiceIconBox: {
+        width: 48,
+        height: 48,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    voiceLabel: {
+        fontSize: 12,
+        fontWeight: '800',
+        textAlign: 'center',
+    },
+    checkIcon: {
+        position: 'absolute',
+        top: 6,
+        right: 6,
+    },
+    modalConfirmBtn: {
+        height: 56,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalConfirmText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '800',
     },
 });

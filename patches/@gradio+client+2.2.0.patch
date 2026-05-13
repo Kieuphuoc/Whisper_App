@@ -1,0 +1,15 @@
+diff --git a/node_modules/@gradio/client/dist/index.js b/node_modules/@gradio/client/dist/index.js
+index 9ccc0fa..216bd22 100644
+--- a/node_modules/@gradio/client/dist/index.js
++++ b/node_modules/@gradio/client/dist/index.js
+@@ -889,8 +889,8 @@ async function process_single_command(client2, data, key) {
+     let fileBuffer;
+     let fullPath;
+     if (typeof process !== "undefined" && process.versions && process.versions.node) {
+-      const fs = await import("fs/promises");
+-      const path = await import("path");
++      const fs = null;
++      const path = null;
+       fullPath = path.resolve(process.cwd(), cmd_item.meta.path);
+       fileBuffer = await fs.readFile(fullPath);
+     } else {

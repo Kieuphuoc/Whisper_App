@@ -11,6 +11,12 @@ config.resolver.assetExts = [...config.resolver.assetExts, "glb"];
 config.resolver.extraNodeModules = {
   ...config.resolver.extraNodeModules,
   'socket.io-client': require.resolve('socket.io-client/dist/socket.io.js'),
+  'fs/promises': require.resolve('./empty-module.js'),
+  'path': require.resolve('./empty-module.js'),
+  'crypto': require.resolve('./empty-module.js'),
+  'url': require.resolve('./empty-module.js'),
+  'stream': require.resolve('./empty-module.js'),
+  'os': require.resolve('./empty-module.js'),
 };
 
 module.exports = withNativeWind(config, { input: "./global.css" });
