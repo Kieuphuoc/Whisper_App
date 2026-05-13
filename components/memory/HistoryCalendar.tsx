@@ -1,22 +1,20 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import { Text } from '@/components/ui/text';
+import { BASE_URL } from '@/configs/Apis';
+import { VoicePin } from '@/types';
+import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import { AnimatePresence, MotiView } from 'moti';
+import React, { useMemo, useState } from 'react';
 import {
-  View,
-  StyleSheet,
-  Dimensions,
-  Image,
-  TouchableOpacity,
-  SafeAreaView,
-  ScrollView as RNScrollView,
+    Dimensions,
+    Image,
+    SafeAreaView,
+    StyleSheet,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { Text } from '@/components/ui/text';
-import { Ionicons } from '@expo/vector-icons';
-import { VoicePin } from '@/types';
-import { BASE_URL } from '@/configs/Apis';
-import { BlurView } from 'expo-blur';
-import { MotiView, AnimatePresence } from 'moti';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { useAnimatedStyle, withRepeat, withTiming, withSequence, withDelay, interpolate } from 'react-native-reanimated';
 
 const { width } = Dimensions.get('window');
 const GRID_COLS = 7;

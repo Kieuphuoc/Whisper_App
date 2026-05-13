@@ -254,7 +254,7 @@ const MapSection = forwardRef<MapView, Props>(function MapSection(
                     <Text style={styles.calloutStatText}>{pin.reactionsCount ?? 0}</Text>
                   </View>
                   <TouchableOpacity style={styles.calloutBtn} onPress={() => setSelectedPin(pin)}>
-                    <Text style={styles.calloutBtnText}>Xem chi tiết</Text>
+                    <Text style={styles.calloutBtnText}>{isAR ? "Dò voice AR" : "Xem chi tiết"}</Text>
                     <Ionicons name="chevron-forward" size={12} color="#8b5cf6" />
                   </TouchableOpacity>
                 </View>

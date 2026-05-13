@@ -6,7 +6,7 @@ import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApis, endpoints } from '@/configs/Apis';
 import { useSocket } from '@/hooks/useSocket';
-import { View, StyleSheet, Platform, Dimensions } from 'react-native';
+import { View, StyleSheet, Platform, Dimensions, AppState } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TAB_BAR_WIDTH = 220;
@@ -48,34 +48,60 @@ export default function TabLayout() {
     const { on, off } = useSocket(user?.id);
 
     useEffect(() => {
-        if (user) {
-            // Temporarily disabled push notifications
-            // AsyncStorage.getItem('token').then((token) => {
-            //     if (token) registerForPushNotificationsAsync(token);
-            // });
+        if (!user) return;
 
-            fetchUnreadCount();
-            const interval = setInterval(fetchUnreadCount, 30000);
+        // Temporarily disabled push notifications
+        // AsyncStorage.getItem('token').then((token) => {
+        //     if (token) registerForPushNotificationsAsync(token);
+        // });
 
-            const handleNewMessage = () => fetchUnreadCount();
-            on('new_message', handleNewMessage);
-
-            // Temporarily disabled notification listener
-            // const notifResponseSub = addNotificationResponseListener((response) => {
-            //     const data = response.notification.request.content.data as any;
-            //     if (data?.voicePinId) {
-            //         router.push({ pathname: '/(tabs)/home/voiceDetail', params: { id: String(data.voicePinId) } });
-            //     } else if (data?.senderId) {
-            //         router.push({ pathname: '/user/[id]', params: { id: String(data.senderId) } });
-            //     }
-            // });
-
-            return () => {
+        let interval: ReturnType<typeof setInterval> | null = null;
+        const startPolling = () => {
+            if (interval) return;
+            interval = setInterval(fetchUnreadCount, 30000);
+        };
+        const stopPolling = () => {
+            if (interval) {
                 clearInterval(interval);
-                off('new_message', handleNewMessage);
-                // notifResponseSub.remove();
-            };
+                interval = null;
+            }
+        };
+
+        // Fetch + start polling ngay nếu app đang foreground
+        if (AppState.currentState === 'active') {
+            fetchUnreadCount();
+            startPolling();
         }
+
+        // Dừng poll khi vào background, mở lại khi foreground
+        const appStateSub = AppState.addEventListener('change', (state) => {
+            if (state === 'active') {
+                fetchUnreadCount();
+                startPolling();
+            } else {
+                stopPolling();
+            }
+        });
+
+        const handleNewMessage = () => fetchUnreadCount();
+        on('new_message', handleNewMessage);
+
+        // Temporarily disabled notification listener
+        // const notifResponseSub = addNotificationResponseListener((response) => {
+        //     const data = response.notification.request.content.data as any;
+        //     if (data?.voicePinId) {
+        //         router.push({ pathname: '/(tabs)/home/voiceDetail', params: { id: String(data.voicePinId) } });
+        //     } else if (data?.senderId) {
+        //         router.push({ pathname: '/user/[id]', params: { id: String(data.senderId) } });
+        //     }
+        // });
+
+        return () => {
+            stopPolling();
+            appStateSub.remove();
+            off('new_message', handleNewMessage);
+            // notifResponseSub.remove();
+        };
     }, [user, fetchUnreadCount, on, off, router]);
 
     if (!isReady) return null;

@@ -1,14 +1,15 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
+import * as Device from "expo-device";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, TouchableOpacity, View, useColorScheme } from "react-native";
+import { Platform, StyleSheet, TouchableOpacity, View, useColorScheme } from "react-native";
 import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocationContext } from "@/contexts/LocationContext";
 import { Text } from "@/components/ui/text";
-import Apis, { authApis, endpoints } from "@/configs/Apis";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import Apis, { endpoints } from "@/configs/Apis";
 import { VoicePin } from "@/types";
+import { parseVoicePinFromDetailResponse } from "@/utils/parseVoiceDetail";
 import {
   haversineDistanceMeters,
   initialBearingDegrees,
@@ -18,13 +19,24 @@ import {
 import { markUnlockedAR } from "@/storage/voiceARProgress";
 import CharmanderOverlay from "@/components/voice-ar/CharmanderOverlay";
 
-type Params = { pinId?: string };
+type Params = { pinId?: string | string[] };
+
+function normalizeRouteParam(v: string | string[] | undefined): string | undefined {
+  if (v == null || v === "") return undefined;
+  const s = Array.isArray(v) ? v[0] : v;
+  const t = typeof s === "string" ? s.trim() : String(s).trim();
+  return t === "" ? undefined : t;
+}
+
+/** iOS Simulator: không có camera thật — dùng nền giả để vẫn test GL + Charmander. */
+const IOS_SIMULATOR_AR_PREVIEW = Platform.OS === "ios" && !Device.isDevice;
 
 export default function VoiceARCameraScreen() {
   const scheme = useColorScheme() || "light";
   const isDark = scheme === "dark";
   const router = useRouter();
-  const { pinId } = useLocalSearchParams<Params>();
+  const { pinId: pinIdParam } = useLocalSearchParams<Params>();
+  const pinId = normalizeRouteParam(pinIdParam);
 
   const [permission, requestPermission] = useCameraPermissions();
   const { permissionStatus: locationPermission } = useLocationContext();
@@ -44,11 +56,10 @@ export default function VoiceARCameraScreen() {
     (async () => {
       if (!pinId) return;
       try {
-        const token = await AsyncStorage.getItem("token");
-        const api = token ? authApis(token) : Apis;
-        const res = await api.get(endpoints.voiceDetail(pinId));
-        const data = res.data?.data as VoicePin | undefined;
+        const res = await Apis.get(endpoints.voiceDetail(pinId));
+        const data = parseVoicePinFromDetailResponse(res);
         if (!cancelled && data) setPin(data);
+        else if (!cancelled) setPin(null);
       } catch {
         if (!cancelled) setPin(null);
       }
@@ -62,6 +73,7 @@ export default function VoiceARCameraScreen() {
 
   useEffect(() => {
     (async () => {
+      if (IOS_SIMULATOR_AR_PREVIEW) return;
       if (!permission || permission.granted) return;
       await requestPermission();
     })();
@@ -152,7 +164,7 @@ export default function VoiceARCameraScreen() {
     router.push({ pathname: "/(tabs)/home", params: { selectPinId: String(pin.id), autoPlay: "1" } });
   };
 
-  if (!permission?.granted) {
+  if (!IOS_SIMULATOR_AR_PREVIEW && !permission?.granted) {
     return (
       <View style={[styles.permissionWrap, { backgroundColor: isDark ? "#05060a" : "#f5f7ff" }]}>
         <Text style={{ color: isDark ? "#fff" : "#111827", fontWeight: "800" }}>
@@ -167,10 +179,14 @@ export default function VoiceARCameraScreen() {
 
   return (
     <View style={styles.container}>
-      <CameraView style={StyleSheet.absoluteFill} facing="back" />
+      {IOS_SIMULATOR_AR_PREVIEW ? (
+        <View style={[StyleSheet.absoluteFill, styles.simulatorBackdrop]} />
+      ) : (
+        <CameraView style={StyleSheet.absoluteFill} facing="back" />
+      )}
 
-      {/* 3D overlay pseudo-anchor (Expo Go friendly) */}
-      <CharmanderOverlay xOffsetPx={xOffset} intensity={signal} placed={placed} />
+      {/* 3D overlay: luôn hiển thị rõ khi mở camera; khoảng cách chỉ ảnh hưởng beacon + nút mở voice */}
+      <CharmanderOverlay xOffsetPx={xOffset} intensity={1} placed={placed} />
 
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} hitSlop={12}>
@@ -178,7 +194,7 @@ export default function VoiceARCameraScreen() {
         </TouchableOpacity>
         <View style={styles.pill}>
           <Ionicons name="sparkles" size={14} color="#ddd6fe" />
-          <Text style={styles.pillText}>Geo AR</Text>
+          <Text style={styles.pillText}>{IOS_SIMULATOR_AR_PREVIEW ? "Simulator AR" : "Geo AR"}</Text>
         </View>
         <TouchableOpacity
           onPress={() => {
@@ -226,6 +242,9 @@ export default function VoiceARCameraScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000" },
+  simulatorBackdrop: {
+    backgroundColor: "#1a0f2e",
+  },
   topBar: {
     position: "absolute",
     top: 54,

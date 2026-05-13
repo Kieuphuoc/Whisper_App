@@ -75,7 +75,7 @@ export default function VoiceButton({ isRecording, onPress }: VoiceButtonProps) 
     }, [isRecording]);
 
     return (
-        <View style={styles.container}>
+        <View style={styles.container} pointerEvents="box-none">
             {/* Pulse rings */}
             {isRecording && (
                 <>

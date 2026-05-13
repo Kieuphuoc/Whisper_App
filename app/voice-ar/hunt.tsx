@@ -5,9 +5,10 @@ import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocationContext } from "@/contexts/LocationContext";
 import { Text } from "@/components/ui/text";
-import Apis, { authApis, endpoints } from "@/configs/Apis";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import Apis, { endpoints } from "@/configs/Apis";
+import axios from "axios";
 import { VoicePin } from "@/types";
+import { parseVoicePinFromDetailResponse } from "@/utils/parseVoiceDetail";
 import {
   haversineDistanceMeters,
   initialBearingDegrees,
@@ -15,16 +16,41 @@ import {
   lerp,
 } from "@/utils/geo";
 
-type Params = { pinId?: string };
+type Params = { pinId?: string | string[] };
+
+function normalizeRouteParam(v: string | string[] | undefined): string | undefined {
+  if (v == null || v === "") return undefined;
+  const s = Array.isArray(v) ? v[0] : v;
+  const t = typeof s === "string" ? s.trim() : String(s).trim();
+  return t === "" ? undefined : t;
+}
+
+/** Gợi ý tiếng Việt từ body lỗi API voice detail (lỗi Prisma / geometry từ server). */
+function userFacingVoiceDetailFailure(apiBody: unknown): string | null {
+  const msg =
+    apiBody &&
+    typeof apiBody === "object" &&
+    "message" in apiBody &&
+    typeof (apiBody as { message: unknown }).message === "string"
+      ? (apiBody as { message: string }).message
+      : "";
+  if (msg.includes("geometry") && (msg.includes("Prisma") || msg.includes("$queryRaw"))) {
+    return "Máy chủ đang lỗi khi đọc dữ liệu bản đồ (geometry). Đây không phải lỗi mạng trên điện thoại — cần sửa API/backend (Prisma/query).";
+  }
+  return null;
+}
 
 export default function VoiceARHuntScreen() {
   const scheme = useColorScheme() || "light";
   const isDark = scheme === "dark";
   const router = useRouter();
-  const { pinId } = useLocalSearchParams<Params>();
+  const params = useLocalSearchParams<Params>();
+  const pinId = normalizeRouteParam(params.pinId);
 
   const { permissionStatus: locationPermission } = useLocationContext();
   const [pin, setPin] = useState<VoicePin | null>(null);
+  const [pinStatus, setPinStatus] = useState<"absent" | "loading" | "ready" | "failed">("absent");
+  const [pinFailureHint, setPinFailureHint] = useState<string | null>(null);
   const [distance, setDistance] = useState<number | null>(null);
   const [deltaDeg, setDeltaDeg] = useState<number | null>(null);
 
@@ -35,33 +61,69 @@ export default function VoiceARHuntScreen() {
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
+    if (!pinId) {
+      setPinStatus("absent");
+      setPin(null);
+      setPinFailureHint(null);
+      return;
+    }
+    setPinStatus("loading");
+    setPin(null);
+    setPinFailureHint(null);
     (async () => {
-      if (!pinId) return;
+      if (!/^\d+$/.test(pinId)) {
+        if (!cancelled) {
+          setPin(null);
+          setPinStatus("failed");
+          setPinFailureHint("Mã pin không hợp lệ.");
+        }
+        return;
+      }
+
+      const detailPath = endpoints.voiceDetail(pinId);
       try {
-        const token = await AsyncStorage.getItem("token");
-        const api = token ? authApis(token) : Apis;
-        const res = await api.get(endpoints.voiceDetail(pinId));
-        const data = res.data?.data as VoicePin | undefined;
-        if (!cancelled && data) setPin(data);
-      } catch {
-        // If fetch fails, user can still open camera; but guidance needs pin.
-        if (!cancelled) setPin(null);
+        const res = await Apis.get(detailPath, { signal: controller.signal });
+        const data = parseVoicePinFromDetailResponse(res);
+        if (cancelled) return;
+        if (data) {
+          setPin(data);
+          setPinStatus("ready");
+        } else {
+          setPin(null);
+          setPinStatus("failed");
+          setPinFailureHint("Dữ liệu pin từ máy chủ không đọc được.");
+        }
+      } catch (e) {
+        if (axios.isCancel(e) || (e as { code?: string }).code === "ERR_CANCELED") return;
+        const ax = e as { message?: string; response?: { status?: number; data?: unknown } };
+        if (!cancelled) {
+          setPin(null);
+          setPinStatus("failed");
+          const hint = userFacingVoiceDetailFailure(ax.response?.data);
+          setPinFailureHint(hint);
+        }
       }
     })();
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [pinId]);
 
   const unlockRadius = pin?.unlockRadius ?? 15;
 
   const directionLabel = useMemo(() => {
-    if (deltaDeg == null) return "Đang căn hướng…";
+    if (pinStatus === "loading") return "Đang tải pin…";
+    if (pinStatus === "failed" || pinStatus === "absent") return "—";
+    if (!pin) return "—";
+    if (distance == null) return "Đang định vị…";
+    if (deltaDeg == null) return "Chưa có la bàn — đi bộ vài bước";
     if (deltaDeg > 15) return "Sang phải";
     if (deltaDeg < -15) return "Qua trái";
     return "Đi thẳng";
-  }, [deltaDeg]);
+  }, [pinStatus, pin, distance, deltaDeg]);
 
   const distanceLabel = useMemo(() => {
     if (distance == null) return "—";
@@ -70,12 +132,17 @@ export default function VoiceARHuntScreen() {
   }, [distance]);
 
   const proximityLabel = useMemo(() => {
+    if (pinStatus === "loading") return "Đang tải dữ liệu pin…";
+    if (pinStatus === "failed" || pinStatus === "absent") {
+      if (pinStatus === "failed" && pinFailureHint) return "Không tải được pin — xem thông báo bên dưới.";
+      return "Cần pin hợp lệ để dò hướng.";
+    }
     if (distance == null) return "Đang định vị…";
     if (distance <= unlockRadius) return "Rất gần rồi — bật camera để mở!";
     if (distance <= 30) return "Đang rất gần…";
     if (distance <= 80) return "Tiếp tục tiến lại gần";
     return "Đi theo hướng dẫn";
-  }, [distance, unlockRadius]);
+  }, [distance, unlockRadius, pinStatus, pinFailureHint]);
 
   // Chỉ bắt đầu high-accuracy watcher khi permission đã được cấp (từ LocationContext)
   useEffect(() => {
@@ -87,7 +154,9 @@ export default function VoiceARHuntScreen() {
       headSubRef.current?.remove();
 
       headSubRef.current = await Location.watchHeadingAsync((h) => {
-        headingRef.current = h.trueHeading >= 0 ? h.trueHeading : h.magHeading;
+        const t = h.trueHeading;
+        const m = h.magHeading;
+        headingRef.current = t >= 0 ? t : m >= 0 ? m : null;
       });
 
       posSubRef.current = await Location.watchPositionAsync(
@@ -99,10 +168,16 @@ export default function VoiceARHuntScreen() {
           const d = haversineDistanceMeters(me, target);
           setDistance(d);
 
-          const heading = headingRef.current;
-          if (heading == null) return;
+          const compass = headingRef.current;
+          const course = loc.coords.heading;
+          const speed = loc.coords.speed ?? 0;
+          const courseUsable =
+            course != null && Number.isFinite(course) && course >= 0 && speed > 0.35;
+          const deviceDeg = compass ?? (courseUsable ? course : null);
+          if (deviceDeg == null) return;
+
           const bearing = initialBearingDegrees(me, target);
-          const delta = normalizeAngleDegrees(bearing - heading);
+          const delta = normalizeAngleDegrees(bearing - deviceDeg);
 
           const prev = smoothedDeltaRef.current;
           const next = prev == null ? delta : lerp(prev, delta, 0.18);
@@ -144,9 +219,10 @@ export default function VoiceARHuntScreen() {
         </View>
 
         <Text style={styles.hint}>{proximityLabel}</Text>
-        {!pin && (
+        {pinStatus === "failed" && (
           <Text style={styles.warn}>
-            Không tải được dữ liệu pin. Bạn có thể quay lại và thử lại khi mạng ổn định.
+            {pinFailureHint ??
+              "Không tải được dữ liệu pin. Bạn có thể quay lại và thử lại khi mạng ổn định."}
           </Text>
         )}
       </View>

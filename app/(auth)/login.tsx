@@ -2,16 +2,51 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect, useCallback } from 'react';
 import { Image, StatusBar, TextInput, TouchableOpacity, View, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-import { makeRedirectUri } from 'expo-auth-session';
+import Constants from 'expo-constants';
 import { Text } from '@/components/ui/text';
 import Apis, { endpoints } from '../../configs/Apis';
 import { MyDispatchContext } from '../../configs/Context';
 
 WebBrowser.maybeCompleteAuthSession();
+
+/** Chuỗi lỗi từ API (Django/FastAPI thường trả object hoặc detail) */
+function formatApiError(err: any): string {
+  const d = err.response?.data;
+  if (d == null) return err.message || 'Đăng nhập Google không thành công.';
+  if (typeof d === 'string') return d;
+  if (typeof d.message === 'string') return d.message;
+  if (typeof d.detail === 'string') return d.detail;
+  if (d.detail != null && typeof d.detail !== 'string') return JSON.stringify(d.detail);
+  if (typeof d.error === 'string') return d.error;
+  const key = Object.keys(d)[0];
+  const val = key ? d[key] : null;
+  if (key && Array.isArray(val) && val[0]) return `${key}: ${val[0]}`;
+  try {
+    return JSON.stringify(d);
+  } catch {
+    return 'Đăng nhập Google không thành công.';
+  }
+}
+
+function googleClientIds() {
+  const extra = Constants.expoConfig?.extra as {
+    googleWebClientId?: string;
+    googleIosClientId?: string;
+    googleAndroidClientId?: string;
+  } | undefined;
+  return {
+    webClientId:
+      process.env.EXPO_PUBLIC_WEB_CLIENT_ID ?? extra?.googleWebClientId,
+    iosClientId:
+      process.env.EXPO_PUBLIC_IOS_CLIENT_ID ?? extra?.googleIosClientId,
+    androidClientId:
+      process.env.EXPO_PUBLIC_ANDROID_CLIENT_ID ?? extra?.googleAndroidClientId,
+  };
+}
 
 type UserLogin = {
   username?: string;
@@ -32,23 +67,64 @@ export default function LoginScreen() {
   const dispatch = useContext(MyDispatchContext);
   const [msg, setMsg] = useState<string | null>(null);
 
+  const { webClientId, iosClientId, androidClientId } = googleClientIds();
+
   const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: process.env.EXPO_PUBLIC_ANDROID_CLIENT_ID,
-    iosClientId: process.env.EXPO_PUBLIC_IOS_CLIENT_ID,
-    webClientId: process.env.EXPO_PUBLIC_WEB_CLIENT_ID,
-    // Thêm dòng này để tự động tạo redirectUri tương thích với Expo Go
-    redirectUri: makeRedirectUri({
-      scheme: 'whispery',
-      preferLocalhost: true,
-    }),
+    androidClientId,
+    iosClientId,
+    webClientId,
+    // Không set redirectUri: expo-auth-session dùng Application.applicationId + ":/oauthredirect"
+    // (vd: com.phuocnguyenkieu.whispery:/oauthredirect) — phải khớp Google Cloud Console.
   });
 
-  React.useEffect(() => {
-    if (response?.type === 'success') {
-      const { id_token } = response.params;
-      handleGoogleLogin(id_token);
+  const handleGoogleLogin = useCallback(async (idToken: string) => {
+    const token = idToken?.trim();
+    if (!token) {
+      Alert.alert('Thất bại', 'Không nhận được id_token từ Google.');
+      return;
     }
-  }, [response]);
+    try {
+      setLoading(true);
+      // Backend hay dùng snake_case `id_token` (Django/FastAPI); giữ `idToken` để tương thích Node
+      const res = await Apis.post(endpoints.googleLogin, {
+        id_token: token,
+        idToken: token,
+      });
+      const data = res.data;
+
+      await AsyncStorage.setItem('token', data.token);
+      await AsyncStorage.setItem('user', JSON.stringify(data.user));
+
+      if (dispatch) {
+        dispatch({ type: "SET_USER", payload: data.user });
+      }
+
+      Alert.alert("Thành công", `Chào mừng ${data.user.displayName || data.user.username}!`);
+      router.replace('/(tabs)/home');
+    } catch (err: any) {
+      console.error('Lỗi Google login:', err.message, err.response?.data);
+      Alert.alert('Thất bại', formatApiError(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (!response) return;
+    if (response.type === 'success') {
+      const idToken = response.params?.id_token;
+      // Luồng code: lần đầu có thể chỉ có `code`; hook đổi token rồi mới có id_token
+      if (idToken) {
+        handleGoogleLogin(idToken);
+      }
+    } else if (response.type === 'error') {
+      const msg =
+        (response.params as { error_description?: string })?.error_description ||
+        response.error?.message ||
+        'Đăng nhập Google không thành công.';
+      Alert.alert('Google', String(msg));
+    }
+  }, [response, handleGoogleLogin]);
 
   const info: InfoField[] = [
     {
@@ -104,29 +180,6 @@ export default function LoginScreen() {
       const errorMsg = err.response?.data?.message || "Tài khoản hoặc mật khẩu không chính xác.";
       setMsg(errorMsg);
       Alert.alert("Thất bại", errorMsg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleLogin = async (idToken: string) => {
-    try {
-      setLoading(true);
-      const res = await Apis.post(endpoints.googleLogin, { idToken });
-      const data = res.data;
-
-      await AsyncStorage.setItem('token', data.token);
-      await AsyncStorage.setItem('user', JSON.stringify(data.user));
-
-      if (dispatch) {
-        dispatch({ type: "SET_USER", payload: data.user });
-      }
-
-      Alert.alert("Thành công", `Chào mừng ${data.user.displayName || data.user.username}!`);
-      router.replace('/(tabs)/home');
-    } catch (err: any) {
-      console.error('Lỗi Google login:', err.message);
-      Alert.alert("Thất bại", "Đăng nhập Google không thành công.");
     } finally {
       setLoading(false);
     }

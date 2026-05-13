@@ -18,7 +18,7 @@ import { BoundingBox, useVoicePins } from "@/hooks/useVoicePins";
 import { Ionicons } from "@expo/vector-icons";
 import { useDiscovery } from "@/hooks/useDiscovery";
 import VoicePinMiniCard from "@/components/discovery/VoicePinMiniCard";
-import { VoicePin, Visibility } from "@/types";
+import { VoicePin, Visibility, VoiceType } from "@/types";
 import { theme } from "@/constants/Theme";
 import FilterToggle from "@/components/home/Filter";
 import QuickActions from "@/components/home/QuickActions";
@@ -29,13 +29,15 @@ import WalkthroughOverlay, { WalkthroughStep } from "@/components/onboarding/Wal
 import { Dimensions } from "react-native";
 import { useNotifications } from "@/hooks/useNotifications";
 import { DraftStorage, VoiceDraft } from "@/utils/draftStorage";
-import { DEFAULT_GHOST_TTS_VOICE_ID } from "@/constants/ghostTtsVoices";
-import { DEFAULT_GHOST_ENGINE_ID, type GhostEngineId } from "@/constants/ghostEngines";
+// Ghost Voice tạm tắt — bật lại: mở comment import + state + VoiceUploadSheet props
+// import { DEFAULT_GHOST_TTS_VOICE_ID } from "@/constants/ghostTtsVoices";
+// import { DEFAULT_GHOST_ENGINE_ID, type GhostEngineId } from "@/constants/ghostEngines";
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 import { useFriends } from "@/hooks/useFriends";
 import { expandBoundingBox, haversineDistanceMeters, pointInBoundingBox } from "@/utils/geo";
+import { parseVoicePinFromDetailResponse } from "@/utils/parseVoiceDetail";
 
 /** Padded viewport for pin retention (reduces churn at edges). */
 const VIEWPORT_RETAIN_FACTOR = 2.35;
@@ -45,6 +47,9 @@ const USER_PIN_RETAIN_RADIUS_M = 1600;
 const MAX_ACCUMULATED_PINS = 450;
 const EMPTY_PINS: VoicePin[] = [];
 
+function isHiddenARVoicePin(pin: VoicePin): boolean {
+  return pin.type === VoiceType.HIDDEN_AR || String(pin.type) === "HIDDEN_AR";
+}
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme() || "light";
@@ -207,9 +212,9 @@ export default function HomeScreen() {
   const [pendingTranscription, setPendingTranscription] = useState<string | null>(null);
   const [pendingEmotionLabel, setPendingEmotionLabel] = useState<string>("Bình yên");
   const [pendingVisibility, setPendingVisibility] = useState<Visibility>("FRIENDS");
-  const [pendingGhostVoice, setPendingGhostVoice] = useState(false);
-  const [pendingGhostTtsVoiceId, setPendingGhostTtsVoiceId] = useState(DEFAULT_GHOST_TTS_VOICE_ID);
-  const [pendingGhostEngine, setPendingGhostEngine] = useState<GhostEngineId>(DEFAULT_GHOST_ENGINE_ID);
+  // const [pendingGhostVoice, setPendingGhostVoice] = useState(false);
+  // const [pendingGhostTtsVoiceId, setPendingGhostTtsVoiceId] = useState(DEFAULT_GHOST_TTS_VOICE_ID);
+  // const [pendingGhostEngine, setPendingGhostEngine] = useState<GhostEngineId>(DEFAULT_GHOST_ENGINE_ID);
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -353,7 +358,7 @@ export default function HomeScreen() {
           const { authApis, endpoints } = await import("@/configs/Apis");
           const api = authApis();
           const res = await api.get(endpoints.voiceDetail(idNum));
-          target = res.data?.data;
+          target = parseVoicePinFromDetailResponse(res) ?? undefined;
           
           if (target) {
             // Add to accumulated pins so it stays on map
@@ -403,9 +408,9 @@ export default function HomeScreen() {
     setPendingTranscription(draft.transcription);
     setPendingEmotionLabel(draft.emotionLabel);
     setPendingVisibility(draft.visibility);
-    setPendingGhostVoice(!!draft.ghostVoice || !!draft.isAnonymous);
-    setPendingGhostTtsVoiceId(draft.ttsVoice || DEFAULT_GHOST_TTS_VOICE_ID);
-    setPendingGhostEngine(draft.ghostEngine === "rvc" ? "rvc" : DEFAULT_GHOST_ENGINE_ID);
+    // setPendingGhostVoice(!!draft.ghostVoice || !!draft.isAnonymous);
+    // setPendingGhostTtsVoiceId(draft.ttsVoice || DEFAULT_GHOST_TTS_VOICE_ID);
+    // setPendingGhostEngine(draft.ghostEngine === "rvc" ? "rvc" : DEFAULT_GHOST_ENGINE_ID);
     setActiveDraftId(draft.id);
     setDraftsVisible(false);
     setUploadSheetVisible(true);
@@ -417,9 +422,9 @@ export default function HomeScreen() {
     setPendingTranscription(null);
     setPendingEmotionLabel("Bình yên");
     setPendingVisibility("FRIENDS");
-    setPendingGhostVoice(false);
-    setPendingGhostTtsVoiceId(DEFAULT_GHOST_TTS_VOICE_ID);
-    setPendingGhostEngine(DEFAULT_GHOST_ENGINE_ID);
+    // setPendingGhostVoice(false);
+    // setPendingGhostTtsVoiceId(DEFAULT_GHOST_TTS_VOICE_ID);
+    // setPendingGhostEngine(DEFAULT_GHOST_ENGINE_ID);
     setActiveDraftId(null);
     setCameraVisible(false);
     setUploadSheetVisible(false);
@@ -510,11 +515,17 @@ export default function HomeScreen() {
       }
     }
 
-    // 3. Show card after focus (or immediately if already focused)
+    // 3. AR pins → hunt flow; otherwise show VoicePinCard after focus
     setTimeout(() => {
+      if (isHiddenARVoicePin(latestPin)) {
+        setExternalSelectedPin(null);
+        setAutoPlayPin(false);
+        router.push({ pathname: "/voice-ar/hunt", params: { pinId: String(latestPin.id) } });
+        return;
+      }
       setExternalSelectedPin(latestPin);
     }, duration);
-  }, [accumulatedPins]);
+  }, [accumulatedPins, router]);
 
   return (
     <View style={styles.container}>
@@ -708,6 +719,11 @@ export default function HomeScreen() {
           onClose={() => setIsMiniCardOpen(false)}
           onPlayVoice={(pin) => {
             setIsMiniCardOpen(false);
+            if (isHiddenARVoicePin(pin)) {
+              setAutoPlayPin(false);
+              router.push({ pathname: "/voice-ar/hunt", params: { pinId: String(pin.id) } });
+              return;
+            }
             setExternalSelectedPin(pin);
             setAutoPlayPin(true);
           }}
@@ -734,9 +750,9 @@ export default function HomeScreen() {
         visibility={pendingVisibility}
         initialTranscription={pendingTranscription}
         initialEmotionLabel={pendingEmotionLabel}
-        initialGhostVoice={pendingGhostVoice}
-        initialGhostTtsVoiceId={pendingGhostTtsVoiceId}
-        initialGhostEngine={pendingGhostEngine}
+        // initialGhostVoice={pendingGhostVoice}
+        // initialGhostTtsVoiceId={pendingGhostTtsVoiceId}
+        // initialGhostEngine={pendingGhostEngine}
         onClose={resetFlow}
         onUploadSuccess={async () => { 
           if (activeDraftId) {

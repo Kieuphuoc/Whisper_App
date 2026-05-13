@@ -323,14 +323,6 @@ PODS:
   - libwebp/sharpyuv (1.5.0)
   - libwebp/webp (1.5.0):
     - libwebp/sharpyuv
-  - MapboxCommon (24.18.3):
-    - Turf (= 4.0.0)
-  - MapboxCoreMaps (11.18.3):
-    - MapboxCommon (= 24.18.3)
-  - MapboxMaps (11.18.3):
-    - MapboxCommon (= 24.18.3)
-    - MapboxCoreMaps (= 11.18.3)
-    - Turf (= 4.0.0)
   - RCTDeprecation (0.81.5)
   - RCTRequired (0.81.5)
   - RCTTypeSafety (0.81.5):
@@ -2121,33 +2113,6 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - rnmapbox-maps (10.3.0):
-    - MapboxMaps (~> 11.18.2)
-    - React
-    - React-Core
-    - rnmapbox-maps/DynamicLibrary (= 10.3.0)
-    - Turf
-  - rnmapbox-maps/DynamicLibrary (10.3.0):
-    - hermes-engine
-    - MapboxMaps (~> 11.18.2)
-    - RCTRequired
-    - RCTTypeSafety
-    - React
-    - React-Core
-    - React-Core-prebuilt
-    - React-featureflags
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - ReactNativeDependencies
-    - Turf
-    - Yoga
   - RNReanimated (4.1.7):
     - hermes-engine
     - RCTRequired
@@ -2396,7 +2361,6 @@ PODS:
   - SDWebImageWebPCoder (0.14.6):
     - libwebp (~> 1.0)
     - SDWebImage/Core (~> 5.17)
-  - Turf (4.0.0)
   - Yoga (0.0.0)
   - ZXingObjC/Core (3.6.9)
   - ZXingObjC/OneD (3.6.9):
@@ -2513,7 +2477,6 @@ DEPENDENCIES:
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - "RNFBApp (from `../node_modules/@react-native-firebase/app`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
-  - "rnmapbox-maps (from `../node_modules/@rnmapbox/maps`)"
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSVG (from `../node_modules/react-native-svg`)
@@ -2529,14 +2492,10 @@ SPEC REPOS:
     - libavif
     - libdav1d
     - libwebp
-    - MapboxCommon
-    - MapboxCoreMaps
-    - MapboxMaps
     - SDWebImage
     - SDWebImageAVIFCoder
     - SDWebImageSVGCoder
     - SDWebImageWebPCoder
-    - Turf
     - ZXingObjC
 
 EXTERNAL SOURCES:
@@ -2755,8 +2714,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-firebase/app"
   RNGestureHandler:
     :path: "../node_modules/react-native-gesture-handler"
-  rnmapbox-maps:
-    :path: "../node_modules/@rnmapbox/maps"
   RNReanimated:
     :path: "../node_modules/react-native-reanimated"
   RNScreens:
@@ -2813,9 +2770,6 @@ SPEC CHECKSUMS:
   libavif: 5f8e715bea24debec477006f21ef9e95432e254d
   libdav1d: 23581a4d8ec811ff171ed5e2e05cd27bad64c39f
   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
-  MapboxCommon: 371fd6db596531464b6fd751ae7daa382fe2da2b
-  MapboxCoreMaps: 811c4196843f5554b10a807d1231270d372ff148
-  MapboxMaps: 0e8fdc25eb3b1c2ff5cf9317266fe984eeb0e18f
   RCTDeprecation: 943572d4be82d480a48f4884f670135ae30bf990
   RCTRequired: 8f3cfc90cc25cf6e420ddb3e7caaaabc57df6043
   RCTTypeSafety: 16a4144ca3f959583ab019b57d5633df10b5e97c
@@ -2886,7 +2840,6 @@ SPEC CHECKSUMS:
   RNCAsyncStorage: 0574155b95b96b89a51717c4dd42fb6057926bbc
   RNFBApp: e17dba7fb8c952d211fd672a55f27df32c2a2910
   RNGestureHandler: c971f0a10fdffe00dfb4c142e87f34cdcd704376
-  rnmapbox-maps: f1733483c1268f108c36a6ca0ee1eaf0f01a8c9b
   RNReanimated: 99e83e857d8c791ef10cf6738417c3e29733cd9c
   RNScreens: e91463674394a1969b4688eb5db419d7045fce2d
   RNSVG: 88b3b3e9e675fa4a2e14405c4c7f886ea8c82e06
@@ -2895,10 +2848,9 @@ SPEC CHECKSUMS:
   SDWebImageAVIFCoder: afe194a084e851f70228e4be35ef651df0fc5c57
   SDWebImageSVGCoder: 15a300a97ec1c8ac958f009c02220ac0402e936c
   SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380
-  Turf: c9eb11a65d96af58cac523460fd40fec5061b081
   Yoga: 65431d43277b661ebc7289c6c5d82f64ce42cfe0
   ZXingObjC: 8898711ab495761b2dbbdec76d90164a6d7e14c5
 
-PODFILE CHECKSUM: e7591f1d0ca611ac61eb8fbbacd745c1d1da5c71
+PODFILE CHECKSUM: b7c5e794f294f15f2bbb7f9e1b845e0ee6f5644d
 
 COCOAPODS: 1.14.3

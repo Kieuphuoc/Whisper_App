@@ -10,6 +10,30 @@ export interface BoundingBox {
     maxLng: number;
 }
 
+/** BBox list đôi khi trả id dưới dạng snake_case / string — chuẩn hoá để tránh String(undefined) khi mở hunt. */
+function normalizeBBoxVoicePins(list: unknown): VoicePin[] {
+    if (!Array.isArray(list)) return [];
+    const out: VoicePin[] = [];
+    for (const raw of list) {
+        if (!raw || typeof raw !== "object") continue;
+        const o = raw as Record<string, unknown>;
+        const idRaw = o.id ?? o.voice_pin_id ?? o.voicePinId;
+        const latRaw = o.latitude ?? o.lat;
+        const lngRaw = o.longitude ?? o.lng ?? o.lon;
+        const idNum =
+            typeof idRaw === "number" && Number.isFinite(idRaw)
+                ? idRaw
+                : typeof idRaw === "string" && idRaw.trim() !== "" && Number.isFinite(Number(idRaw))
+                  ? Number(idRaw)
+                  : NaN;
+        const latNum = typeof latRaw === "number" ? latRaw : Number(latRaw);
+        const lngNum = typeof lngRaw === "number" ? lngRaw : Number(lngRaw);
+        if (!Number.isFinite(idNum) || !Number.isFinite(latNum) || !Number.isFinite(lngNum)) continue;
+        out.push({ ...(raw as object), id: idNum, latitude: latNum, longitude: lngNum } as VoicePin);
+    }
+    return out;
+}
+
 export function useVoicePins(visibility: Visibility, bbox?: BoundingBox, options: { enabled?: boolean } = {}) {
     // 1. Quantize BBox for Query Key Stability (4 decimal places ~ 11m)
     const quantizedBBox = bbox ? {
@@ -40,7 +64,8 @@ export function useVoicePins(visibility: Visibility, bbox?: BoundingBox, options
                     },
                     signal // Axios support for AbortController via TanStack Query signal
                 });
-                data = res.data?.data ?? [];
+                const raw = res.data?.data ?? res.data;
+                data = normalizeBBoxVoicePins(Array.isArray(raw) ? raw : []);
             }
 
             return data;

@@ -46,7 +46,16 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       // Hiển thị vị trí cuối cùng ngay lập tức (không block UI)
       try {
         const last = await Location.getLastKnownPositionAsync({});
-        if (!cancelled && last) setLocation(last);
+        if (!cancelled && last) {
+          setLocation(last);
+          if (__DEV__) {
+            console.log(
+              `[Location] last-known: lat=${last.coords.latitude.toFixed(6)}, ` +
+                `lng=${last.coords.longitude.toFixed(6)}, ` +
+                `acc=${last.coords.accuracy?.toFixed(1) ?? "?"}m`
+            );
+          }
+        }
       } catch {
         // không sao nếu không có vị trí cũ
       }
@@ -60,7 +69,16 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
           distanceInterval: 20,
         },
         (loc) => {
-          if (!cancelled) setLocation(loc);
+          if (cancelled) return;
+          setLocation(loc);
+          if (__DEV__) {
+            console.log(
+              `[Location] update: lat=${loc.coords.latitude.toFixed(6)}, ` +
+                `lng=${loc.coords.longitude.toFixed(6)}, ` +
+                `acc=${loc.coords.accuracy?.toFixed(1) ?? "?"}m, ` +
+                `spd=${loc.coords.speed?.toFixed(2) ?? "?"}m/s`
+            );
+          }
         }
       );
 

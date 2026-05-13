@@ -3,6 +3,7 @@ import { View, ActivityIndicator, StyleSheet, TouchableOpacity, StatusBar } from
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { authApis, endpoints } from '@/configs/Apis';
 import { VoicePin } from '@/types';
+import { parseVoicePinFromDetailResponse } from '@/utils/parseVoiceDetail';
 import VoicePinTurntable from '@/components/home/VoicePinCard';
 import { theme } from '@/constants/Theme';
 import { useColorScheme } from 'react-native';
@@ -23,7 +24,7 @@ export default function VoiceDetailScreen() {
             if (!id) return;
             try {
                 const res = await authApis().get(endpoints.voiceDetail(id as string));
-                setPin(res.data?.data || res.data);
+                setPin(parseVoicePinFromDetailResponse(res));
             } catch (error) {
                 console.error("Fetch voice detail error:", error);
             } finally {
