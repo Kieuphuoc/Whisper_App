@@ -22,6 +22,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { CelebrationProvider } from '@/components/ui/CelebrationOverlay';
 import { LocationProvider } from '@/contexts/LocationContext';
+import "@/services/GeofenceService";
 
 configureReanimatedLogger({ level: ReanimatedLogLevel.warn, strict: false });
 

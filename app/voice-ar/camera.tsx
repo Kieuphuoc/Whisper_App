@@ -1,4 +1,4 @@
-import { CameraView, useCameraPermissions } from "expo-camera";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Device from "expo-device";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -7,17 +7,15 @@ import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocationContext } from "@/contexts/LocationContext";
 import { Text } from "@/components/ui/text";
-import Apis, { endpoints } from "@/configs/Apis";
+import { authApis, endpoints } from "@/configs/Apis";
+import Apis from "@/configs/Apis";
 import { VoicePin } from "@/types";
 import { parseVoicePinFromDetailResponse } from "@/utils/parseVoiceDetail";
-import {
-  haversineDistanceMeters,
-  initialBearingDegrees,
-  normalizeAngleDegrees,
-  lerp,
-} from "@/utils/geo";
+import { haversineDistanceMeters } from "@/utils/geo";
 import { markUnlockedAR } from "@/storage/voiceARProgress";
-import CharmanderOverlay from "@/components/voice-ar/CharmanderOverlay";
+import WorldARScene from "@/components/voice-ar/WorldARScene";
+import { DEFAULT_AR_MODEL_URL } from "@/constants/arModels";
+import { resolveArModelUri } from "@/utils/arModelCache";
 
 type Params = { pinId?: string | string[] };
 
@@ -28,7 +26,6 @@ function normalizeRouteParam(v: string | string[] | undefined): string | undefin
   return t === "" ? undefined : t;
 }
 
-/** iOS Simulator: không có camera thật — dùng nền giả để vẫn test GL + Charmander. */
 const IOS_SIMULATOR_AR_PREVIEW = Platform.OS === "ios" && !Device.isDevice;
 
 export default function VoiceARCameraScreen() {
@@ -38,18 +35,16 @@ export default function VoiceARCameraScreen() {
   const { pinId: pinIdParam } = useLocalSearchParams<Params>();
   const pinId = normalizeRouteParam(pinIdParam);
 
-  const [permission, requestPermission] = useCameraPermissions();
   const { permissionStatus: locationPermission } = useLocationContext();
   const [pin, setPin] = useState<VoicePin | null>(null);
   const [distance, setDistance] = useState<number | null>(null);
-  const [deltaDeg, setDeltaDeg] = useState<number | null>(null);
   const [unlocked, setUnlocked] = useState(false);
-  const [placed, setPlaced] = useState(false);
+  const [modelPlaced, setModelPlaced] = useState(false);
+  const [localModelUri, setLocalModelUri] = useState<string | null>(null);
+  const [modelLoading, setModelLoading] = useState(false);
+  const [modelError, setModelError] = useState<string | null>(null);
 
   const posSubRef = useRef<Location.LocationSubscription | null>(null);
-  const headSubRef = useRef<Location.LocationSubscription | null>(null);
-  const headingRef = useRef<number | null>(null);
-  const smoothedDeltaRef = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,51 +65,48 @@ export default function VoiceARCameraScreen() {
   }, [pinId]);
 
   const unlockRadius = pin?.unlockRadius ?? 15;
+  const remoteModelUrl = (pin?.arModelUrl?.trim() || DEFAULT_AR_MODEL_URL).trim();
+  const withinUnlockRadius = distance != null && distance <= unlockRadius;
+  const canStartAR = withinUnlockRadius || IOS_SIMULATOR_AR_PREVIEW;
 
   useEffect(() => {
+    if (!canStartAR || IOS_SIMULATOR_AR_PREVIEW) return;
+    let cancelled = false;
+    setModelLoading(true);
+    setModelError(null);
     (async () => {
-      if (IOS_SIMULATOR_AR_PREVIEW) return;
-      if (!permission || permission.granted) return;
-      await requestPermission();
+      try {
+        const uri = await resolveArModelUri(remoteModelUrl);
+        if (!cancelled) setLocalModelUri(uri);
+      } catch {
+        if (!cancelled) {
+          setModelError("Không tải được mô hình 3D. Kiểm tra mạng và thử lại.");
+          setLocalModelUri(null);
+        }
+      } finally {
+        if (!cancelled) setModelLoading(false);
+      }
     })();
-  }, [permission, requestPermission]);
+    return () => {
+      cancelled = true;
+    };
+  }, [canStartAR, remoteModelUrl]);
 
-  // Chỉ bắt đầu high-accuracy watcher khi permission đã được cấp (từ LocationContext)
   useEffect(() => {
-    if (locationPermission !== "granted") return;
+    if (locationPermission !== "granted" || !pin) return;
 
     let cancelled = false;
     (async () => {
       posSubRef.current?.remove();
-      headSubRef.current?.remove();
-
-      headSubRef.current = await Location.watchHeadingAsync((h) => {
-        headingRef.current = h.trueHeading >= 0 ? h.trueHeading : h.magHeading;
-      });
-
       posSubRef.current = await Location.watchPositionAsync(
         { accuracy: Location.Accuracy.High, timeInterval: 1200, distanceInterval: 6 },
         (loc) => {
           if (cancelled || !pin) return;
           const me = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
           const target = { latitude: pin.latitude, longitude: pin.longitude };
-
           const d = haversineDistanceMeters(me, target);
           setDistance(d);
-
-          const heading = headingRef.current;
-          if (heading != null) {
-            const bearing = initialBearingDegrees(me, target);
-            const delta = normalizeAngleDegrees(bearing - heading);
-            const prev = smoothedDeltaRef.current;
-            const next = prev == null ? delta : lerp(prev, delta, 0.2);
-            smoothedDeltaRef.current = next;
-            setDeltaDeg(next);
-          }
-
-          if (!unlocked && d <= unlockRadius) {
-            setUnlocked(true);
-          }
+          if (!unlocked && d <= unlockRadius) setUnlocked(true);
         }
       );
     })();
@@ -122,25 +114,9 @@ export default function VoiceARCameraScreen() {
     return () => {
       cancelled = true;
       posSubRef.current?.remove();
-      headSubRef.current?.remove();
       posSubRef.current = null;
-      headSubRef.current = null;
     };
   }, [locationPermission, pin, unlockRadius, unlocked]);
-
-  const xOffset = useMemo(() => {
-    // Map delta [-90..90] degrees to horizontal shift [-120..120]
-    if (deltaDeg == null) return 0;
-    const clamped = Math.max(-90, Math.min(90, deltaDeg));
-    return (clamped / 90) * 120;
-  }, [deltaDeg]);
-
-  const signal = useMemo(() => {
-    if (distance == null) return 0.2;
-    if (distance <= unlockRadius) return 1;
-    const t = Math.max(0, Math.min(1, 1 - distance / 120));
-    return 0.25 + 0.75 * t;
-  }, [distance, unlockRadius]);
 
   const distanceLabel = useMemo(() => {
     if (distance == null) return "—";
@@ -160,33 +136,43 @@ export default function VoiceARCameraScreen() {
     } catch {
       // ignore network error
     }
-    // Go back to Home, select pin and autoplay.
     router.push({ pathname: "/(tabs)/home", params: { selectPinId: String(pin.id), autoPlay: "1" } });
   };
 
-  if (!IOS_SIMULATOR_AR_PREVIEW && !permission?.granted) {
-    return (
-      <View style={[styles.permissionWrap, { backgroundColor: isDark ? "#05060a" : "#f5f7ff" }]}>
-        <Text style={{ color: isDark ? "#fff" : "#111827", fontWeight: "800" }}>
-          Cần quyền camera để khám phá
-        </Text>
-        <TouchableOpacity onPress={requestPermission} style={styles.permissionBtn}>
-          <Text style={styles.permissionBtnText}>Cho phép camera</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  const showUnlockCta = unlocked && modelPlaced;
 
   return (
     <View style={styles.container}>
-      {IOS_SIMULATOR_AR_PREVIEW ? (
-        <View style={[StyleSheet.absoluteFill, styles.simulatorBackdrop]} />
-      ) : (
-        <CameraView style={StyleSheet.absoluteFill} facing="back" />
-      )}
-
-      {/* 3D overlay: luôn hiển thị rõ khi mở camera; khoảng cách chỉ ảnh hưởng beacon + nút mở voice */}
-      <CharmanderOverlay xOffsetPx={xOffset} intensity={1} placed={placed} />
+      {!canStartAR ? (
+        <View style={[styles.gateBackdrop, { backgroundColor: isDark ? "#05060a" : "#1a1033" }]}>
+          <Ionicons name="footsteps-outline" size={48} color="#a78bfa" />
+          <Text style={styles.gateTitle}>Đến gần hơn để mở AR</Text>
+          <Text style={styles.gateSub}>
+            Bạn đang cách {distanceLabel}. Tiến tới ≤ {unlockRadius}m để quét sàn và đặt vật thể 3D.
+          </Text>
+        </View>
+      ) : modelLoading ? (
+        <View style={styles.gateBackdrop}>
+          <Text style={styles.gateSub}>Đang tải mô hình 3D…</Text>
+        </View>
+      ) : modelError ? (
+        <View style={styles.gateBackdrop}>
+          <Text style={styles.gateTitle}>Lỗi model</Text>
+          <Text style={styles.gateSub}>{modelError}</Text>
+        </View>
+      ) : IOS_SIMULATOR_AR_PREVIEW ? (
+        <View style={[styles.gateBackdrop, styles.simulatorBackdrop]}>
+          <Text style={styles.gateTitle}>Simulator</Text>
+          <Text style={styles.gateSub}>AR thật cần thiết bị có ARKit. Build dev client và chạy trên máy thật.</Text>
+        </View>
+      ) : localModelUri ? (
+        <WorldARScene
+          modelUri={localModelUri}
+          modelScale={0.25}
+          onPlaced={() => setModelPlaced(true)}
+          onLoadError={(msg) => setModelError(msg)}
+        />
+      ) : null}
 
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} hitSlop={12}>
@@ -194,17 +180,9 @@ export default function VoiceARCameraScreen() {
         </TouchableOpacity>
         <View style={styles.pill}>
           <Ionicons name="sparkles" size={14} color="#ddd6fe" />
-          <Text style={styles.pillText}>{IOS_SIMULATOR_AR_PREVIEW ? "Simulator AR" : "Geo AR"}</Text>
+          <Text style={styles.pillText}>World AR</Text>
         </View>
-        <TouchableOpacity
-          onPress={() => {
-            setPlaced((v) => !v);
-          }}
-          style={[styles.iconBtn, { backgroundColor: placed ? "rgba(139,92,246,0.45)" : "rgba(0,0,0,0.35)" }]}
-          hitSlop={12}
-        >
-          <Ionicons name={placed ? "pin" : "pin-outline"} size={18} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.iconBtnPlaceholder} />
       </View>
 
       <View style={styles.hud}>
@@ -212,27 +190,32 @@ export default function VoiceARCameraScreen() {
         <Text style={styles.hudValue}>{distanceLabel}</Text>
       </View>
 
-      {/* Beacon overlay */}
-      <View pointerEvents="none" style={styles.beaconWrap}>
-        <View style={[styles.beacon, { transform: [{ translateX: xOffset }], opacity: signal }]}>
-          <View style={[styles.ring, { opacity: 0.35 + 0.45 * signal }]} />
-          <View style={[styles.dot, { opacity: 0.6 + 0.4 * signal }]} />
+      {canStartAR && !modelPlaced && !IOS_SIMULATOR_AR_PREVIEW && !modelError && !modelLoading && (
+        <View style={styles.scanHint} pointerEvents="none">
+          <Text style={styles.scanHintText}>Di chuyển điện thoại quét sàn, rồi chạm vào mặt phẳng để đặt vật thể</Text>
         </View>
-        <Text style={styles.beaconText}>
-          {unlocked ? "Đã tới nơi — mở voice!" : "Hãy xoay điện thoại và tiến lại gần"}
-        </Text>
-      </View>
+      )}
 
       <View style={styles.bottom}>
-        {unlocked ? (
+        {showUnlockCta ? (
           <TouchableOpacity onPress={handleUnlock} activeOpacity={0.9} style={styles.cta}>
             <Ionicons name="headset-outline" size={18} color="#fff" />
             <Text style={styles.ctaText}>Mở voice ẩn</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.note}>
-            <Ionicons name="compass-outline" size={16} color="rgba(255,255,255,0.85)" />
-            <Text style={styles.noteText}>Tới gần ≤ {unlockRadius}m để mở</Text>
+            <Ionicons
+              name={modelPlaced ? "checkmark-circle-outline" : "scan-outline"}
+              size={16}
+              color="rgba(255,255,255,0.85)"
+            />
+            <Text style={styles.noteText}>
+              {!canStartAR
+                ? `Tới gần ≤ ${unlockRadius}m để bắt đầu AR`
+                : modelPlaced
+                  ? "Sẵn sàng mở voice"
+                  : "Chạm mặt phẳng để đặt model"}
+            </Text>
           </View>
         )}
       </View>
@@ -242,9 +225,16 @@ export default function VoiceARCameraScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000" },
-  simulatorBackdrop: {
-    backgroundColor: "#1a0f2e",
+  gateBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 28,
+    gap: 12,
   },
+  simulatorBackdrop: { backgroundColor: "#1a0f2e" },
+  gateTitle: { color: "#fff", fontWeight: "900", fontSize: 17, textAlign: "center" },
+  gateSub: { color: "rgba(255,255,255,0.8)", fontSize: 14, textAlign: "center", lineHeight: 21 },
   topBar: {
     position: "absolute",
     top: 54,
@@ -264,6 +254,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.12)",
   },
+  iconBtnPlaceholder: { width: 40, height: 40 },
   pill: {
     flexDirection: "row",
     alignItems: "center",
@@ -290,47 +281,16 @@ const styles = StyleSheet.create({
   },
   hudLabel: { color: "rgba(255,255,255,0.75)", fontSize: 11, fontWeight: "800" },
   hudValue: { color: "#fff", fontSize: 16, fontWeight: "900" },
-  beaconWrap: {
+  scanHint: {
     position: "absolute",
-    left: 0,
-    right: 0,
-    top: "42%",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 14,
+    left: 20,
+    right: 20,
+    bottom: 100,
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
-  beacon: {
-    width: 120,
-    height: 120,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  ring: {
-    position: "absolute",
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 2,
-    borderColor: "#a78bfa",
-  },
-  dot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: "#c4b5fd",
-    shadowColor: "#a78bfa",
-    shadowOpacity: 0.9,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 12,
-  },
-  beaconText: {
-    color: "rgba(255,255,255,0.92)",
-    fontWeight: "800",
-    fontSize: 13,
-    paddingHorizontal: 16,
-    textAlign: "center",
-  },
+  scanHintText: { color: "rgba(255,255,255,0.92)", fontWeight: "700", fontSize: 13, textAlign: "center" },
   bottom: {
     position: "absolute",
     left: 16,
@@ -358,10 +318,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexDirection: "row",
     gap: 10,
+    paddingHorizontal: 12,
   },
-  noteText: { color: "rgba(255,255,255,0.88)", fontWeight: "900" },
-  permissionWrap: { flex: 1, alignItems: "center", justifyContent: "center", gap: 14, padding: 16 },
-  permissionBtn: { backgroundColor: "#8b5cf6", paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12 },
-  permissionBtnText: { color: "#fff", fontWeight: "900" },
+  noteText: { color: "rgba(255,255,255,0.88)", fontWeight: "900", flex: 1, textAlign: "center" },
 });
-

@@ -29,6 +29,7 @@ import { VinylRecord } from './voice-pin/VinylRecord';
 import { useCelebration } from '@/components/ui/CelebrationOverlay';
 import { AI_TRANSFORM_VOICES, DEFAULT_AI_TRANSFORM_VOICE_ID, type AiTransformOption } from '@/constants/aiTransform';
 import { gradioService } from '@/services/gradioService';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const { width } = Dimensions.get('window');
 
@@ -206,11 +207,22 @@ export default function VoiceUploadSheet({
 
             const resultUri = await gradioService.transformVoice({
                 audioUri,
-                modelType: selectedVoice.modelType || "Beatrice v2",
+                modelType: selectedVoice.modelType || "RVC v2",
                 targetSpeaker: selectedVoice.targetSpeaker || 0,
+                pitch: selectedVoice.pitch ?? 0,
             });
 
-            setTransformedAudioUri(resultUri);
+            // The Gradio result is a remote https URL on the HF Space. Download
+            // it to a local cache file so the audio player and the upload
+            // FormData can both consume it as a real file:// URI.
+            let localUri = resultUri;
+            if (resultUri.startsWith('http')) {
+                const ext = resultUri.split('.').pop()?.split('?')[0] || 'wav';
+                const dest = `${FileSystem.cacheDirectory}transformed_${Date.now()}.${ext}`;
+                const dl = await FileSystem.downloadAsync(resultUri, dest);
+                localUri = dl.uri;
+            }
+            setTransformedAudioUri(localUri);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             
             // Auto-play the transformed voice
@@ -221,9 +233,9 @@ export default function VoiceUploadSheet({
                  }
             }, 500);
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("Transform failed:", error);
-            Alert.alert("Lỗi", "Không thể biến đổi giọng nói lúc này.");
+            Alert.alert("Lỗi AI Transform", error.message || "Không thể biến đổi giọng nói lúc này.");
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         } finally {
             setIsTransforming(false);
@@ -248,6 +260,11 @@ export default function VoiceUploadSheet({
     };
 
     const handleUpload = async () => {
+        if (isTransforming) {
+            Alert.alert('AI Transform', 'Đang trong quá trình biến đổi giọng nói. Vui lòng đợi trong giây lát...');
+            return;
+        }
+
         // Stop playback before upload
         if (player && playing) {
             player.pause();
@@ -294,10 +311,23 @@ export default function VoiceUploadSheet({
             const finalAudioUri = (aiTransformEnabled && transformedAudioUri) ? transformedAudioUri : audioUri;
             const audioFileUri = finalAudioUri.startsWith('file://') ? finalAudioUri : `file://${finalAudioUri}`;
 
+            // Derive extension + MIME from the actual file so multer's filter
+            // (which checks mime type) doesn't reject transformed .wav files.
+            const ext = (audioFileUri.split('.').pop() || 'm4a').toLowerCase().split('?')[0];
+            const mimeMap: Record<string, string> = {
+                m4a: 'audio/m4a',
+                mp3: 'audio/mpeg',
+                wav: 'audio/wav',
+                ogg: 'audio/ogg',
+                webm: 'audio/webm',
+            };
+            const audioMime = mimeMap[ext] || 'audio/m4a';
+            const audioName = `voice_${Date.now()}.${ext in mimeMap ? ext : 'm4a'}`;
+
             formData.append('file', {
                 uri: audioFileUri,
-                name: `voice_${Date.now()}.m4a`,
-                type: 'audio/m4a',
+                name: audioName,
+                type: audioMime,
             } as any);
 
             formData.append('latitude', String(location.coords.latitude));

@@ -10,7 +10,9 @@ import { View, StyleSheet, Platform, Dimensions, AppState } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TAB_BAR_WIDTH = 220;
-import { registerForPushNotificationsAsync, addNotificationResponseListener } from '@/services/notificationService';
+import * as Notifications from 'expo-notifications';
+import { addNotificationResponseListener } from '@/services/notificationService';
+import { routeArNotification } from '@/services/arNotificationRouting';
 import { useRouter } from 'expo-router';
 
 import CustomTabBar from '@/components/ui/CustomTabBar';
@@ -86,21 +88,27 @@ export default function TabLayout() {
         const handleNewMessage = () => fetchUnreadCount();
         on('new_message', handleNewMessage);
 
-        // Temporarily disabled notification listener
-        // const notifResponseSub = addNotificationResponseListener((response) => {
-        //     const data = response.notification.request.content.data as any;
-        //     if (data?.voicePinId) {
-        //         router.push({ pathname: '/(tabs)/home/voiceDetail', params: { id: String(data.voicePinId) } });
-        //     } else if (data?.senderId) {
-        //         router.push({ pathname: '/user/[id]', params: { id: String(data.senderId) } });
-        //     }
-        // });
+        const handleNotifResponse = (response: Notifications.NotificationResponse) => {
+            const data = response.notification.request.content.data as Record<string, unknown> | undefined;
+            if (routeArNotification(router, data as Parameters<typeof routeArNotification>[1])) return;
+            if (data?.voicePinId) {
+                router.push({ pathname: '/(tabs)/home/voiceDetail', params: { id: String(data.voicePinId) } });
+            } else if (data?.senderId) {
+                router.push({ pathname: '/user/[id]', params: { id: String(data.senderId) } });
+            }
+        };
+
+        Notifications.getLastNotificationResponseAsync().then((last) => {
+            if (last) handleNotifResponse(last);
+        });
+
+        const notifResponseSub = addNotificationResponseListener(handleNotifResponse);
 
         return () => {
             stopPolling();
             appStateSub.remove();
             off('new_message', handleNewMessage);
-            // notifResponseSub.remove();
+            notifResponseSub.remove();
         };
     }, [user, fetchUnreadCount, on, off, router]);
 

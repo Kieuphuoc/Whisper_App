@@ -12,6 +12,21 @@ type UseRecorderOptions = {
   onRecordingComplete?: (uri: string) => void;
 };
 
+// Add helper to configure audio mode optimally
+const configureAudioMode = async (isRecording: boolean) => {
+  try {
+    await setAudioModeAsync({
+      allowsRecording: isRecording,
+      playsInSilentMode: true,
+      shouldRouteThroughEarpiece: false,
+      interruptionMode: isRecording ? 'doNotMix' : 'mixWithOthers',
+      shouldPlayInBackground: false,
+    });
+  } catch (error) {
+    console.warn("Failed to set audio mode:", error);
+  }
+};
+
 export function useRecorder({ onRecordingComplete }: UseRecorderOptions = {}) {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [isRecording, setIsRecording] = useState(false);
@@ -30,13 +45,8 @@ export function useRecorder({ onRecordingComplete }: UseRecorderOptions = {}) {
       }
     }
 
-    // iOS: activate audio session for recording
-    if (Platform.OS === "ios") {
-      await setAudioModeAsync({
-        allowsRecording: true,
-        playsInSilentMode: true,
-      });
-    }
+    // Configure optimal audio session for recording
+    await configureAudioMode(true);
 
     await recorder.prepareToRecordAsync();
     recorder.record();
@@ -47,13 +57,8 @@ export function useRecorder({ onRecordingComplete }: UseRecorderOptions = {}) {
     await recorder.stop();
     setIsRecording(false);
 
-    // iOS: reset audio mode so playback works normally
-    if (Platform.OS === "ios") {
-      await setAudioModeAsync({
-        allowsRecording: false,
-        playsInSilentMode: true,
-      });
-    }
+    // Reset audio mode so playback works normally and loudly via speaker
+    await configureAudioMode(false);
 
     const uri = recorder.uri;
     if (uri && onRecordingComplete) {

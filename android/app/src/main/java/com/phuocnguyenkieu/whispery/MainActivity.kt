@@ -25,7 +25,7 @@ class MainActivity : ReactActivity() {
 
   /**
    * Returns the name of the main component registered from JavaScript. This is used to schedule
-   * rendering of the main component.
+   * rendering of the component.
    */
   override fun getMainComponentName(): String = "main"
 
@@ -59,7 +59,7 @@ class MainActivity : ReactActivity() {
       }
 
       // Use the default back button implementation on Android S
-      // because it is doing more than [Activity.moveTaskToBack] in fact.
+      // because it's doing more than [Activity.moveTaskToBack] in fact.
       super.invokeDefaultOnBackPressed()
   }
 }

@@ -471,8 +471,9 @@ export function VinylRecord({
 
               <TouchableOpacity
                 onPress={onPost}
-                style={styles.actionButtonContainer}
+                style={[styles.actionButtonContainer, isThinking && { opacity: 0.5 }]}
                 activeOpacity={0.7}
+                disabled={isThinking}
               >
                 <LinearGradient
                   colors={['#7c3aed', '#4338ca']}

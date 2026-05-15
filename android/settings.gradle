@@ -31,9 +31,16 @@ extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
 }
 expoAutolinking.useExpoModules()
 
-rootProject.name = 'App'
+rootProject.name = 'Whispery'
 
 expoAutolinking.useExpoVersionCatalog()
 
 include ':app'
 includeBuild(expoAutolinking.reactNativeGradlePlugin)
+
+include ':react_viro', ':arcore_client', ':gvr_common', ':viro_renderer'
+project(':arcore_client').projectDir = new File('../node_modules/@reactvision/react-viro/android/arcore_client')
+project(':gvr_common').projectDir = new File('../node_modules/@reactvision/react-viro/android/gvr_common')
+project(':viro_renderer').projectDir = new File('../node_modules/@reactvision/react-viro/android/viro_renderer')
+project(':react_viro').projectDir = new File('../node_modules/@reactvision/react-viro/android/react_viro')
+    

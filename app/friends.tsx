@@ -385,8 +385,10 @@ export default function FriendsScreen() {
                 message: `Kết bạn với mình trên Whisper: ${inviteLink}`,
                 url: inviteLink,
             });
-        } catch {
-            Alert.alert('Lỗi', 'Không thể chia sẻ link kết bạn.');
+        } catch (error: any) {
+            console.error('handleShareFriendLink error:', error);
+            const msg = error.response?.data?.message || error.message || 'Không thể chia sẻ link kết bạn.';
+            Alert.alert('Lỗi', msg);
         }
     };
 

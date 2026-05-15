@@ -4,7 +4,7 @@
     "slug": "whispery",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/avatar.png",
     "scheme": "whispery",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,7 +13,10 @@
       "supportsTablet": true,
       "jsEngine": "hermes",
       "bundleIdentifier": "com.phuocnguyenkieu.whispery",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "infoPlist": {
+        "UIBackgroundModes": ["location"]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -37,7 +40,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/avatar.png"
     },
     "plugins": [
       "expo-router",
@@ -53,6 +56,18 @@
         {
           "cameraPermission": "Cho phép Whispery truy cập camera để trải nghiệm tính năng thực tế ảo (AR) tìm kiếm tin nhắn thoại.",
           "microphonePermission": "Cho phép Whispery truy cập microphone trong quá trình sử dụng camera."
+        }
+      ],
+      [
+        "@reactvision/react-viro",
+        {
+          "android": { "xRMode": "AR" },
+          "ios": {
+            "cameraUsagePermission": "Cho phép Whispery truy cập camera để đặt và xem vật thể AR trên mặt phẳng thực tế.",
+            "microphoneUsagePermission": "Cho phép Whispery truy cập microphone khi dùng camera AR.",
+            "photosPermission": "Cho phép Whispery truy cập ảnh khi lưu ảnh chụp từ AR.",
+            "savephotosPermission": "Cho phép Whispery lưu ảnh chụp từ AR vào thư viện."
+          }
         }
       ],
       [
@@ -72,7 +87,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/mascot_whispery.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"

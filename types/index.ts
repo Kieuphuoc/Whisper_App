@@ -79,6 +79,7 @@ export interface VoicePin {
     // --- AR & Hidden Voice ---
     type: VoiceType;            // STANDARD | HIDDEN_AR
     unlockRadius: number;       // meters
+    arModelUrl?: string;        // GLB URL for world-anchored AR
 
     // --- AI & Emotion ---
     emotionLabel?: string;      // "Happy" | "Sad" | ...
