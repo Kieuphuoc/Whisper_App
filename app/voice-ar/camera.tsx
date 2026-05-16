@@ -1,8 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Device from "expo-device";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Platform, StyleSheet, TouchableOpacity, View, useColorScheme } from "react-native";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Platform, StyleSheet, TouchableOpacity, View, useColorScheme } from "react-native";
 import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocationContext } from "@/contexts/LocationContext";
@@ -13,8 +13,11 @@ import { VoicePin } from "@/types";
 import { parseVoicePinFromDetailResponse } from "@/utils/parseVoiceDetail";
 import { haversineDistanceMeters } from "@/utils/geo";
 import { markUnlockedAR } from "@/storage/voiceARProgress";
-import WorldARScene from "@/components/voice-ar/WorldARScene";
+import "@/utils/debugViroProbe";
+import { isViroNativeAvailable } from "@/utils/nativeModulesAvailability";
 import { DEFAULT_AR_MODEL_URL } from "@/constants/arModels";
+
+const WorldARScene = lazy(() => import("@/components/voice-ar/WorldARScene"));
 import { resolveArModelUri } from "@/utils/arModelCache";
 
 type Params = { pinId?: string | string[] };
@@ -165,13 +168,29 @@ export default function VoiceARCameraScreen() {
           <Text style={styles.gateTitle}>Simulator</Text>
           <Text style={styles.gateSub}>AR thật cần thiết bị có ARKit. Build dev client và chạy trên máy thật.</Text>
         </View>
+      ) : !isViroNativeAvailable() ? (
+        <View style={[styles.gateBackdrop, styles.simulatorBackdrop]}>
+          <Text style={styles.gateTitle}>AR chưa sẵn sàng</Text>
+          <Text style={styles.gateSub}>
+            Dev client thiếu module Viro. Chạy `npx expo run:ios` hoặc `npx expo run:android` rồi mở lại app.
+          </Text>
+        </View>
       ) : localModelUri ? (
-        <WorldARScene
-          modelUri={localModelUri}
-          modelScale={0.25}
-          onPlaced={() => setModelPlaced(true)}
-          onLoadError={(msg) => setModelError(msg)}
-        />
+        <Suspense
+          fallback={
+            <View style={styles.gateBackdrop}>
+              <ActivityIndicator color="#a78bfa" size="large" />
+              <Text style={styles.gateSub}>Đang khởi động AR…</Text>
+            </View>
+          }
+        >
+          <WorldARScene
+            modelUri={localModelUri}
+            modelScale={0.25}
+            onPlaced={() => setModelPlaced(true)}
+            onLoadError={(msg) => setModelError(msg)}
+          />
+        </Suspense>
       ) : null}
 
       <View style={styles.topBar}>

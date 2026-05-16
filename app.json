@@ -15,8 +15,11 @@
       "bundleIdentifier": "com.phuocnguyenkieu.whispery",
       "buildNumber": "1",
       "infoPlist": {
-        "UIBackgroundModes": ["location"]
-      }
+        "UIBackgroundModes": [
+          "location"
+        ]
+      },
+      "appleTeamId": "UY8NY4F4GJ"
     },
     "android": {
       "adaptiveIcon": {
@@ -45,6 +48,7 @@
     "plugins": [
       "expo-router",
       "expo-notifications",
+      "./plugins/withNoPushEntitlement",
       [
         "expo-audio",
         {
@@ -61,7 +65,9 @@
       [
         "@reactvision/react-viro",
         {
-          "android": { "xRMode": "AR" },
+          "android": {
+            "xRMode": "AR"
+          },
           "ios": {
             "cameraUsagePermission": "Cho phép Whispery truy cập camera để đặt và xem vật thể AR trên mặt phẳng thực tế.",
             "microphoneUsagePermission": "Cho phép Whispery truy cập microphone khi dùng camera AR.",
@@ -100,7 +106,8 @@
         "expo-build-properties",
         {
           "ios": {
-            "useFrameworks": "static"
+            "useFrameworks": "static",
+            "deploymentTarget": "16.0"
           }
         }
       ]

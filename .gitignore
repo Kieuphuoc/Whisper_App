@@ -41,3 +41,8 @@ app/google-services.json
 *.tsbuildinfo
 
 app-example
+
+# Xcode / App Store Connect (often written to repo root when archiving)
+IDEDistribution*.log
+ContentDelivery.log
+DVTITunesSoftwareService.log
